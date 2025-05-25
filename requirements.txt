@@ -1,0 +1,4 @@
+tradingview-screener
+rookiepy
+pandas
+schedule
