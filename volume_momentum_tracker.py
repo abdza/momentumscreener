@@ -174,7 +174,7 @@ class VolumeMomentumTracker:
                 previous_rank = previous_rankings[ticker]
                 rank_change = previous_rank - current_rank  # Positive = moved up
                 
-                if rank_change > 5:  # Moved up at least 5 positions
+                if rank_change > 0:  # Moved up at least 1 positions
                     # Get current data for this ticker
                     current_ticker_data = next((r for r in current_data if r['name'] == ticker), None)
                     if current_ticker_data:
@@ -244,7 +244,7 @@ class VolumeMomentumTracker:
                     price_change = ((current_price - oldest_entry['price']) / oldest_entry['price']) * 100
                     
                     # Significant price spike criteria
-                    if (change_pct > 10 or price_change > 15) and current_price < 20:
+                    if (change_pct > 5 or price_change > 5) and current_price < 20:
                         price_spikes.append({
                             'ticker': ticker,
                             'current_price': current_price,
