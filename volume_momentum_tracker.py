@@ -1,16 +1,43 @@
 #!/usr/bin/env python3
 """
-Volume Momentum Tracker - Real-time Small Caps Monitor
+Volume Momentum Tracker - Real-time Small Caps Monitor (LONG TRADES ONLY)
 Continuously monitors small cap stocks to detect:
-1. Tickers moving up in volume rankings (volume momentum)
-2. Tickers with price spikes (price momentum)
+1. Tickers moving up in volume rankings with POSITIVE price movement (bullish volume momentum)
+2. Tickers with POSITIVE price spikes (bullish price momentum)
+3. Pre-market volume surges (pre-market activity)
+4. POSITIVE pre-market price changes and acceleration (bullish early signals)
 
+LONG TRADES FOCUS: Only alerts on upward price movements for bullish momentum plays.
 Runs every 2 minutes and compares with previous results to spot emerging momentum plays.
+
+Command Line Usage:
+    python volume_momentum_tracker.py [options]
+    
+    Options:
+        --bot-token TOKEN           Telegram bot token for notifications
+        --chat-id ID               Telegram chat ID for notifications
+        --continuous              Start continuous monitoring (resets counters first)
+        --reset                   Reset ticker counters and exit
+        --stats                   Show ticker statistics and exit
+        --single                  Run single scan and exit
+        --help                    Show this help message
+        
+    Examples:
+        # Single scan
+        python volume_momentum_tracker.py --single
+        
+        # Continuous monitoring with Telegram alerts
+        python volume_momentum_tracker.py --continuous --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
+        
+        # Reset counters
+        python volume_momentum_tracker.py --reset
 """
 
 import json
 import time
 import rookiepy
+import argparse
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 import logging
@@ -31,28 +58,114 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class VolumeMomentumTracker:
-    def __init__(self, output_dir="momentum_data", browser="firefox"):
+    def __init__(self, output_dir="momentum_data", browser="firefox", telegram_bot_token=None, telegram_chat_id=None):
         """
         Initialize the Volume Momentum Tracker
         
         Args:
             output_dir (str): Directory to save data files
             browser (str): Browser to extract cookies from
+            telegram_bot_token (str): Telegram bot token for notifications
+            telegram_chat_id (str): Telegram chat ID for notifications
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.browser = browser
         self.cookies = self._get_cookies()
         
+        # Initialize Telegram bot if credentials provided
+        self.telegram_bot = None
+        self.telegram_chat_id = telegram_chat_id
+        self.telegram_notifications_sent = set()
+        
+        if telegram_bot_token and telegram_chat_id:
+            try:
+                import telegram
+                self.telegram_bot = telegram.Bot(token=telegram_bot_token)
+                self.telegram_notifications_sent = self._load_telegram_notifications()
+                logger.info("✅ Telegram bot initialized successfully")
+            except ImportError:
+                logger.warning("📱 python-telegram-bot not installed. Run: pip install python-telegram-bot")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize Telegram bot: {e}")
+        
         # Historical data storage
         self.historical_data = []
         self.previous_rankings = {}
         self.price_history = {}
+        self.premarket_history = {}  # Track pre-market data
+        
+        # Ticker frequency tracking
+        self.ticker_counters = self._load_ticker_counters()
+        self.ticker_alert_history = self._load_ticker_alert_history()
         
         # Tracking settings
         self.monitor_interval = 120  # 2 minutes in seconds
         self.max_history = 50  # Keep last 50 data points
         
+    def _get_tradingview_link(self, symbol):
+        """Generate TradingView chart link for the symbol"""
+        return f"https://www.tradingview.com/chart/?symbol={symbol}&interval=5"
+    
+    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, sector, alert_types):
+        """Send Telegram alert for high-frequency ticker"""
+        if not self.telegram_bot or not self.telegram_chat_id or ticker in self.telegram_notifications_sent:
+            return
+        
+        try:
+            import asyncio
+            tradingview_link = self._get_tradingview_link(ticker)
+            alert_types_str = ', '.join(alert_types[:3])  # First 3 alert types
+            if len(alert_types) > 3:
+                alert_types_str += f" +{len(alert_types)-3}"
+            
+            message = (
+                f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
+                f"📊 Ticker: {ticker}\n"
+                f"⚡ Alert Count: {alert_count} times\n"
+                f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
+                f"📈 Volume: {volume:,}\n"
+                f"🏭 Sector: {sector}\n"
+                f"🎯 Alert Types: {alert_types_str}\n\n"
+                f"📋 This ticker has triggered {alert_count} momentum alerts, "
+                f"indicating sustained bullish activity!\n\n"
+                f"📊 View Chart: {tradingview_link}"
+            )
+            
+            # Handle async send_message properly
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            loop.run_until_complete(self.telegram_bot.send_message(self.telegram_chat_id, message))
+            self.telegram_notifications_sent.add(ticker)  # Don't spam the same ticker
+            logger.info(f"📱 Telegram alert sent for {ticker} ({alert_count} alerts)")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to send Telegram alert for {ticker}: {e}")
+    
+    def _check_high_frequency_alerts(self, ticker, alert_data):
+        """Check if ticker qualifies for Telegram notification"""
+        if not self.telegram_bot or not self.telegram_chat_id:
+            return
+        
+        alert_count = self.ticker_counters.get(ticker, 0)
+        
+        # Send Telegram alert if ticker has 5+ alerts and we haven't notified yet
+        if alert_count >= 5 and ticker not in self.telegram_notifications_sent:
+            history = self.ticker_alert_history.get(ticker, {})
+            alert_types = list(history.get('alert_types', {}).keys())
+            
+            # Get current data from the alert
+            current_price = alert_data.get('current_price', alert_data.get('price', 0))
+            change_pct = alert_data.get('change_pct', alert_data.get('premarket_change', 0))
+            volume = alert_data.get('volume', 0)
+            sector = alert_data.get('sector', 'Unknown')
+            
+            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, sector, alert_types)
+    
     def _get_cookies(self):
         """Get cookies from browser using rookiepy"""
         try:
@@ -66,6 +179,149 @@ class VolumeMomentumTracker:
         except Exception as e:
             logger.error(f"Failed to extract cookies: {e}")
             return {}
+    
+    def _load_ticker_counters(self):
+        """Load ticker appearance counters from file"""
+        counter_file = self.output_dir / "ticker_counters.json"
+        try:
+            if counter_file.exists():
+                with open(counter_file, 'r') as f:
+                    counters = json.load(f)
+                logger.info(f"Loaded ticker counters for {len(counters)} tickers")
+                return counters
+        except Exception as e:
+            logger.warning(f"Could not load ticker counters: {e}")
+        
+        return {}
+    
+    def _load_ticker_alert_history(self):
+        """Load detailed ticker alert history from file"""
+        history_file = self.output_dir / "ticker_alert_history.json"
+        try:
+            if history_file.exists():
+                with open(history_file, 'r') as f:
+                    history = json.load(f)
+                logger.info(f"Loaded alert history for {len(history)} tickers")
+                return history
+        except Exception as e:
+            logger.warning(f"Could not load ticker alert history: {e}")
+        
+        return {}
+    
+    def _load_telegram_notifications(self):
+        """Load telegram notifications sent from file"""
+        notifications_file = self.output_dir / "telegram_notifications.json"
+        try:
+            if notifications_file.exists():
+                with open(notifications_file, 'r') as f:
+                    notifications_list = json.load(f)
+                notifications_set = set(notifications_list)
+                logger.info(f"Loaded telegram notifications for {len(notifications_set)} tickers")
+                return notifications_set
+        except Exception as e:
+            logger.warning(f"Could not load telegram notifications: {e}")
+        
+        return set()
+    
+    def _save_telegram_notifications(self):
+        """Save telegram notifications sent to file"""
+        try:
+            notifications_file = self.output_dir / "telegram_notifications.json"
+            with open(notifications_file, 'w') as f:
+                json.dump(list(self.telegram_notifications_sent), f, indent=2)
+            logger.debug("Telegram notifications data saved")
+        except Exception as e:
+            logger.error(f"Could not save telegram notifications: {e}")
+    
+    def _save_ticker_data(self):
+        """Save ticker counters and history to files"""
+        try:
+            # Save counters
+            counter_file = self.output_dir / "ticker_counters.json"
+            with open(counter_file, 'w') as f:
+                json.dump(self.ticker_counters, f, indent=2)
+            
+            # Save detailed history
+            history_file = self.output_dir / "ticker_alert_history.json"
+            with open(history_file, 'w') as f:
+                json.dump(self.ticker_alert_history, f, indent=2, default=str)
+            
+            # Save telegram notifications
+            self._save_telegram_notifications()
+            
+            logger.debug("Ticker tracking data saved")
+        except Exception as e:
+            logger.error(f"Could not save ticker data: {e}")
+    
+    def _update_ticker_counter(self, ticker, alert_type, alert_data=None):
+        """Update ticker appearance counter and history"""
+        # Update main counter
+        if ticker not in self.ticker_counters:
+            self.ticker_counters[ticker] = 0
+        self.ticker_counters[ticker] += 1
+        
+        # Update detailed history
+        if ticker not in self.ticker_alert_history:
+            self.ticker_alert_history[ticker] = {
+                'total_appearances': 0,
+                'alert_types': {},
+                'first_seen': datetime.now().isoformat(),
+                'last_seen': datetime.now().isoformat(),
+                'recent_alerts': []
+            }
+        
+        history = self.ticker_alert_history[ticker]
+        history['total_appearances'] += 1
+        history['last_seen'] = datetime.now().isoformat()
+        
+        # Track by alert type
+        if alert_type not in history['alert_types']:
+            history['alert_types'][alert_type] = 0
+        history['alert_types'][alert_type] += 1
+        
+        # Keep recent alerts (last 10)
+        alert_record = {
+            'timestamp': datetime.now().isoformat(),
+            'alert_type': alert_type,
+            'data': alert_data
+        }
+        history['recent_alerts'].append(alert_record)
+        if len(history['recent_alerts']) > 10:
+            history['recent_alerts'].pop(0)
+        
+        # Check if this ticker qualifies for Telegram notification
+        if alert_data:
+            self._check_high_frequency_alerts(ticker, alert_data)
+    
+    def _add_counter_to_alerts(self, alerts, alert_type):
+        """Add appearance counter to alert data and sort by frequency"""
+        # First pass: Update counters and add appearance_count to all alerts
+        for alert in alerts:
+            ticker = alert['ticker']
+            
+            # Update counter
+            self._update_ticker_counter(ticker, alert_type, alert)
+            
+            # Add counter to alert data
+            alert['appearance_count'] = self.ticker_counters.get(ticker, 0)
+            alert['alert_types_count'] = len(self.ticker_alert_history.get(ticker, {}).get('alert_types', {}))
+        
+        # Second pass: Sort by appearance count (highest first), then by the original metric
+        try:
+            if alert_type == 'volume_climber':
+                alerts.sort(key=lambda x: (x.get('appearance_count', 0), x.get('rank_change', 0)), reverse=True)
+            elif alert_type == 'volume_newcomer':
+                alerts.sort(key=lambda x: (x.get('appearance_count', 0), -x.get('current_rank', 999)), reverse=True)
+            elif alert_type in ['price_spike', 'premarket_price']:
+                alerts.sort(key=lambda x: (x.get('appearance_count', 0), abs(x.get('change_pct', x.get('premarket_change', 0)))), reverse=True)
+            elif alert_type == 'premarket_volume':
+                alerts.sort(key=lambda x: (x.get('appearance_count', 0), x.get('premarket_volume', 0)), reverse=True)
+        except Exception as e:
+            logger.error(f"Error sorting alerts for {alert_type}: {e}")
+            # Fall back to simple sort by appearance count only
+            alerts.sort(key=lambda x: x.get('appearance_count', 0), reverse=True)
+        
+        return alerts
     
     def get_volume_screener_data(self, limit=200):
         """Get small cap data sorted by volume descending"""
@@ -82,6 +338,7 @@ class VolumeMomentumTracker:
                         'close',                    # Price
                         'float_shares_outstanding', # Float
                         'premarket_change',         # Pre-market change %
+                        'premarket_volume',         # Pre-market volume
                         'sector',                   # Sector
                         'exchange'                  # Exchange
                     )
@@ -126,7 +383,7 @@ class VolumeMomentumTracker:
             try:
                 logger.info("Trying simplified query without all columns...")
                 simple_query = (Query()
-                              .select('name', 'volume', 'close', 'change|5', 'sector', 'exchange')
+                              .select('name', 'volume', 'close', 'change|5', 'premarket_change', 'sector', 'exchange')
                               .order_by('volume', ascending=False)
                               .limit(limit * 2))
                 
@@ -174,42 +431,54 @@ class VolumeMomentumTracker:
                 previous_rank = previous_rankings[ticker]
                 rank_change = previous_rank - current_rank  # Positive = moved up
                 
-                if rank_change > 0:  # Moved up at least 1 positions
+                if rank_change > 5:  # Moved up at least 5 positions
                     # Get current data for this ticker
                     current_ticker_data = next((r for r in current_data if r['name'] == ticker), None)
                     if current_ticker_data:
-                        volume_climbers.append({
-                            'ticker': ticker,
-                            'rank_change': rank_change,
-                            'current_rank': current_rank + 1,  # 1-based ranking
-                            'previous_rank': previous_rank + 1,
-                            'volume': current_ticker_data.get('volume', 0),
-                            'price': current_ticker_data.get('close', 0),
-                            'change_pct': current_ticker_data.get('change|5', 0),
-                            'sector': current_ticker_data.get('sector', 'Unknown')
-                        })
+                        change_pct = current_ticker_data.get('change|5', 0)
+                        
+                        # ONLY ALERT IF PRICE IS ALSO GOING UP (long trades only)
+                        if change_pct > 0:  # Must have positive price movement
+                            volume_climbers.append({
+                                'ticker': ticker,
+                                'rank_change': rank_change,
+                                'current_rank': current_rank + 1,  # 1-based ranking
+                                'previous_rank': previous_rank + 1,
+                                'volume': current_ticker_data.get('volume', 0),
+                                'price': current_ticker_data.get('close', 0),
+                                'change_pct': change_pct,
+                                'sector': current_ticker_data.get('sector', 'Unknown')
+                            })
             else:
                 # New ticker in top rankings
                 if current_rank < 50:  # Only care about top 50 newcomers
                     current_ticker_data = next((r for r in current_data if r['name'] == ticker), None)
                     if current_ticker_data:
-                        volume_newcomers.append({
-                            'ticker': ticker,
-                            'current_rank': current_rank + 1,
-                            'volume': current_ticker_data.get('volume', 0),
-                            'price': current_ticker_data.get('close', 0),
-                            'change_pct': current_ticker_data.get('change|5', 0),
-                            'sector': current_ticker_data.get('sector', 'Unknown')
-                        })
+                        change_pct = current_ticker_data.get('change|5', 0)
+                        
+                        # ONLY ALERT IF PRICE IS ALSO GOING UP (long trades only)
+                        if change_pct > 0:  # Must have positive price movement
+                            volume_newcomers.append({
+                                'ticker': ticker,
+                                'current_rank': current_rank + 1,
+                                'volume': current_ticker_data.get('volume', 0),
+                                'price': current_ticker_data.get('close', 0),
+                                'change_pct': change_pct,
+                                'sector': current_ticker_data.get('sector', 'Unknown')
+                            })
         
         # Sort by rank improvement
         volume_climbers.sort(key=lambda x: x['rank_change'], reverse=True)
         volume_newcomers.sort(key=lambda x: x['current_rank'])
         
+        # Add counters and re-sort by frequency
+        volume_climbers = self._add_counter_to_alerts(volume_climbers, 'volume_climber')
+        volume_newcomers = self._add_counter_to_alerts(volume_newcomers, 'volume_newcomer')
+        
         return volume_climbers, volume_newcomers
     
     def analyze_price_spikes(self, current_data, time_window_minutes=10):
-        """Analyze which tickers have the biggest price increases"""
+        """Analyze which tickers have the biggest POSITIVE price increases (long trades only)"""
         price_spikes = []
         
         # Track price changes
@@ -220,7 +489,8 @@ class VolumeMomentumTracker:
             current_price = record.get('close', 0)
             change_pct = record.get('change|5', 0)
             
-            if ticker and current_price > 0:
+            # ONLY ALERT ON POSITIVE PRICE MOVEMENTS (for long trades)
+            if ticker and current_price > 0 and change_pct > 0:  # Must be positive change
                 # Update price history
                 if ticker not in self.price_history:
                     self.price_history[ticker] = []
@@ -243,8 +513,8 @@ class VolumeMomentumTracker:
                     oldest_entry = self.price_history[ticker][0]
                     price_change = ((current_price - oldest_entry['price']) / oldest_entry['price']) * 100
                     
-                    # Significant price spike criteria
-                    if (change_pct > 5 or price_change > 5) and current_price < 20:
+                    # Significant POSITIVE price spike criteria (long trades only)
+                    if (change_pct > 10 or price_change > 15) and current_price < 20 and change_pct > 0:
                         price_spikes.append({
                             'ticker': ticker,
                             'current_price': current_price,
@@ -255,22 +525,138 @@ class VolumeMomentumTracker:
                             'sector': record.get('sector', 'Unknown'),
                             'time_window': time_window_minutes
                         })
+                elif change_pct > 10:  # First time seeing this ticker but significant positive move
+                    price_spikes.append({
+                        'ticker': ticker,
+                        'current_price': current_price,
+                        'change_pct': change_pct,
+                        'price_change_window': change_pct,
+                        'volume': record.get('volume', 0),
+                        'relative_volume': record.get('relative_volume_10d_calc', 0),
+                        'sector': record.get('sector', 'Unknown'),
+                        'time_window': time_window_minutes
+                    })
         
-        # Sort by biggest price increases
+        # Sort by biggest POSITIVE price increases
         price_spikes.sort(key=lambda x: x['change_pct'], reverse=True)
+        
+        # Add counters and re-sort by frequency  
+        price_spikes = self._add_counter_to_alerts(price_spikes, 'price_spike')
+        
         return price_spikes
     
-    def save_alerts(self, volume_climbers, volume_newcomers, price_spikes, timestamp):
+    def analyze_premarket_activity(self, current_data, previous_data):
+        """Analyze pre-market volume and POSITIVE price changes (long trades only)"""
+        premarket_volume_alerts = []
+        premarket_price_alerts = []
+        
+        if not previous_data:
+            # For first scan, just identify significant POSITIVE pre-market activity
+            for record in current_data:
+                ticker = record.get('name')
+                premarket_change = record.get('premarket_change', 0)
+                premarket_volume = record.get('premarket_volume', 0)
+                
+                # Alert on significant POSITIVE pre-market price changes only (long trades)
+                if premarket_change > 5:  # ONLY positive moves > 5%
+                    premarket_price_alerts.append({
+                        'ticker': ticker,
+                        'premarket_change': premarket_change,
+                        'current_price': record.get('close', 0),
+                        'volume': record.get('volume', 0),
+                        'sector': record.get('sector', 'Unknown'),
+                        'alert_type': 'significant_premarket_move'
+                    })
+                
+                # Alert on high pre-market volume (if available)
+                if premarket_volume > 100000:  # > 100k pre-market volume
+                    premarket_volume_alerts.append({
+                        'ticker': ticker,
+                        'premarket_volume': premarket_volume,
+                        'current_price': record.get('close', 0),
+                        'premarket_change': premarket_change,
+                        'sector': record.get('sector', 'Unknown'),
+                        'alert_type': 'high_premarket_volume'
+                    })
+            
+            return premarket_volume_alerts, premarket_price_alerts
+        
+        # Compare with previous data for trends
+        current_premarket = {record['name']: record for record in current_data}
+        previous_premarket = {record['name']: record for record in previous_data}
+        
+        for ticker, current_record in current_premarket.items():
+            current_pm_change = current_record.get('premarket_change', 0)
+            current_pm_volume = current_record.get('premarket_volume', 0)
+            
+            if ticker in previous_premarket:
+                previous_record = previous_premarket[ticker]
+                previous_pm_change = previous_record.get('premarket_change', 0)
+                previous_pm_volume = previous_record.get('premarket_volume', 0)
+                
+                # Pre-market price acceleration - ONLY POSITIVE moves (long trades)
+                pm_change_acceleration = current_pm_change - previous_pm_change
+                if pm_change_acceleration > 3 and current_pm_change > 0:  # Must be positive and accelerating up
+                    premarket_price_alerts.append({
+                        'ticker': ticker,
+                        'premarket_change': current_pm_change,
+                        'premarket_change_acceleration': pm_change_acceleration,
+                        'current_price': current_record.get('close', 0),
+                        'volume': current_record.get('volume', 0),
+                        'sector': current_record.get('sector', 'Unknown'),
+                        'alert_type': 'premarket_acceleration'
+                    })
+                
+                # Pre-market volume surge (regardless of price direction)
+                if previous_pm_volume > 0:
+                    pm_volume_change = ((current_pm_volume - previous_pm_volume) / previous_pm_volume) * 100
+                    if pm_volume_change > 50:  # 50%+ increase in pre-market volume
+                        premarket_volume_alerts.append({
+                            'ticker': ticker,
+                            'premarket_volume': current_pm_volume,
+                            'premarket_volume_change': pm_volume_change,
+                            'current_price': current_record.get('close', 0),
+                            'premarket_change': current_pm_change,
+                            'sector': current_record.get('sector', 'Unknown'),
+                            'alert_type': 'premarket_volume_surge'
+                        })
+            else:
+                # New pre-market activity - ONLY POSITIVE moves (long trades)
+                if current_pm_change > 3:  # New significant POSITIVE pre-market move
+                    premarket_price_alerts.append({
+                        'ticker': ticker,
+                        'premarket_change': current_pm_change,
+                        'current_price': current_record.get('close', 0),
+                        'volume': current_record.get('volume', 0),
+                        'sector': current_record.get('sector', 'Unknown'),
+                        'alert_type': 'new_premarket_move'
+                    })
+        
+        # Sort alerts - price alerts by biggest POSITIVE moves
+        premarket_price_alerts.sort(key=lambda x: x['premarket_change'], reverse=True)  # Only positive now
+        premarket_volume_alerts.sort(key=lambda x: x.get('premarket_volume', 0), reverse=True)
+        
+        # Add counters and re-sort by frequency
+        premarket_price_alerts = self._add_counter_to_alerts(premarket_price_alerts, 'premarket_price')
+        premarket_volume_alerts = self._add_counter_to_alerts(premarket_volume_alerts, 'premarket_volume')
+        
+        return premarket_volume_alerts, premarket_price_alerts
+    
+    def save_alerts(self, volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts, timestamp):
         """Save movement alerts to files"""
         alerts_data = {
             'timestamp': timestamp.isoformat(),
             'volume_climbers': volume_climbers[:10],  # Top 10
             'volume_newcomers': volume_newcomers[:10],  # Top 10
             'price_spikes': price_spikes[:10],  # Top 10
+            'premarket_volume_alerts': premarket_volume_alerts[:10],  # Top 10
+            'premarket_price_alerts': premarket_price_alerts[:10],  # Top 10
             'summary': {
                 'total_volume_climbers': len(volume_climbers),
                 'total_newcomers': len(volume_newcomers),
-                'total_price_spikes': len(price_spikes)
+                'total_price_spikes': len(price_spikes),
+                'total_premarket_volume_alerts': len(premarket_volume_alerts),
+                'total_premarket_price_alerts': len(premarket_price_alerts)
             }
         }
         
@@ -287,75 +673,192 @@ class VolumeMomentumTracker:
         logger.info(f"Alerts saved: {alerts_file}")
         return alerts_data
     
-    def print_alerts(self, volume_climbers, volume_newcomers, price_spikes):
+    def print_alerts(self, volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts):
         """Print movement alerts to console"""
         print("\n" + "="*80)
         print(f"🚨 MOMENTUM ALERTS - {datetime.now().strftime('%H:%M:%S')}")
         print("="*80)
         
+        # Show trending tickers summary first
+        try:
+            self._print_trending_summary()
+        except Exception as e:
+            logger.error(f"Error printing trending summary: {e}")
+        
         if volume_climbers:
-            print(f"\n📈 VOLUME CLIMBERS ({len(volume_climbers)} found):")
-            print("-" * 60)
+            print(f"\n📈 VOLUME CLIMBERS ({len(volume_climbers)} found) - Sorted by Frequency:")
+            print("-" * 70)
             for climber in volume_climbers[:5]:  # Top 5
-                print(f"  {climber['ticker']:6} | Rank: {climber['previous_rank']:3d} → {climber['current_rank']:3d} "
-                      f"(+{climber['rank_change']:2d}) | Vol: {climber['volume']:>10,} | "
-                      f"${climber['price']:6.2f} ({climber['change_pct']:+5.1f}%) | {climber['sector']}")
+                try:
+                    count = climber.get('appearance_count', 1)  # Default to 1 if missing
+                    print(f"  {climber['ticker']:6} [{count:2d}x] | Rank: {climber['previous_rank']:3d} → {climber['current_rank']:3d} "
+                          f"(+{climber['rank_change']:2d}) | Vol: {climber['volume']:>10,} | "
+                          f"${climber['price']:6.2f} ({climber.get('change_pct', 0):+5.1f}%) | {climber.get('sector', 'Unknown')}")
+                except Exception as e:
+                    logger.error(f"Error printing volume climber {climber.get('ticker', 'Unknown')}: {e}")
         
         if volume_newcomers:
-            print(f"\n🆕 NEW HIGH VOLUME ({len(volume_newcomers)} found):")
-            print("-" * 60)
+            print(f"\n🆕 NEW HIGH VOLUME ({len(volume_newcomers)} found) - Sorted by Frequency:")
+            print("-" * 70)
             for newcomer in volume_newcomers[:5]:  # Top 5
-                print(f"  {newcomer['ticker']:6} | NEW → Rank {newcomer['current_rank']:3d} | "
-                      f"Vol: {newcomer['volume']:>10,} | ${newcomer['price']:6.2f} "
-                      f"({newcomer['change_pct']:+5.1f}%) | {newcomer['sector']}")
+                try:
+                    count = newcomer.get('appearance_count', 1)
+                    print(f"  {newcomer['ticker']:6} [{count:2d}x] | NEW → Rank {newcomer['current_rank']:3d} | "
+                          f"Vol: {newcomer['volume']:>10,} | ${newcomer['price']:6.2f} "
+                          f"({newcomer.get('change_pct', 0):+5.1f}%) | {newcomer.get('sector', 'Unknown')}")
+                except Exception as e:
+                    logger.error(f"Error printing volume newcomer {newcomer.get('ticker', 'Unknown')}: {e}")
         
         if price_spikes:
-            print(f"\n🔥 PRICE SPIKES ({len(price_spikes)} found):")
-            print("-" * 60)
+            print(f"\n🔥 PRICE SPIKES ({len(price_spikes)} found) - Sorted by Frequency:")
+            print("-" * 70)
             for spike in price_spikes[:5]:  # Top 5
-                print(f"  {spike['ticker']:6} | ${spike['current_price']:6.2f} ({spike['change_pct']:+5.1f}%) | "
-                      f"Vol: {spike['volume']:>10,} | RelVol: {spike['relative_volume']:4.1f}x | {spike['sector']}")
+                try:
+                    count = spike.get('appearance_count', 1)
+                    print(f"  {spike['ticker']:6} [{count:2d}x] | ${spike['current_price']:6.2f} ({spike.get('change_pct', 0):+5.1f}%) | "
+                          f"Vol: {spike.get('volume', 0):>10,} | RelVol: {spike.get('relative_volume', 0):4.1f}x | {spike.get('sector', 'Unknown')}")
+                except Exception as e:
+                    logger.error(f"Error printing price spike {spike.get('ticker', 'Unknown')}: {e}")
         
-        if not volume_climbers and not volume_newcomers and not price_spikes:
+        if premarket_volume_alerts:
+            print(f"\n🌅 PRE-MARKET VOLUME ({len(premarket_volume_alerts)} found) - Sorted by Frequency:")
+            print("-" * 70)
+            for alert in premarket_volume_alerts[:5]:  # Top 5
+                try:
+                    count = alert.get('appearance_count', 1)
+                    if alert.get('alert_type') == 'premarket_volume_surge':
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} "
+                              f"(+{alert.get('premarket_volume_change', 0):5.1f}%) | ${alert.get('current_price', 0):6.2f} "
+                              f"PM: {alert.get('premarket_change', 0):+5.1f}% | {alert.get('sector', 'Unknown')}")
+                    else:
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} | "
+                              f"${alert.get('current_price', 0):6.2f} PM: {alert.get('premarket_change', 0):+5.1f}% | {alert.get('sector', 'Unknown')}")
+                except Exception as e:
+                    logger.error(f"Error printing premarket volume alert {alert.get('ticker', 'Unknown')}: {e}")
+        
+        if premarket_price_alerts:
+            print(f"\n🌄 PRE-MARKET MOVERS ({len(premarket_price_alerts)} found) - Sorted by Frequency:")
+            print("-" * 70)
+            for alert in premarket_price_alerts[:5]:  # Top 5
+                try:
+                    count = alert.get('appearance_count', 1)
+                    if alert.get('alert_type') == 'premarket_acceleration':
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {alert.get('premarket_change', 0):+6.1f}% "
+                              f"(Δ{alert.get('premarket_change_acceleration', 0):+5.1f}%) | ${alert.get('current_price', 0):6.2f} | "
+                              f"Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
+                    else:
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {alert.get('premarket_change', 0):+6.1f}% | "
+                              f"${alert.get('current_price', 0):6.2f} | Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
+                except Exception as e:
+                    logger.error(f"Error printing premarket price alert {alert.get('ticker', 'Unknown')}: {e}")
+        
+        if not any([volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts]):
             print("\n😴 No significant momentum detected this cycle.")
         
         print("="*80)
+    
+    def _print_trending_summary(self):
+        """Print summary of most frequently appearing tickers"""
+        if not self.ticker_counters:
+            return
+        
+        # Get top trending tickers
+        sorted_tickers = sorted(self.ticker_counters.items(), key=lambda x: x[1], reverse=True)
+        top_tickers = sorted_tickers[:10]  # Top 10
+        
+        print(f"\n🔥 TOP TRENDING TICKERS (Most Frequent Alerts):")
+        print("-" * 70)
+        
+        for i, (ticker, count) in enumerate(top_tickers[:5], 1):
+            history = self.ticker_alert_history.get(ticker, {})
+            alert_types = list(history.get('alert_types', {}).keys())
+            alert_types_str = ', '.join(alert_types[:3])  # Show first 3 types
+            if len(alert_types) > 3:
+                alert_types_str += f" +{len(alert_types)-3}"
+            
+            print(f"  #{i:1d}. {ticker:6} | {count:2d} alerts | Types: {alert_types_str}")
+        
+        if len(top_tickers) > 5:
+            others = ', '.join([f"{ticker}({count})" for ticker, count in top_tickers[5:10]])
+            print(f"  Also trending: {others}")
     
     def run_single_scan(self):
         """Run a single scan and compare with previous data"""
         timestamp = datetime.now()
         logger.info(f"Starting scan cycle at {timestamp.strftime('%H:%M:%S')}")
         
-        # Get current data
-        current_data = self.get_volume_screener_data()
-        if not current_data:
-            logger.error("Failed to get current data")
-            return
-        
-        # Analyze movements
-        previous_data = self.historical_data[-1] if self.historical_data else None
-        
-        volume_climbers, volume_newcomers = self.analyze_volume_movement(current_data, previous_data)
-        price_spikes = self.analyze_price_spikes(current_data)
-        
-        # Print alerts
-        self.print_alerts(volume_climbers, volume_newcomers, price_spikes)
-        
-        # Save alerts
-        alerts_data = self.save_alerts(volume_climbers, volume_newcomers, price_spikes, timestamp)
-        
-        # Store current data for next comparison
-        self.historical_data.append(current_data)
-        if len(self.historical_data) > self.max_history:
-            self.historical_data.pop(0)  # Keep only recent history
-        
-        # Save raw data
-        raw_file = self.output_dir / f"raw_data_{timestamp.strftime('%Y%m%d_%H%M%S')}.json"
-        with open(raw_file, 'w') as f:
-            json.dump(current_data, f, indent=2, default=str)
-        
-        logger.info(f"Scan cycle completed. Found: {len(volume_climbers)} climbers, "
-                   f"{len(volume_newcomers)} newcomers, {len(price_spikes)} price spikes")
+        try:
+            # Get current data
+            current_data = self.get_volume_screener_data()
+            if not current_data:
+                logger.error("Failed to get current data")
+                return
+            
+            # Analyze movements
+            previous_data = self.historical_data[-1] if self.historical_data else None
+            
+            try:
+                volume_climbers, volume_newcomers = self.analyze_volume_movement(current_data, previous_data)
+            except Exception as e:
+                logger.error(f"Error analyzing volume movement: {e}")
+                volume_climbers, volume_newcomers = [], []
+            
+            try:
+                price_spikes = self.analyze_price_spikes(current_data)
+            except Exception as e:
+                logger.error(f"Error analyzing price spikes: {e}")
+                price_spikes = []
+            
+            try:
+                premarket_volume_alerts, premarket_price_alerts = self.analyze_premarket_activity(current_data, previous_data)
+            except Exception as e:
+                logger.error(f"Error analyzing premarket activity: {e}")
+                premarket_volume_alerts, premarket_price_alerts = [], []
+            
+            # Print alerts with error handling
+            try:
+                self.print_alerts(volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts)
+            except Exception as e:
+                logger.error(f"Error printing alerts: {e}")
+                print(f"⚠️  Error displaying alerts: {e}")
+                print(f"Found: {len(volume_climbers)} climbers, {len(volume_newcomers)} newcomers, "
+                      f"{len(price_spikes)} price spikes, {len(premarket_volume_alerts)} PM volume, "
+                      f"{len(premarket_price_alerts)} PM price alerts")
+            
+            # Save alerts
+            try:
+                alerts_data = self.save_alerts(volume_climbers, volume_newcomers, price_spikes, 
+                                             premarket_volume_alerts, premarket_price_alerts, timestamp)
+            except Exception as e:
+                logger.error(f"Error saving alerts: {e}")
+            
+            # Save ticker tracking data
+            try:
+                self._save_ticker_data()
+            except Exception as e:
+                logger.error(f"Error saving ticker data: {e}")
+            
+            # Store current data for next comparison
+            self.historical_data.append(current_data)
+            if len(self.historical_data) > self.max_history:
+                self.historical_data.pop(0)  # Keep only recent history
+            
+            # Save raw data
+            try:
+                raw_file = self.output_dir / f"raw_data_{timestamp.strftime('%Y%m%d_%H%M%S')}.json"
+                with open(raw_file, 'w') as f:
+                    json.dump(current_data, f, indent=2, default=str)
+            except Exception as e:
+                logger.error(f"Error saving raw data: {e}")
+            
+            logger.info(f"Scan cycle completed. Found: {len(volume_climbers)} climbers, "
+                       f"{len(volume_newcomers)} newcomers, {len(price_spikes)} price spikes, "
+                       f"{len(premarket_volume_alerts)} PM volume alerts, {len(premarket_price_alerts)} PM price alerts")
+                       
+        except Exception as e:
+            logger.error(f"Critical error in scan cycle: {e}")
+            print(f"⚠️  Scan cycle failed: {e}")
+            print("Will retry in next cycle...")
     
     def run_continuous_monitoring(self):
         """Run continuous monitoring every 2 minutes"""
@@ -363,6 +866,11 @@ class VolumeMomentumTracker:
         logger.info(f"📊 Scanning every {self.monitor_interval} seconds (2 minutes)")
         logger.info(f"🎯 Tracking: Volume climbers, newcomers, and price spikes")
         logger.info(f"💾 Data saved to: {self.output_dir}")
+        
+        if self.telegram_bot and self.telegram_chat_id:
+            logger.info("📱 Telegram notifications: ✅ ENABLED")
+        else:
+            logger.info("📱 Telegram notifications: ❌ DISABLED")
         
         try:
             while True:
@@ -383,44 +891,192 @@ class VolumeMomentumTracker:
                     
         except KeyboardInterrupt:
             logger.info("🛑 Volume momentum monitoring stopped")
+    
+    def reset_ticker_counters(self):
+        """Reset all ticker counters and history"""
+        self.ticker_counters = {}
+        self.ticker_alert_history = {}
+        self.telegram_notifications_sent = set()  # Reset Telegram notifications too
+        self._save_ticker_data()
+        logger.info("🔄 Ticker counters, history, and Telegram notifications reset")
+    
+    def print_ticker_stats(self):
+        """Print detailed ticker statistics"""
+        if not self.ticker_counters:
+            print("No ticker data available yet.")
+            return
+        
+        print(f"\n📊 TICKER STATISTICS")
+        print("=" * 60)
+        
+        sorted_tickers = sorted(self.ticker_counters.items(), key=lambda x: x[1], reverse=True)
+        
+        print(f"Total tracked tickers: {len(sorted_tickers)}")
+        print(f"Most active ticker: {sorted_tickers[0][0]} ({sorted_tickers[0][1]} alerts)")
+        
+        print(f"\nTop 10 Most Active Tickers:")
+        print("-" * 60)
+        
+        for i, (ticker, count) in enumerate(sorted_tickers[:10], 1):
+            history = self.ticker_alert_history.get(ticker, {})
+            alert_types = history.get('alert_types', {})
+            types_str = ', '.join([f"{k}({v})" for k, v in alert_types.items()])
+            
+            print(f"{i:2d}. {ticker:6} | {count:3d} total | {types_str}")
+
+    def test_telegram_bot(self):
+        """Test Telegram bot connectivity"""
+        if not self.telegram_bot or not self.telegram_chat_id:
+            print("❌ Telegram bot not configured. Provide --bot-token and --chat-id parameters.")
+            return False
+        
+        try:
+            import asyncio
+            test_message = "🧪 Test message from Volume Momentum Tracker\n\n📊 If you see this, Telegram notifications are working correctly!"
+            
+            # Handle async send_message properly
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            loop.run_until_complete(self.telegram_bot.send_message(self.telegram_chat_id, test_message))
+            print("✅ Test message sent successfully!")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to send test message: {e}")
+            return False
+
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="Volume Momentum Tracker - Real-time Small Caps Monitor",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  Single scan:
+    python volume_momentum_tracker.py --single
+    
+  Continuous monitoring with Telegram:
+    python volume_momentum_tracker.py --continuous --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
+    
+  Reset counters:
+    python volume_momentum_tracker.py --reset
+    
+  Show statistics:
+    python volume_momentum_tracker.py --stats
+        """
+    )
+    
+    # Action arguments (mutually exclusive)
+    action_group = parser.add_mutually_exclusive_group(required=True)
+    action_group.add_argument('--single', action='store_true', 
+                            help='Run single scan and exit')
+    action_group.add_argument('--continuous', action='store_true', 
+                            help='Start continuous monitoring (resets counters first)')
+    action_group.add_argument('--reset', action='store_true', 
+                            help='Reset ticker counters and exit')
+    action_group.add_argument('--stats', action='store_true', 
+                            help='Show ticker statistics and exit')
+    action_group.add_argument('--test-bot', action='store_true', 
+                            help='Test Telegram bot connectivity and exit')
+    
+    # Telegram configuration
+    parser.add_argument('--bot-token', type=str, 
+                       help='Telegram bot token for notifications')
+    parser.add_argument('--chat-id', type=str, 
+                       help='Telegram chat ID for notifications')
+    
+    # Optional configuration
+    parser.add_argument('--output-dir', type=str, default='momentum_data',
+                       help='Directory to save data files (default: momentum_data)')
+    parser.add_argument('--browser', type=str, default='firefox',
+                       choices=['firefox', 'chrome', 'edge', 'safari'],
+                       help='Browser to extract cookies from (default: firefox)')
+    
+    return parser.parse_args()
 
 def main():
     """Main function to run the volume momentum tracker"""
     
-    # Configuration
-    OUTPUT_DIR = "momentum_tracking"
-    BROWSER = "firefox"  # or "chrome", "edge", etc.
+    # Parse command line arguments
+    args = parse_arguments()
     
     try:
         # Initialize the tracker
         tracker = VolumeMomentumTracker(
-            output_dir=OUTPUT_DIR,
-            browser=BROWSER
+            output_dir=args.output_dir,
+            browser=args.browser,
+            telegram_bot_token=args.bot_token,
+            telegram_chat_id=args.chat_id
         )
         
-        print("🎯 Volume Momentum Tracker")
-        print("=" * 40)
-        print("Tracks small cap stocks (price < $20) for:")
-        print("  📈 Volume ranking improvements") 
-        print("  🆕 New high-volume entries")
-        print("  🔥 Price spikes")
+        # Print header
+        print("🎯 Volume Momentum Tracker with CLI Parameters (LONG TRADES)")
+        print("=" * 70)
+        print("Tracks small cap stocks (price < $20) for BULLISH momentum:")
+        print("  📈 Volume ranking improvements (with positive price movement)") 
+        print("  🆕 New high-volume entries (with positive price movement)")
+        print("  🔥 POSITIVE price spikes only")
+        print("  🌅 Pre-market volume surges")
+        print("  🌄 POSITIVE pre-market price movements only")
+        print("  📊 Tracks frequency of alerts per ticker")
+        print("  🔥 Shows trending tickers (most frequent)")
+        print("  📱 Sends Telegram alerts for tickers with 5+ alerts")
         print("  ⏱️  Updates every 2 minutes")
-        print("=" * 40)
+        print("  🚀 LONG TRADES ONLY - No bearish alerts")
+        print("=" * 70)
         
-        # Ask user what to do
-        choice = input("\n[S]ingle scan or [C]ontinuous monitoring? (s/c): ").lower().strip()
+        # Show Telegram status
+        if tracker.telegram_bot and tracker.telegram_chat_id:
+            print("📱 Telegram notifications: ✅ ENABLED")
+        else:
+            print("📱 Telegram notifications: ❌ DISABLED")
+            if args.continuous:
+                print("   💡 Use --bot-token and --chat-id for Telegram alerts")
+        print("=" * 70)
         
-        if choice == 's':
+        # Execute the requested action
+        if args.single:
             print("\n🔍 Running single scan...")
             tracker.run_single_scan()
             print("\n✅ Single scan completed. Check output files for detailed data.")
-        else:
-            print("\n🚀 Starting continuous monitoring...")
+            
+        elif args.continuous:
+            print("\n🔄 Resetting ticker counters before continuous monitoring...")
+            tracker.reset_ticker_counters()
+            print("✅ Counters reset. Starting continuous monitoring...")
             print("Press Ctrl+C to stop")
             tracker.run_continuous_monitoring()
+            
+        elif args.reset:
+            print("\n🔄 Resetting ticker counters...")
+            tracker.reset_ticker_counters()
+            print("✅ Ticker counters reset.")
+            
+        elif args.stats:
+            print("\n📊 Ticker Statistics:")
+            tracker.print_ticker_stats()
+            
+        elif args.test_bot:
+            print("\n🧪 Testing Telegram bot...")
+            if not args.bot_token or not args.chat_id:
+                print("❌ Bot token and chat ID are required for testing.")
+                print("Usage: --test-bot --bot-token 'YOUR_TOKEN' --chat-id 'YOUR_CHAT_ID'")
+                sys.exit(1)
+            
+            if tracker.test_telegram_bot():
+                print("✅ Telegram bot test successful!")
+            else:
+                print("❌ Telegram bot test failed!")
+                sys.exit(1)
         
+    except KeyboardInterrupt:
+        logger.info("🛑 Operation stopped by user")
     except Exception as e:
         logger.error(f"Error in main: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

@@ -2,3 +2,5 @@ tradingview-screener
 rookiepy
 pandas
 schedule
+python-telegram-bot
+pyTelegramBotAPI
