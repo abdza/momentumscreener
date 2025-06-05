@@ -105,7 +105,7 @@ class VolumeMomentumTracker:
         
     def _get_tradingview_link(self, symbol):
         """Generate TradingView chart link for the symbol"""
-        return f"https://www.tradingview.com/chart/?symbol={symbol}&interval=5"
+        return f"https://www.tradingview.com/chart/?symbol={symbol}"
     
     def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, sector, alert_types):
         """Send Telegram alert for high-frequency ticker"""
