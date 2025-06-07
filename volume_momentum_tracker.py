@@ -31,6 +31,9 @@ Command Line Usage:
         
         # Reset counters
         python volume_momentum_tracker.py --reset
+        
+        # Kill running process
+        kill $(cat /tmp/screener.pid)
 """
 
 import json
@@ -38,6 +41,8 @@ import time
 import rookiepy
 import argparse
 import sys
+import os
+import atexit
 from datetime import datetime, timedelta
 from pathlib import Path
 import logging
@@ -56,6 +61,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# PID file path
+PID_FILE = "/tmp/screener.pid"
 
 class VolumeMomentumTracker:
     def __init__(self, output_dir="momentum_data", browser="firefox", telegram_bot_token=None, telegram_chat_id=None):
@@ -76,13 +84,14 @@ class VolumeMomentumTracker:
         # Initialize Telegram bot if credentials provided
         self.telegram_bot = None
         self.telegram_chat_id = telegram_chat_id
-        self.telegram_notifications_sent = set()
+        self.telegram_last_sent = {}  # Track last notification time per ticker for rate limiting
+        self.telegram_notification_interval = 30 * 60  # 30 minutes between notifications for same ticker
         
         if telegram_bot_token and telegram_chat_id:
             try:
                 import telegram
                 self.telegram_bot = telegram.Bot(token=telegram_bot_token)
-                self.telegram_notifications_sent = self._load_telegram_notifications()
+                self.telegram_last_sent = self._load_telegram_last_sent()
                 logger.info("✅ Telegram bot initialized successfully")
             except ImportError:
                 logger.warning("📱 python-telegram-bot not installed. Run: pip install python-telegram-bot")
@@ -103,14 +112,49 @@ class VolumeMomentumTracker:
         self.monitor_interval = 120  # 2 minutes in seconds
         self.max_history = 50  # Keep last 50 data points
         
+    def _create_pid_file(self):
+        """Create PID file with current process ID"""
+        try:
+            pid = os.getpid()
+            with open(PID_FILE, 'w') as f:
+                f.write(str(pid))
+            logger.info(f"📁 PID file created: {PID_FILE} (PID: {pid})")
+            print(f"📁 Process ID: {pid} (saved to {PID_FILE})")
+            print(f"💡 To stop the process later: kill $(cat {PID_FILE})")
+            
+            # Register cleanup function to remove PID file on exit
+            atexit.register(self._cleanup_pid_file)
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to create PID file: {e}")
+    
+    def _cleanup_pid_file(self):
+        """Remove PID file on exit"""
+        try:
+            if os.path.exists(PID_FILE):
+                os.remove(PID_FILE)
+                logger.info(f"🗑️  PID file removed: {PID_FILE}")
+        except Exception as e:
+            logger.error(f"❌ Failed to remove PID file: {e}")
+    
     def _get_tradingview_link(self, symbol):
         """Generate TradingView chart link for the symbol"""
         return f"https://www.tradingview.com/chart/?symbol={symbol}"
     
     def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, sector, alert_types):
-        """Send Telegram alert for high-frequency ticker"""
-        if not self.telegram_bot or not self.telegram_chat_id or ticker in self.telegram_notifications_sent:
+        """Send Telegram alert for high-frequency ticker with rate limiting"""
+        if not self.telegram_bot or not self.telegram_chat_id:
             return
+        
+        # Check rate limiting - don't send if we sent a notification for this ticker recently
+        current_time = datetime.now()
+        last_sent_time = self.telegram_last_sent.get(ticker)
+        
+        if last_sent_time:
+            time_since_last = (current_time - datetime.fromisoformat(last_sent_time)).total_seconds()
+            if time_since_last < self.telegram_notification_interval:
+                logger.debug(f"Rate limiting: Skipping Telegram alert for {ticker} (sent {time_since_last:.0f}s ago)")
+                return
         
         try:
             import asyncio
@@ -140,21 +184,23 @@ class VolumeMomentumTracker:
                 asyncio.set_event_loop(loop)
             
             loop.run_until_complete(self.telegram_bot.send_message(self.telegram_chat_id, message))
-            self.telegram_notifications_sent.add(ticker)  # Don't spam the same ticker
+            
+            # Update last sent time for rate limiting
+            self.telegram_last_sent[ticker] = current_time.isoformat()
             logger.info(f"📱 Telegram alert sent for {ticker} ({alert_count} alerts)")
             
         except Exception as e:
             logger.error(f"❌ Failed to send Telegram alert for {ticker}: {e}")
     
     def _check_high_frequency_alerts(self, ticker, alert_data):
-        """Check if ticker qualifies for Telegram notification"""
+        """Check if ticker qualifies for Telegram notification (sends every time for 5+ alerts with rate limiting)"""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
         
         alert_count = self.ticker_counters.get(ticker, 0)
         
-        # Send Telegram alert if ticker has 5+ alerts and we haven't notified yet
-        if alert_count >= 5 and ticker not in self.telegram_notifications_sent:
+        # Send Telegram alert every time for tickers with 5+ alerts (with rate limiting)
+        if alert_count >= 5:
             history = self.ticker_alert_history.get(ticker, {})
             alert_types = list(history.get('alert_types', {}).keys())
             
@@ -208,30 +254,29 @@ class VolumeMomentumTracker:
         
         return {}
     
-    def _load_telegram_notifications(self):
-        """Load telegram notifications sent from file"""
-        notifications_file = self.output_dir / "telegram_notifications.json"
+    def _load_telegram_last_sent(self):
+        """Load telegram last sent times from file"""
+        last_sent_file = self.output_dir / "telegram_last_sent.json"
         try:
-            if notifications_file.exists():
-                with open(notifications_file, 'r') as f:
-                    notifications_list = json.load(f)
-                notifications_set = set(notifications_list)
-                logger.info(f"Loaded telegram notifications for {len(notifications_set)} tickers")
-                return notifications_set
+            if last_sent_file.exists():
+                with open(last_sent_file, 'r') as f:
+                    last_sent = json.load(f)
+                logger.info(f"Loaded telegram last sent times for {len(last_sent)} tickers")
+                return last_sent
         except Exception as e:
-            logger.warning(f"Could not load telegram notifications: {e}")
+            logger.warning(f"Could not load telegram last sent times: {e}")
         
-        return set()
+        return {}
     
-    def _save_telegram_notifications(self):
-        """Save telegram notifications sent to file"""
+    def _save_telegram_last_sent(self):
+        """Save telegram last sent times to file"""
         try:
-            notifications_file = self.output_dir / "telegram_notifications.json"
-            with open(notifications_file, 'w') as f:
-                json.dump(list(self.telegram_notifications_sent), f, indent=2)
-            logger.debug("Telegram notifications data saved")
+            last_sent_file = self.output_dir / "telegram_last_sent.json"
+            with open(last_sent_file, 'w') as f:
+                json.dump(self.telegram_last_sent, f, indent=2)
+            logger.debug("Telegram last sent times saved")
         except Exception as e:
-            logger.error(f"Could not save telegram notifications: {e}")
+            logger.error(f"Could not save telegram last sent times: {e}")
     
     def _save_ticker_data(self):
         """Save ticker counters and history to files"""
@@ -246,8 +291,8 @@ class VolumeMomentumTracker:
             with open(history_file, 'w') as f:
                 json.dump(self.ticker_alert_history, f, indent=2, default=str)
             
-            # Save telegram notifications
-            self._save_telegram_notifications()
+            # Save telegram last sent times
+            self._save_telegram_last_sent()
             
             logger.debug("Ticker tracking data saved")
         except Exception as e:
@@ -862,6 +907,9 @@ class VolumeMomentumTracker:
     
     def run_continuous_monitoring(self):
         """Run continuous monitoring every 2 minutes"""
+        # Create PID file when starting continuous monitoring
+        self._create_pid_file()
+        
         logger.info("🚀 Starting continuous volume momentum monitoring...")
         logger.info(f"📊 Scanning every {self.monitor_interval} seconds (2 minutes)")
         logger.info(f"🎯 Tracking: Volume climbers, newcomers, and price spikes")
@@ -869,6 +917,7 @@ class VolumeMomentumTracker:
         
         if self.telegram_bot and self.telegram_chat_id:
             logger.info("📱 Telegram notifications: ✅ ENABLED")
+            logger.info(f"📱 Rate limiting: {self.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
         else:
             logger.info("📱 Telegram notifications: ❌ DISABLED")
         
@@ -891,14 +940,17 @@ class VolumeMomentumTracker:
                     
         except KeyboardInterrupt:
             logger.info("🛑 Volume momentum monitoring stopped")
+        finally:
+            # Clean up PID file when exiting
+            self._cleanup_pid_file()
     
     def reset_ticker_counters(self):
         """Reset all ticker counters and history"""
         self.ticker_counters = {}
         self.ticker_alert_history = {}
-        self.telegram_notifications_sent = set()  # Reset Telegram notifications too
+        self.telegram_last_sent = {}  # Reset Telegram rate limiting too
         self._save_ticker_data()
-        logger.info("🔄 Ticker counters, history, and Telegram notifications reset")
+        logger.info("🔄 Ticker counters, history, and Telegram rate limiting reset")
     
     def print_ticker_stats(self):
         """Print detailed ticker statistics"""
@@ -932,7 +984,7 @@ class VolumeMomentumTracker:
         
         try:
             import asyncio
-            test_message = "🧪 Test message from Volume Momentum Tracker\n\n📊 If you see this, Telegram notifications are working correctly!"
+            test_message = "🧪 Test message from Volume Momentum Tracker\n\n📊 If you see this, Telegram notifications are working correctly!\n\n📱 Notifications will be sent for every alert of tickers with 5+ total alerts (rate limited to once per 30 minutes per ticker)."
             
             # Handle async send_message properly
             try:
@@ -966,6 +1018,9 @@ Examples:
     
   Show statistics:
     python volume_momentum_tracker.py --stats
+    
+  Kill running process:
+    kill $(cat /tmp/screener.pid)
         """
     )
     
@@ -1023,7 +1078,8 @@ def main():
         print("  🌄 POSITIVE pre-market price movements only")
         print("  📊 Tracks frequency of alerts per ticker")
         print("  🔥 Shows trending tickers (most frequent)")
-        print("  📱 Sends Telegram alerts for tickers with 5+ alerts")
+        print("  📱 Sends Telegram alerts for EVERY alert of tickers with 5+ alerts")
+        print("  📱 Rate limiting: 30 minutes between notifications per ticker")
         print("  ⏱️  Updates every 2 minutes")
         print("  🚀 LONG TRADES ONLY - No bearish alerts")
         print("=" * 70)
@@ -1031,6 +1087,7 @@ def main():
         # Show Telegram status
         if tracker.telegram_bot and tracker.telegram_chat_id:
             print("📱 Telegram notifications: ✅ ENABLED")
+            print(f"📱 Rate limiting: {tracker.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
         else:
             print("📱 Telegram notifications: ❌ DISABLED")
             if args.continuous:
