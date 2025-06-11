@@ -43,6 +43,8 @@ import argparse
 import sys
 import os
 import atexit
+import requests
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 import logging
@@ -87,6 +89,10 @@ class VolumeMomentumTracker:
         self.telegram_last_sent = {}  # Track last notification time per ticker for rate limiting
         self.telegram_notification_interval = 30 * 60  # 30 minutes between notifications for same ticker
         
+        # News cache to avoid repeated API calls
+        self.news_cache = {}
+        self.news_cache_duration = 60 * 60  # Cache news for 1 hour
+        
         if telegram_bot_token and telegram_chat_id:
             try:
                 import telegram
@@ -111,7 +117,205 @@ class VolumeMomentumTracker:
         # Tracking settings
         self.monitor_interval = 120  # 2 minutes in seconds
         self.max_history = 50  # Keep last 50 data points
+    
+    def _get_recent_news(self, ticker, max_headlines=3):
+        """
+        Get recent news headlines for a ticker (within last 3 days)
         
+        Args:
+            ticker (str): Stock ticker symbol
+            max_headlines (int): Maximum number of headlines to return
+            
+        Returns:
+            list: List of dictionaries with 'title' and 'url' keys
+        """
+        # Check cache first
+        cache_key = ticker.upper()
+        current_time = datetime.now()
+        
+        if cache_key in self.news_cache:
+            cached_data = self.news_cache[cache_key]
+            cache_time = datetime.fromisoformat(cached_data['timestamp'])
+            if (current_time - cache_time).total_seconds() < self.news_cache_duration:
+                logger.debug(f"Using cached news for {ticker}")
+                return cached_data['headlines']
+        
+        headlines = []
+        
+        try:
+            # Method 1: Try Google News search
+            headlines = self._search_google_news(ticker, max_headlines)
+            
+            # Method 2: If Google News fails, try Bing News
+            if not headlines:
+                headlines = self._search_bing_news(ticker, max_headlines)
+            
+            # Method 3: If both fail, try Yahoo Finance
+            if not headlines:
+                headlines = self._search_yahoo_finance_news(ticker, max_headlines)
+            
+            # Cache the results
+            self.news_cache[cache_key] = {
+                'timestamp': current_time.isoformat(),
+                'headlines': headlines
+            }
+            
+            logger.debug(f"Found {len(headlines)} news headlines for {ticker}")
+            
+        except Exception as e:
+            logger.error(f"Error fetching news for {ticker}: {e}")
+            headlines = []
+        
+        return headlines
+    
+    def _search_google_news(self, ticker, max_headlines=3):
+        """Search Google News for recent ticker news"""
+        headlines = []
+        
+        try:
+            # Google News RSS feed
+            three_days_ago = datetime.now() - timedelta(days=3)
+            
+            # Use Google News RSS with search query
+            search_query = f"{ticker} stock"
+            url = f"https://news.google.com/rss/search?q={search_query}&hl=en-US&gl=US&ceid=US:en"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            # Parse RSS feed (basic XML parsing)
+            import xml.etree.ElementTree as ET
+            
+            root = ET.fromstring(response.content)
+            
+            for item in root.findall('.//item')[:max_headlines * 2]:  # Get more to filter by date
+                try:
+                    title_elem = item.find('title')
+                    link_elem = item.find('link')
+                    pub_date_elem = item.find('pubDate')
+                    
+                    if title_elem is not None and link_elem is not None:
+                        title = title_elem.text
+                        link = link_elem.text
+                        
+                        # Check if published within last 3 days
+                        if pub_date_elem is not None:
+                            try:
+                                # Parse RFC 2822 date format
+                                from email.utils import parsedate_to_datetime
+                                pub_date = parsedate_to_datetime(pub_date_elem.text)
+                                if pub_date < three_days_ago:
+                                    continue
+                            except:
+                                pass  # If date parsing fails, include the article
+                        
+                        # Filter out obviously unrelated news
+                        if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares', 'trading']):
+                            headlines.append({
+                                'title': title[:100] + '...' if len(title) > 100 else title,
+                                'url': link
+                            })
+                            
+                            if len(headlines) >= max_headlines:
+                                break
+                                
+                except Exception as e:
+                    logger.debug(f"Error parsing news item: {e}")
+                    continue
+            
+        except Exception as e:
+            logger.debug(f"Google News search failed for {ticker}: {e}")
+        
+        return headlines
+    
+    def _search_bing_news(self, ticker, max_headlines=3):
+        """Search Bing News for recent ticker news"""
+        headlines = []
+        
+        try:
+            # Bing News search
+            search_query = f"{ticker} stock news"
+            url = f"https://www.bing.com/news/search?q={search_query}&qft=interval%3d%227%22"  # Last week
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            # Basic HTML parsing to extract news links and titles
+            content = response.text
+            
+            # Look for news article patterns
+            news_pattern = r'<a[^>]*href="([^"]*)"[^>]*aria-label="([^"]*)"'
+            matches = re.findall(news_pattern, content)
+            
+            three_days_ago = datetime.now() - timedelta(days=3)
+            
+            for url, title in matches[:max_headlines * 2]:
+                if len(headlines) >= max_headlines:
+                    break
+                    
+                # Filter relevant news
+                if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares']):
+                    # Clean up the URL
+                    if url.startswith('/'):
+                        url = 'https://www.bing.com' + url
+                    
+                    headlines.append({
+                        'title': title[:100] + '...' if len(title) > 100 else title,
+                        'url': url
+                    })
+            
+        except Exception as e:
+            logger.debug(f"Bing News search failed for {ticker}: {e}")
+        
+        return headlines
+    
+    def _search_yahoo_finance_news(self, ticker, max_headlines=3):
+        """Search Yahoo Finance for recent ticker news"""
+        headlines = []
+        
+        try:
+            # Yahoo Finance news URL
+            url = f"https://finance.yahoo.com/quote/{ticker}/news"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            content = response.text
+            
+            # Look for news article patterns in Yahoo Finance
+            # This is a simplified approach - you might need to adjust based on Yahoo's current HTML structure
+            news_pattern = r'<h3[^>]*><a[^>]*href="([^"]*)"[^>]*>([^<]*)</a></h3>'
+            matches = re.findall(news_pattern, content)
+            
+            for url, title in matches[:max_headlines]:
+                # Make sure URL is absolute
+                if url.startswith('/'):
+                    url = 'https://finance.yahoo.com' + url
+                elif not url.startswith('http'):
+                    continue
+                
+                headlines.append({
+                    'title': title[:100] + '...' if len(title) > 100 else title,
+                    'url': url
+                })
+            
+        except Exception as e:
+            logger.debug(f"Yahoo Finance search failed for {ticker}: {e}")
+        
+        return headlines
+    
     def _create_pid_file(self):
         """Create PID file with current process ID"""
         try:
@@ -142,7 +346,7 @@ class VolumeMomentumTracker:
         return f"https://www.tradingview.com/chart/?symbol={symbol}"
     
     def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, sector, alert_types):
-        """Send Telegram alert for high-frequency ticker with rate limiting"""
+        """Send Telegram alert for high-frequency ticker with rate limiting and news headlines"""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
         
@@ -158,6 +362,11 @@ class VolumeMomentumTracker:
         
         try:
             import asyncio
+            
+            # Get recent news headlines
+            logger.info(f"Fetching recent news for {ticker}...")
+            recent_news = self._get_recent_news(ticker, max_headlines=3)
+            
             tradingview_link = self._get_tradingview_link(ticker)
             alert_types_str = ', '.join(alert_types[:3])  # First 3 alert types
             if len(alert_types) > 3:
@@ -176,6 +385,15 @@ class VolumeMomentumTracker:
                 f"📊 View Chart: {tradingview_link}"
             )
             
+            # Add recent news headlines if available
+            if recent_news:
+                message += f"\n\n📰 Recent Headlines (last 3 days):"
+                for i, news_item in enumerate(recent_news, 1):
+                    # Telegram supports markdown links: [text](url)
+                    message += f"\n{i}. [{news_item['title']}]({news_item['url']})"
+            else:
+                message += f"\n\n📰 No recent headlines found for {ticker}"
+            
             # Handle async send_message properly
             try:
                 loop = asyncio.get_event_loop()
@@ -183,14 +401,42 @@ class VolumeMomentumTracker:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
             
-            loop.run_until_complete(self.telegram_bot.send_message(self.telegram_chat_id, message))
+            # Send message with Markdown parsing enabled for clickable links
+            loop.run_until_complete(
+                self.telegram_bot.send_message(
+                    self.telegram_chat_id, 
+                    message, 
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True  # Prevent telegram from showing preview for every link
+                )
+            )
             
             # Update last sent time for rate limiting
             self.telegram_last_sent[ticker] = current_time.isoformat()
-            logger.info(f"📱 Telegram alert sent for {ticker} ({alert_count} alerts)")
+            logger.info(f"📱 Telegram alert sent for {ticker} ({alert_count} alerts) with {len(recent_news)} news headlines")
             
         except Exception as e:
             logger.error(f"❌ Failed to send Telegram alert for {ticker}: {e}")
+            # Try sending without markdown if it fails
+            try:
+                simple_message = (
+                    f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
+                    f"📊 Ticker: {ticker}\n"
+                    f"⚡ Alert Count: {alert_count} times\n"
+                    f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
+                    f"📈 Volume: {volume:,}\n"
+                    f"🏭 Sector: {sector}\n"
+                    f"🎯 Alert Types: {alert_types_str}\n\n"
+                    f"📊 Chart: {tradingview_link}"
+                )
+                
+                loop.run_until_complete(
+                    self.telegram_bot.send_message(self.telegram_chat_id, simple_message)
+                )
+                logger.info(f"📱 Sent simplified Telegram alert for {ticker}")
+                
+            except Exception as e2:
+                logger.error(f"❌ Failed to send even simplified alert: {e2}")
     
     def _check_high_frequency_alerts(self, ticker, alert_data):
         """Check if ticker qualifies for Telegram notification (sends every time for 5+ alerts with rate limiting)"""
@@ -914,10 +1160,12 @@ class VolumeMomentumTracker:
         logger.info(f"📊 Scanning every {self.monitor_interval} seconds (2 minutes)")
         logger.info(f"🎯 Tracking: Volume climbers, newcomers, and price spikes")
         logger.info(f"💾 Data saved to: {self.output_dir}")
+        logger.info(f"📰 News headlines: Recent news included in Telegram alerts")
         
         if self.telegram_bot and self.telegram_chat_id:
             logger.info("📱 Telegram notifications: ✅ ENABLED")
             logger.info(f"📱 Rate limiting: {self.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
+            logger.info("📰 Recent headlines (last 3 days) will be included in alerts")
         else:
             logger.info("📱 Telegram notifications: ❌ DISABLED")
         
@@ -949,8 +1197,9 @@ class VolumeMomentumTracker:
         self.ticker_counters = {}
         self.ticker_alert_history = {}
         self.telegram_last_sent = {}  # Reset Telegram rate limiting too
+        self.news_cache = {}  # Reset news cache too
         self._save_ticker_data()
-        logger.info("🔄 Ticker counters, history, and Telegram rate limiting reset")
+        logger.info("🔄 Ticker counters, history, news cache, and Telegram rate limiting reset")
     
     def print_ticker_stats(self):
         """Print detailed ticker statistics"""
@@ -977,14 +1226,22 @@ class VolumeMomentumTracker:
             print(f"{i:2d}. {ticker:6} | {count:3d} total | {types_str}")
 
     def test_telegram_bot(self):
-        """Test Telegram bot connectivity"""
+        """Test Telegram bot connectivity and news fetching"""
         if not self.telegram_bot or not self.telegram_chat_id:
             print("❌ Telegram bot not configured. Provide --bot-token and --chat-id parameters.")
             return False
         
         try:
             import asyncio
-            test_message = "🧪 Test message from Volume Momentum Tracker\n\n📊 If you see this, Telegram notifications are working correctly!\n\n📱 Notifications will be sent for every alert of tickers with 5+ total alerts (rate limited to once per 30 minutes per ticker)."
+            
+            # Test basic message sending
+            test_message = (
+                "🧪 Test message from Volume Momentum Tracker\n\n"
+                "📊 If you see this, Telegram notifications are working correctly!\n\n"
+                "📱 Notifications will be sent for every alert of tickers with 5+ total alerts "
+                "(rate limited to once per 30 minutes per ticker).\n\n"
+                "📰 Recent headlines (last 3 days) will be included automatically."
+            )
             
             # Handle async send_message properly
             try:
@@ -993,9 +1250,38 @@ class VolumeMomentumTracker:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
             
-            loop.run_until_complete(self.telegram_bot.send_message(self.telegram_chat_id, test_message))
+            loop.run_until_complete(
+                self.telegram_bot.send_message(self.telegram_chat_id, test_message)
+            )
             print("✅ Test message sent successfully!")
+            
+            # Test news fetching
+            print("\n🧪 Testing news headline fetching...")
+            test_ticker = "AAPL"  # Use Apple as test ticker
+            news_headlines = self._get_recent_news(test_ticker, max_headlines=2)
+            
+            if news_headlines:
+                print(f"✅ Successfully fetched {len(news_headlines)} headlines for {test_ticker}")
+                
+                # Send a test news message
+                news_test_message = f"📰 News Test for {test_ticker}:\n\n"
+                for i, news_item in enumerate(news_headlines, 1):
+                    news_test_message += f"{i}. [{news_item['title']}]({news_item['url']})\n"
+                
+                loop.run_until_complete(
+                    self.telegram_bot.send_message(
+                        self.telegram_chat_id, 
+                        news_test_message,
+                        parse_mode='Markdown',
+                        disable_web_page_preview=True
+                    )
+                )
+                print("✅ News headlines test sent successfully!")
+            else:
+                print(f"⚠️  No headlines found for {test_ticker} - this is normal if there's no recent news")
+            
             return True
+            
         except Exception as e:
             print(f"❌ Failed to send test message: {e}")
             return False
@@ -1003,7 +1289,7 @@ class VolumeMomentumTracker:
 def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Volume Momentum Tracker - Real-time Small Caps Monitor",
+        description="Volume Momentum Tracker - Real-time Small Caps Monitor with News Headlines",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1018,6 +1304,9 @@ Examples:
     
   Show statistics:
     python volume_momentum_tracker.py --stats
+    
+  Test Telegram bot and news fetching:
+    python volume_momentum_tracker.py --test-bot --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
     
   Kill running process:
     kill $(cat /tmp/screener.pid)
@@ -1035,7 +1324,7 @@ Examples:
     action_group.add_argument('--stats', action='store_true', 
                             help='Show ticker statistics and exit')
     action_group.add_argument('--test-bot', action='store_true', 
-                            help='Test Telegram bot connectivity and exit')
+                            help='Test Telegram bot connectivity and news fetching, then exit')
     
     # Telegram configuration
     parser.add_argument('--bot-token', type=str, 
@@ -1068,7 +1357,7 @@ def main():
         )
         
         # Print header
-        print("🎯 Volume Momentum Tracker with CLI Parameters (LONG TRADES)")
+        print("🎯 Volume Momentum Tracker with News Headlines (LONG TRADES)")
         print("=" * 70)
         print("Tracks small cap stocks (price < $20) for BULLISH momentum:")
         print("  📈 Volume ranking improvements (with positive price movement)") 
@@ -1079,6 +1368,7 @@ def main():
         print("  📊 Tracks frequency of alerts per ticker")
         print("  🔥 Shows trending tickers (most frequent)")
         print("  📱 Sends Telegram alerts for EVERY alert of tickers with 5+ alerts")
+        print("  📰 Includes recent news headlines (last 3 days) in Telegram alerts")
         print("  📱 Rate limiting: 30 minutes between notifications per ticker")
         print("  ⏱️  Updates every 2 minutes")
         print("  🚀 LONG TRADES ONLY - No bearish alerts")
@@ -1087,11 +1377,13 @@ def main():
         # Show Telegram status
         if tracker.telegram_bot and tracker.telegram_chat_id:
             print("📱 Telegram notifications: ✅ ENABLED")
+            print("📰 News headlines: ✅ ENABLED (last 3 days)")
             print(f"📱 Rate limiting: {tracker.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
         else:
             print("📱 Telegram notifications: ❌ DISABLED")
+            print("📰 News headlines: ❌ DISABLED (requires Telegram)")
             if args.continuous:
-                print("   💡 Use --bot-token and --chat-id for Telegram alerts")
+                print("   💡 Use --bot-token and --chat-id for Telegram alerts with news")
         print("=" * 70)
         
         # Execute the requested action
@@ -1108,23 +1400,23 @@ def main():
             tracker.run_continuous_monitoring()
             
         elif args.reset:
-            print("\n🔄 Resetting ticker counters...")
+            print("\n🔄 Resetting ticker counters and news cache...")
             tracker.reset_ticker_counters()
-            print("✅ Ticker counters reset.")
+            print("✅ Ticker counters and news cache reset.")
             
         elif args.stats:
             print("\n📊 Ticker Statistics:")
             tracker.print_ticker_stats()
             
         elif args.test_bot:
-            print("\n🧪 Testing Telegram bot...")
+            print("\n🧪 Testing Telegram bot and news fetching...")
             if not args.bot_token or not args.chat_id:
                 print("❌ Bot token and chat ID are required for testing.")
                 print("Usage: --test-bot --bot-token 'YOUR_TOKEN' --chat-id 'YOUR_CHAT_ID'")
                 sys.exit(1)
             
             if tracker.test_telegram_bot():
-                print("✅ Telegram bot test successful!")
+                print("✅ Telegram bot and news fetching test successful!")
             else:
                 print("❌ Telegram bot test failed!")
                 sys.exit(1)
