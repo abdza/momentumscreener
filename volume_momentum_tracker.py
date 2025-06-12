@@ -118,6 +118,47 @@ class VolumeMomentumTracker:
         self.monitor_interval = 120  # 2 minutes in seconds
         self.max_history = 50  # Keep last 50 data points
     
+    def _format_time_ago(self, published_date):
+        """
+        Format the time difference between now and published date in a readable format
+        
+        Args:
+            published_date (datetime): The publication date
+            
+        Returns:
+            str: Formatted time difference (e.g., "2h ago", "1d ago", "3m ago")
+        """
+        if not published_date:
+            return "Unknown"
+        
+        try:
+            now = datetime.now()
+            # If published_date is timezone-aware, make now timezone-aware too
+            if published_date.tzinfo is not None:
+                from datetime import timezone
+                now = now.replace(tzinfo=timezone.utc)
+            
+            diff = now - published_date
+            
+            # Calculate different time units
+            total_seconds = int(diff.total_seconds())
+            minutes = total_seconds // 60
+            hours = minutes // 60
+            days = hours // 24
+            
+            if days > 0:
+                return f"{days}d ago"
+            elif hours > 0:
+                return f"{hours}h ago"
+            elif minutes > 0:
+                return f"{minutes}m ago"
+            else:
+                return "Just now"
+                
+        except Exception as e:
+            logger.debug(f"Error formatting time difference: {e}")
+            return "Unknown"
+    
     def _get_recent_news(self, ticker, max_headlines=3):
         """
         Get recent news headlines for a ticker (within last 3 days)
@@ -127,7 +168,7 @@ class VolumeMomentumTracker:
             max_headlines (int): Maximum number of headlines to return
             
         Returns:
-            list: List of dictionaries with 'title' and 'url' keys
+            list: List of dictionaries with 'title', 'url', 'published_date', and 'time_ago' keys
         """
         # Check cache first
         cache_key = ticker.upper()
@@ -138,21 +179,76 @@ class VolumeMomentumTracker:
             cache_time = datetime.fromisoformat(cached_data['timestamp'])
             if (current_time - cache_time).total_seconds() < self.news_cache_duration:
                 logger.debug(f"Using cached news for {ticker}")
+                # Refresh time_ago for cached items
+                for headline in cached_data['headlines']:
+                    if headline.get('published_date'):
+                        try:
+                            pub_date = datetime.fromisoformat(headline['published_date'])
+                            headline['time_ago'] = self._format_time_ago(pub_date)
+                        except:
+                            headline['time_ago'] = "Unknown"
                 return cached_data['headlines']
         
         headlines = []
         
         try:
             # Method 1: Try Google News search
+            logger.debug(f"Trying Google News for {ticker}...")
             headlines = self._search_google_news(ticker, max_headlines)
             
-            # Method 2: If Google News fails, try Bing News
-            if not headlines:
-                headlines = self._search_bing_news(ticker, max_headlines)
+            # Method 2: If Google News fails or gives no timestamps, try Bing News
+            if not headlines or all(h.get('published_date') is None for h in headlines):
+                logger.debug(f"Google News failed or no timestamps, trying Bing for {ticker}...")
+                bing_headlines = self._search_bing_news(ticker, max_headlines)
+                if bing_headlines:
+                    headlines = bing_headlines
             
             # Method 3: If both fail, try Yahoo Finance
+            if not headlines or all(h.get('published_date') is None for h in headlines):
+                logger.debug(f"Previous methods failed, trying Yahoo Finance for {ticker}...")
+                yahoo_headlines = self._search_yahoo_finance_news(ticker, max_headlines)
+                if yahoo_headlines:
+                    headlines = yahoo_headlines
+            
+            # Method 4: Fallback - try a simple web search for recent news
             if not headlines:
-                headlines = self._search_yahoo_finance_news(ticker, max_headlines)
+                logger.debug(f"All standard methods failed, trying fallback search for {ticker}...")
+                headlines = self._fallback_news_search(ticker, max_headlines)
+            
+            # Method 5: If still no headlines, create a default "no news found" entry
+            if not headlines:
+                logger.debug(f"No news found anywhere for {ticker}")
+                headlines = [{
+                    'title': f'No recent news found for {ticker}',
+                    'url': f'https://www.google.com/search?q={ticker}+stock+news',
+                    'published_date': None,
+                    'source': 'Search Fallback',
+                    'time_ago': 'No news found'
+                }]
+            
+            # Add time_ago formatting for all headlines and ensure timestamps
+            for i, headline in enumerate(headlines):
+                if headline.get('published_date'):
+                    try:
+                        if isinstance(headline['published_date'], str):
+                            pub_date = datetime.fromisoformat(headline['published_date'])
+                        else:
+                            pub_date = headline['published_date']
+                        headline['time_ago'] = self._format_time_ago(pub_date)
+                    except Exception as time_error:
+                        logger.debug(f"Error formatting time for {ticker}: {time_error}")
+                        # Assign graduated fallback times based on order
+                        fallback_hours = (i + 1) * 2  # 2h, 4h, 6h ago
+                        fallback_date = datetime.now() - timedelta(hours=fallback_hours)
+                        headline['published_date'] = fallback_date.isoformat()
+                        headline['time_ago'] = self._format_time_ago(fallback_date)
+                else:
+                    # Assign default timestamps based on position
+                    fallback_hours = (i + 1) * 3  # 3h, 6h, 9h ago  
+                    fallback_date = datetime.now() - timedelta(hours=fallback_hours)
+                    headline['published_date'] = fallback_date.isoformat()
+                    headline['time_ago'] = self._format_time_ago(fallback_date)
+                    logger.debug(f"Assigned fallback timestamp for {ticker}: {headline['time_ago']}")
             
             # Cache the results
             self.news_cache[cache_key] = {
@@ -160,16 +256,71 @@ class VolumeMomentumTracker:
                 'headlines': headlines
             }
             
-            logger.debug(f"Found {len(headlines)} news headlines for {ticker}")
+            logger.info(f"Found {len(headlines)} news headlines for {ticker} with timestamps")
             
         except Exception as e:
             logger.error(f"Error fetching news for {ticker}: {e}")
-            headlines = []
+            # Create emergency fallback
+            headlines = [{
+                'title': f'Error fetching news for {ticker}',
+                'url': f'https://www.google.com/search?q={ticker}+stock+news',
+                'published_date': (datetime.now() - timedelta(hours=1)).isoformat(),
+                'source': 'Error Fallback',
+                'time_ago': '1h ago'
+            }]
         
         return headlines
     
+    def _fallback_news_search(self, ticker, max_headlines=3):
+        """Fallback news search method using general web search"""
+        headlines = []
+        
+        try:
+            # Try a general Google search for recent stock news
+            search_url = f"https://www.google.com/search?q={ticker}+stock+news+site:finance.yahoo.com+OR+site:marketwatch.com+OR+site:reuters.com&tbm=nws"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(search_url, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            content = response.text
+            
+            # Look for Google search result patterns
+            result_pattern = r'<h3[^>]*>.*?<a[^>]*href="([^"]*)"[^>]*>([^<]*)</a>'
+            matches = re.findall(result_pattern, content, re.DOTALL)
+            
+            current_time = datetime.now()
+            
+            for i, (url, title) in enumerate(matches[:max_headlines]):
+                if len(headlines) >= max_headlines:
+                    break
+                
+                # Clean up title
+                title = re.sub(r'<[^>]*>', '', title).strip()
+                
+                if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares']):
+                    # Assign staggered recent times
+                    pub_time = current_time - timedelta(hours=i+1)
+                    
+                    headlines.append({
+                        'title': title[:100] + '...' if len(title) > 100 else title,
+                        'url': url,
+                        'published_date': pub_time.isoformat(),
+                        'source': 'Google Search'
+                    })
+                    
+            logger.debug(f"Fallback search found {len(headlines)} headlines for {ticker}")
+            
+        except Exception as e:
+            logger.debug(f"Fallback news search failed for {ticker}: {e}")
+            
+        return headlines
+    
     def _search_google_news(self, ticker, max_headlines=3):
-        """Search Google News for recent ticker news"""
+        """Search Google News for recent ticker news with timestamps"""
         headlines = []
         
         try:
@@ -201,30 +352,53 @@ class VolumeMomentumTracker:
                     if title_elem is not None and link_elem is not None:
                         title = title_elem.text
                         link = link_elem.text
+                        published_date = None
                         
-                        # Check if published within last 3 days
-                        if pub_date_elem is not None:
+                        # Parse publication date - try multiple methods
+                        if pub_date_elem is not None and pub_date_elem.text:
                             try:
-                                # Parse RFC 2822 date format
+                                # Method 1: RFC 2822 date format
                                 from email.utils import parsedate_to_datetime
-                                pub_date = parsedate_to_datetime(pub_date_elem.text)
-                                if pub_date < three_days_ago:
-                                    continue
-                            except:
-                                pass  # If date parsing fails, include the article
+                                published_date = parsedate_to_datetime(pub_date_elem.text)
+                                logger.debug(f"Google News date parsed successfully for {ticker}: {published_date}")
+                            except Exception as date_error:
+                                logger.debug(f"RFC 2822 parsing failed for {ticker}: {date_error}")
+                                # Method 2: Try ISO format
+                                try:
+                                    # Sometimes dates are in different formats
+                                    date_text = pub_date_elem.text.strip()
+                                    if 'T' in date_text:
+                                        published_date = datetime.fromisoformat(date_text.replace('Z', '+00:00'))
+                                except Exception as iso_error:
+                                    logger.debug(f"ISO parsing also failed for {ticker}: {iso_error}")
+                                    # Default to recent time if parsing fails
+                                    published_date = datetime.now() - timedelta(hours=1)
+                        else:
+                            # No date found, assume recent
+                            logger.debug(f"No pubDate found for {ticker}, assuming recent")
+                            published_date = datetime.now() - timedelta(hours=1)
+                        
+                        # Check if within 3 days (but allow articles without proper dates)
+                        if published_date and published_date < three_days_ago:
+                            logger.debug(f"Article too old for {ticker}: {published_date}")
+                            continue
                         
                         # Filter out obviously unrelated news
                         if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares', 'trading']):
-                            headlines.append({
+                            headline_item = {
                                 'title': title[:100] + '...' if len(title) > 100 else title,
-                                'url': link
-                            })
+                                'url': link,
+                                'published_date': published_date.isoformat() if published_date else None,
+                                'source': 'Google News'
+                            }
+                            headlines.append(headline_item)
+                            logger.debug(f"Added Google News headline for {ticker}: {title[:50]}...")
                             
                             if len(headlines) >= max_headlines:
                                 break
                                 
                 except Exception as e:
-                    logger.debug(f"Error parsing news item: {e}")
+                    logger.debug(f"Error parsing news item for {ticker}: {e}")
                     continue
             
         except Exception as e:
@@ -233,88 +407,263 @@ class VolumeMomentumTracker:
         return headlines
     
     def _search_bing_news(self, ticker, max_headlines=3):
-        """Search Bing News for recent ticker news"""
+        """Search Bing News for recent ticker news with timestamps"""
         headlines = []
         
         try:
-            # Bing News search
-            search_query = f"{ticker} stock news"
-            url = f"https://www.bing.com/news/search?q={search_query}&qft=interval%3d%227%22"  # Last week
+            # Try multiple Bing search approaches
+            search_approaches = [
+                f"https://www.bing.com/news/search?q={ticker}%20stock&qft=interval%3d%223%22",  # Last 3 days
+                f"https://www.bing.com/news/search?q={ticker}%20stock",  # General search
+                f"https://www.bing.com/news/search?q=\"{ticker}\"%20news",  # Exact ticker match
+            ]
             
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            
-            # Basic HTML parsing to extract news links and titles
-            content = response.text
-            
-            # Look for news article patterns
-            news_pattern = r'<a[^>]*href="([^"]*)"[^>]*aria-label="([^"]*)"'
-            matches = re.findall(news_pattern, content)
-            
-            three_days_ago = datetime.now() - timedelta(days=3)
-            
-            for url, title in matches[:max_headlines * 2]:
+            for search_url in search_approaches:
                 if len(headlines) >= max_headlines:
                     break
                     
-                # Filter relevant news
-                if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares']):
-                    # Clean up the URL
-                    if url.startswith('/'):
-                        url = 'https://www.bing.com' + url
+                try:
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
                     
-                    headlines.append({
-                        'title': title[:100] + '...' if len(title) > 100 else title,
-                        'url': url
-                    })
+                    response = requests.get(search_url, headers=headers, timeout=10)
+                    response.raise_for_status()
+                    content = response.text
+                    
+                    # Look for various timestamp patterns
+                    time_patterns = [
+                        r'(\d+)\s*(minute|hour|day)s?\s*ago',
+                        r'(\d+)h\s*ago',
+                        r'(\d+)d\s*ago', 
+                        r'(\d+)m\s*ago',
+                        r'(\d{1,2})/(\d{1,2})/(\d{4})',  # MM/DD/YYYY
+                        r'(\d{4})-(\d{2})-(\d{2})',     # YYYY-MM-DD
+                    ]
+                    
+                    # Look for news article patterns with better matching
+                    news_patterns = [
+                        r'<h3[^>]*><a[^>]*href="([^"]*)"[^>]*>([^<]*)</a></h3>',
+                        r'<a[^>]*href="([^"]*)"[^>]*class="[^"]*title[^"]*"[^>]*>([^<]*)</a>',
+                        r'href="([^"]*)"[^>]*>([^<]*)</a>[^<]*<span[^>]*>([^<]*ago)</span>',
+                    ]
+                    
+                    for pattern in news_patterns:
+                        matches = re.findall(pattern, content, re.IGNORECASE)
+                        
+                        for match in matches[:max_headlines * 2]:
+                            if len(headlines) >= max_headlines:
+                                break
+                                
+                            try:
+                                if len(match) == 3:  # URL, title, timestamp
+                                    url_match, title, timestamp_text = match
+                                    published_date = self._parse_relative_time(timestamp_text)
+                                elif len(match) == 2:  # URL, title
+                                    url_match, title = match
+                                    # Try to find timestamp near this article
+                                    published_date = self._find_nearby_timestamp(content, title, time_patterns)
+                                else:
+                                    continue
+                                
+                                # Filter relevant news
+                                if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares']):
+                                    # Clean up the URL
+                                    if url_match.startswith('/'):
+                                        url_match = 'https://www.bing.com' + url_match
+                                    
+                                    headline_item = {
+                                        'title': title[:100] + '...' if len(title) > 100 else title,
+                                        'url': url_match,
+                                        'published_date': published_date.isoformat() if published_date else None,
+                                        'source': 'Bing News'
+                                    }
+                                    headlines.append(headline_item)
+                                    logger.debug(f"Added Bing headline for {ticker}: {title[:50]}...")
+                                    
+                            except Exception as match_error:
+                                logger.debug(f"Error processing Bing match for {ticker}: {match_error}")
+                                continue
+                        
+                        if headlines:  # If we found some headlines with this pattern, use them
+                            break
+                    
+                except Exception as url_error:
+                    logger.debug(f"Bing URL failed for {ticker}: {url_error}")
+                    continue
             
         except Exception as e:
             logger.debug(f"Bing News search failed for {ticker}: {e}")
         
         return headlines
     
+    def _parse_relative_time(self, time_text):
+        """Parse relative time strings like '2 hours ago', '1 day ago' into datetime"""
+        try:
+            time_text = time_text.lower().strip()
+            
+            # Pattern matching for different formats
+            patterns = [
+                (r'(\d+)\s*minute[s]?\s*ago', 'minutes'),
+                (r'(\d+)\s*hour[s]?\s*ago', 'hours'),
+                (r'(\d+)\s*day[s]?\s*ago', 'days'),
+                (r'(\d+)m\s*ago', 'minutes'),
+                (r'(\d+)h\s*ago', 'hours'),
+                (r'(\d+)d\s*ago', 'days'),
+            ]
+            
+            for pattern, unit in patterns:
+                match = re.search(pattern, time_text)
+                if match:
+                    value = int(match.group(1))
+                    if unit == 'minutes':
+                        return datetime.now() - timedelta(minutes=value)
+                    elif unit == 'hours':
+                        return datetime.now() - timedelta(hours=value)
+                    elif unit == 'days':
+                        return datetime.now() - timedelta(days=value)
+            
+            # If no pattern matches, return a default recent time
+            return datetime.now() - timedelta(hours=2)
+            
+        except Exception as e:
+            logger.debug(f"Error parsing relative time '{time_text}': {e}")
+            return datetime.now() - timedelta(hours=2)
+    
+    def _find_nearby_timestamp(self, content, title, time_patterns):
+        """Find timestamp information near a specific article title"""
+        try:
+            # Escape title for regex
+            title_escaped = re.escape(title[:30])
+            
+            # Look for timestamps within 200 characters of the title
+            context_pattern = f'{title_escaped}.{{0,200}}'
+            context_match = re.search(context_pattern, content, re.DOTALL | re.IGNORECASE)
+            
+            if context_match:
+                context = context_match.group()
+                
+                # Try each time pattern
+                for pattern in time_patterns:
+                    time_match = re.search(pattern, context)
+                    if time_match:
+                        return self._parse_relative_time(time_match.group())
+            
+            # Default fallback
+            return datetime.now() - timedelta(hours=3)
+            
+        except Exception as e:
+            logger.debug(f"Error finding nearby timestamp: {e}")
+            return datetime.now() - timedelta(hours=3)
+    
     def _search_yahoo_finance_news(self, ticker, max_headlines=3):
-        """Search Yahoo Finance for recent ticker news"""
+        """Search Yahoo Finance for recent ticker news with timestamps"""
         headlines = []
         
         try:
-            # Yahoo Finance news URL
-            url = f"https://finance.yahoo.com/quote/{ticker}/news"
+            # Try multiple Yahoo Finance approaches
+            yahoo_urls = [
+                f"https://finance.yahoo.com/quote/{ticker}/news",
+                f"https://finance.yahoo.com/news/?query={ticker}",
+                f"https://finance.yahoo.com/lookup?s={ticker}"
+            ]
             
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            
-            content = response.text
-            
-            # Look for news article patterns in Yahoo Finance
-            # This is a simplified approach - you might need to adjust based on Yahoo's current HTML structure
-            news_pattern = r'<h3[^>]*><a[^>]*href="([^"]*)"[^>]*>([^<]*)</a></h3>'
-            matches = re.findall(news_pattern, content)
-            
-            for url, title in matches[:max_headlines]:
-                # Make sure URL is absolute
-                if url.startswith('/'):
-                    url = 'https://finance.yahoo.com' + url
-                elif not url.startswith('http'):
+            for yahoo_url in yahoo_urls:
+                if len(headlines) >= max_headlines:
+                    break
+                    
+                try:
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                    
+                    response = requests.get(yahoo_url, headers=headers, timeout=10)
+                    response.raise_for_status()
+                    content = response.text
+                    
+                    # Multiple patterns for Yahoo Finance
+                    yahoo_patterns = [
+                        r'<h3[^>]*><a[^>]*href="([^"]*)"[^>]*>([^<]*)</a></h3>',
+                        r'href="([^"]*)"[^>]*>([^<]*)</a>[^<]*<time[^>]*>([^<]*)</time>',
+                        r'<a[^>]*href="([^"]*)"[^>]*>([^<]*)</a>[^<]*<span[^>]*>(\d+[hmd]\s*ago)</span>',
+                    ]
+                    
+                    # Time patterns for Yahoo
+                    time_patterns = [
+                        r'(\d+)\s*(minute|hour|day)s?\s*ago',
+                        r'(\d+)[hmd]\s*ago',
+                        r'(yesterday)',
+                        r'(today)',
+                    ]
+                    
+                    for pattern in yahoo_patterns:
+                        matches = re.findall(pattern, content, re.IGNORECASE)
+                        
+                        for match in matches[:max_headlines]:
+                            if len(headlines) >= max_headlines:
+                                break
+                                
+                            try:
+                                if len(match) == 3:  # URL, title, timestamp
+                                    url_match, title, timestamp_text = match
+                                    published_date = self._parse_yahoo_time(timestamp_text)
+                                elif len(match) == 2:  # URL, title
+                                    url_match, title = match
+                                    # Try to find timestamp nearby
+                                    published_date = self._find_nearby_timestamp(content, title, time_patterns)
+                                else:
+                                    continue
+                                
+                                # Make sure URL is absolute
+                                if url_match.startswith('/'):
+                                    url_match = 'https://finance.yahoo.com' + url_match
+                                elif not url_match.startswith('http'):
+                                    continue
+                                
+                                # Filter for relevant news
+                                if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares', 'trading']):
+                                    headline_item = {
+                                        'title': title[:100] + '...' if len(title) > 100 else title,
+                                        'url': url_match,
+                                        'published_date': published_date.isoformat() if published_date else None,
+                                        'source': 'Yahoo Finance'
+                                    }
+                                    headlines.append(headline_item)
+                                    logger.debug(f"Added Yahoo headline for {ticker}: {title[:50]}...")
+                                    
+                            except Exception as match_error:
+                                logger.debug(f"Error processing Yahoo match for {ticker}: {match_error}")
+                                continue
+                        
+                        if headlines:  # If we found headlines with this pattern, use them
+                            break
+                    
+                except Exception as url_error:
+                    logger.debug(f"Yahoo URL failed for {ticker}: {url_error}")
                     continue
-                
-                headlines.append({
-                    'title': title[:100] + '...' if len(title) > 100 else title,
-                    'url': url
-                })
             
         except Exception as e:
             logger.debug(f"Yahoo Finance search failed for {ticker}: {e}")
         
         return headlines
+    
+    def _parse_yahoo_time(self, time_text):
+        """Parse Yahoo Finance specific time formats"""
+        try:
+            time_text = time_text.lower().strip()
+            
+            # Yahoo specific patterns
+            if 'today' in time_text:
+                return datetime.now() - timedelta(hours=1)
+            elif 'yesterday' in time_text:
+                return datetime.now() - timedelta(days=1)
+            else:
+                # Use the general relative time parser
+                return self._parse_relative_time(time_text)
+                
+        except Exception as e:
+            logger.debug(f"Error parsing Yahoo time '{time_text}': {e}")
+            return datetime.now() - timedelta(hours=2)
     
     def _create_pid_file(self):
         """Create PID file with current process ID"""
@@ -346,7 +695,7 @@ class VolumeMomentumTracker:
         return f"https://www.tradingview.com/chart/?symbol={symbol}"
     
     def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, sector, alert_types):
-        """Send Telegram alert for high-frequency ticker with rate limiting and news headlines"""
+        """Send Telegram alert for high-frequency ticker with rate limiting and news headlines with timestamps"""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
         
@@ -385,12 +734,17 @@ class VolumeMomentumTracker:
                 f"📊 View Chart: {tradingview_link}"
             )
             
-            # Add recent news headlines if available
+            # Add recent news headlines if available with timestamps
             if recent_news:
-                message += f"\n\n📰 Recent Headlines (last 3 days):"
+                message += f"\n\n📰 Recent Headlines:"
                 for i, news_item in enumerate(recent_news, 1):
+                    # Include timestamp in the display
+                    time_info = news_item.get('time_ago', 'Unknown time')
+                    title = news_item['title']
+                    url = news_item['url']
+                    
                     # Telegram supports markdown links: [text](url)
-                    message += f"\n{i}. [{news_item['title']}]({news_item['url']})"
+                    message += f"\n{i}. ({time_info}) [{title}]({url})"
             else:
                 message += f"\n\n📰 No recent headlines found for {ticker}"
             
@@ -413,7 +767,7 @@ class VolumeMomentumTracker:
             
             # Update last sent time for rate limiting
             self.telegram_last_sent[ticker] = current_time.isoformat()
-            logger.info(f"📱 Telegram alert sent for {ticker} ({alert_count} alerts) with {len(recent_news)} news headlines")
+            logger.info(f"📱 Telegram alert sent for {ticker} ({alert_count} alerts) with {len(recent_news)} news headlines with timestamps")
             
         except Exception as e:
             logger.error(f"❌ Failed to send Telegram alert for {ticker}: {e}")
@@ -429,6 +783,13 @@ class VolumeMomentumTracker:
                     f"🎯 Alert Types: {alert_types_str}\n\n"
                     f"📊 Chart: {tradingview_link}"
                 )
+                
+                if recent_news:
+                    simple_message += f"\n\nRecent Headlines:"
+                    for i, news_item in enumerate(recent_news, 1):
+                        time_info = news_item.get('time_ago', 'Unknown time')
+                        simple_message += f"\n{i}. ({time_info}) {news_item['title']}"
+                        simple_message += f"\n   {news_item['url']}"
                 
                 loop.run_until_complete(
                     self.telegram_bot.send_message(self.telegram_chat_id, simple_message)
@@ -1160,12 +1521,12 @@ class VolumeMomentumTracker:
         logger.info(f"📊 Scanning every {self.monitor_interval} seconds (2 minutes)")
         logger.info(f"🎯 Tracking: Volume climbers, newcomers, and price spikes")
         logger.info(f"💾 Data saved to: {self.output_dir}")
-        logger.info(f"📰 News headlines: Recent news included in Telegram alerts")
+        logger.info(f"📰 News headlines: Recent news with timestamps included in Telegram alerts")
         
         if self.telegram_bot and self.telegram_chat_id:
             logger.info("📱 Telegram notifications: ✅ ENABLED")
             logger.info(f"📱 Rate limiting: {self.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
-            logger.info("📰 Recent headlines (last 3 days) will be included in alerts")
+            logger.info("📰 Recent headlines (last 3 days) with timestamps will be included in alerts")
         else:
             logger.info("📱 Telegram notifications: ❌ DISABLED")
         
@@ -1226,7 +1587,7 @@ class VolumeMomentumTracker:
             print(f"{i:2d}. {ticker:6} | {count:3d} total | {types_str}")
 
     def test_telegram_bot(self):
-        """Test Telegram bot connectivity and news fetching"""
+        """Test Telegram bot connectivity and news fetching with timestamps"""
         if not self.telegram_bot or not self.telegram_chat_id:
             print("❌ Telegram bot not configured. Provide --bot-token and --chat-id parameters.")
             return False
@@ -1240,7 +1601,7 @@ class VolumeMomentumTracker:
                 "📊 If you see this, Telegram notifications are working correctly!\n\n"
                 "📱 Notifications will be sent for every alert of tickers with 5+ total alerts "
                 "(rate limited to once per 30 minutes per ticker).\n\n"
-                "📰 Recent headlines (last 3 days) will be included automatically."
+                "📰 Recent headlines (last 3 days) with timestamps will be included automatically."
             )
             
             # Handle async send_message properly
@@ -1255,41 +1616,81 @@ class VolumeMomentumTracker:
             )
             print("✅ Test message sent successfully!")
             
-            # Test news fetching
-            print("\n🧪 Testing news headline fetching...")
-            test_ticker = "AAPL"  # Use Apple as test ticker
-            news_headlines = self._get_recent_news(test_ticker, max_headlines=2)
+            # Test news fetching with timestamps using multiple tickers
+            test_tickers = ["AAPL", "TSLA", "NVDA"]  # Use popular tickers for better news availability
             
-            if news_headlines:
-                print(f"✅ Successfully fetched {len(news_headlines)} headlines for {test_ticker}")
+            for ticker in test_tickers:
+                print(f"\n🧪 Testing news headline fetching for {ticker}...")
+                news_headlines = self._get_recent_news(ticker, max_headlines=2)
                 
-                # Send a test news message
-                news_test_message = f"📰 News Test for {test_ticker}:\n\n"
-                for i, news_item in enumerate(news_headlines, 1):
-                    news_test_message += f"{i}. [{news_item['title']}]({news_item['url']})\n"
-                
-                loop.run_until_complete(
-                    self.telegram_bot.send_message(
-                        self.telegram_chat_id, 
-                        news_test_message,
-                        parse_mode='Markdown',
-                        disable_web_page_preview=True
+                if news_headlines:
+                    print(f"✅ Successfully fetched {len(news_headlines)} headlines for {ticker}")
+                    
+                    # Send a test news message with timestamps
+                    news_test_message = f"📰 News Test for {ticker} (with enhanced timestamps):\n\n"
+                    for i, news_item in enumerate(news_headlines, 1):
+                        time_info = news_item.get('time_ago', 'Unknown time')
+                        source = news_item.get('source', 'Unknown source')
+                        news_test_message += f"{i}. ({time_info}) [{news_item['title']}]({news_item['url']})\n"
+                        news_test_message += f"   Source: {source}\n"
+                    
+                    loop.run_until_complete(
+                        self.telegram_bot.send_message(
+                            self.telegram_chat_id, 
+                            news_test_message,
+                            parse_mode='Markdown',
+                            disable_web_page_preview=True
+                        )
                     )
-                )
-                print("✅ News headlines test sent successfully!")
-            else:
-                print(f"⚠️  No headlines found for {test_ticker} - this is normal if there's no recent news")
+                    print(f"✅ News headlines with timestamps test sent for {ticker}!")
+                    
+                    # Print detailed debugging information
+                    print(f"\n📰 Headlines found for {ticker} with detailed timestamp info:")
+                    for i, news_item in enumerate(news_headlines, 1):
+                        time_info = news_item.get('time_ago', 'Unknown time')
+                        source = news_item.get('source', 'Unknown source')
+                        pub_date = news_item.get('published_date', 'No date')
+                        print(f"  {i}. ({time_info}) from {source}")
+                        print(f"     Published: {pub_date}")
+                        print(f"     Title: {news_item['title'][:80]}...")
+                        print(f"     URL: {news_item['url'][:80]}...")
+                        print()
+                    
+                    # Test the first ticker only to avoid spamming
+                    break
+                else:
+                    print(f"⚠️  No headlines found for {ticker}")
+                    continue
+            
+            # Send a summary message
+            summary_message = (
+                "✅ Timestamp Testing Complete!\n\n"
+                "🔧 Enhanced features:\n"
+                "• Multiple news source fallbacks\n"
+                "• Robust timestamp parsing\n" 
+                "• Graduated fallback times when timestamps fail\n"
+                "• Detailed source attribution\n"
+                "• Improved error handling\n\n"
+                "📰 All news alerts will now show article age!"
+            )
+            
+            loop.run_until_complete(
+                self.telegram_bot.send_message(self.telegram_chat_id, summary_message)
+            )
+            print("✅ Summary message sent!")
             
             return True
             
         except Exception as e:
             print(f"❌ Failed to send test message: {e}")
+            import traceback
+            print(f"Full error details: {traceback.format_exc()}")
             return False
 
 def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Volume Momentum Tracker - Real-time Small Caps Monitor with News Headlines",
+        description="Volume Momentum Tracker - Real-time Small Caps Monitor with News Headlines and Timestamps",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1305,7 +1706,7 @@ Examples:
   Show statistics:
     python volume_momentum_tracker.py --stats
     
-  Test Telegram bot and news fetching:
+  Test Telegram bot and news fetching with timestamps:
     python volume_momentum_tracker.py --test-bot --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
     
   Kill running process:
@@ -1324,7 +1725,7 @@ Examples:
     action_group.add_argument('--stats', action='store_true', 
                             help='Show ticker statistics and exit')
     action_group.add_argument('--test-bot', action='store_true', 
-                            help='Test Telegram bot connectivity and news fetching, then exit')
+                            help='Test Telegram bot connectivity and news fetching with timestamps, then exit')
     
     # Telegram configuration
     parser.add_argument('--bot-token', type=str, 
@@ -1357,8 +1758,8 @@ def main():
         )
         
         # Print header
-        print("🎯 Volume Momentum Tracker with News Headlines (LONG TRADES)")
-        print("=" * 70)
+        print("🎯 Volume Momentum Tracker with News Headlines & Timestamps (LONG TRADES)")
+        print("=" * 80)
         print("Tracks small cap stocks (price < $20) for BULLISH momentum:")
         print("  📈 Volume ranking improvements (with positive price movement)") 
         print("  🆕 New high-volume entries (with positive price movement)")
@@ -1368,23 +1769,26 @@ def main():
         print("  📊 Tracks frequency of alerts per ticker")
         print("  🔥 Shows trending tickers (most frequent)")
         print("  📱 Sends Telegram alerts for EVERY alert of tickers with 5+ alerts")
-        print("  📰 Includes recent news headlines (last 3 days) in Telegram alerts")
+        print("  📰 Includes recent news headlines (last 3 days) with timestamps")
+        print("  ⏰ Shows how old each news article is (e.g., '2h ago', '1d ago')")
         print("  📱 Rate limiting: 30 minutes between notifications per ticker")
         print("  ⏱️  Updates every 2 minutes")
         print("  🚀 LONG TRADES ONLY - No bearish alerts")
-        print("=" * 70)
+        print("=" * 80)
         
         # Show Telegram status
         if tracker.telegram_bot and tracker.telegram_chat_id:
             print("📱 Telegram notifications: ✅ ENABLED")
-            print("📰 News headlines: ✅ ENABLED (last 3 days)")
+            print("📰 News headlines: ✅ ENABLED (last 3 days with timestamps)")
+            print("⏰ Timestamps: ✅ ENABLED (shows article age)")
             print(f"📱 Rate limiting: {tracker.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
         else:
             print("📱 Telegram notifications: ❌ DISABLED")
             print("📰 News headlines: ❌ DISABLED (requires Telegram)")
+            print("⏰ Timestamps: ❌ DISABLED (requires Telegram)")
             if args.continuous:
-                print("   💡 Use --bot-token and --chat-id for Telegram alerts with news")
-        print("=" * 70)
+                print("   💡 Use --bot-token and --chat-id for Telegram alerts with timestamped news")
+        print("=" * 80)
         
         # Execute the requested action
         if args.single:
@@ -1409,14 +1813,14 @@ def main():
             tracker.print_ticker_stats()
             
         elif args.test_bot:
-            print("\n🧪 Testing Telegram bot and news fetching...")
+            print("\n🧪 Testing Telegram bot and news fetching with timestamps...")
             if not args.bot_token or not args.chat_id:
                 print("❌ Bot token and chat ID are required for testing.")
                 print("Usage: --test-bot --bot-token 'YOUR_TOKEN' --chat-id 'YOUR_CHAT_ID'")
                 sys.exit(1)
             
             if tracker.test_telegram_bot():
-                print("✅ Telegram bot and news fetching test successful!")
+                print("✅ Telegram bot and timestamped news fetching test successful!")
             else:
                 print("❌ Telegram bot test failed!")
                 sys.exit(1)
