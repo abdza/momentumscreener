@@ -694,7 +694,7 @@ class VolumeMomentumTracker:
         """Generate TradingView chart link for the symbol"""
         return f"https://www.tradingview.com/chart/?symbol={symbol}"
     
-    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, sector, alert_types):
+    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types):
         """Send Telegram alert for high-frequency ticker with rate limiting and news headlines with timestamps"""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
@@ -721,12 +721,16 @@ class VolumeMomentumTracker:
             if len(alert_types) > 3:
                 alert_types_str += f" +{len(alert_types)-3}"
             
+            # Format relative volume display
+            rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
+            
             message = (
                 f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
                 f"📊 Ticker: {ticker}\n"
                 f"⚡ Alert Count: {alert_count} times\n"
                 f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
                 f"📈 Volume: {volume:,}\n"
+                f"📊 Relative Volume: {rel_vol_str}\n"
                 f"🏭 Sector: {sector}\n"
                 f"🎯 Alert Types: {alert_types_str}\n\n"
                 f"📋 This ticker has triggered {alert_count} momentum alerts, "
@@ -773,12 +777,14 @@ class VolumeMomentumTracker:
             logger.error(f"❌ Failed to send Telegram alert for {ticker}: {e}")
             # Try sending without markdown if it fails
             try:
+                rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
                 simple_message = (
                     f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
                     f"📊 Ticker: {ticker}\n"
                     f"⚡ Alert Count: {alert_count} times\n"
                     f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
                     f"📈 Volume: {volume:,}\n"
+                    f"📊 Relative Volume: {rel_vol_str}\n"
                     f"🏭 Sector: {sector}\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
                     f"📊 Chart: {tradingview_link}"
@@ -815,9 +821,12 @@ class VolumeMomentumTracker:
             current_price = alert_data.get('current_price', alert_data.get('price', 0))
             change_pct = alert_data.get('change_pct', alert_data.get('premarket_change', 0))
             volume = alert_data.get('volume', 0)
+            # Extract relative volume from different possible keys
+            relative_volume = alert_data.get('relative_volume', 
+                            alert_data.get('relative_volume_10d_calc', 0))
             sector = alert_data.get('sector', 'Unknown')
             
-            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, sector, alert_types)
+            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types)
     
     def _get_cookies(self):
         """Get cookies from browser using rookiepy"""
