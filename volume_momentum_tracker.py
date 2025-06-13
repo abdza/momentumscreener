@@ -574,7 +574,7 @@ class VolumeMomentumTracker:
                     
                 try:
                     headers = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                     }
                     
                     response = requests.get(yahoo_url, headers=headers, timeout=10)
@@ -806,14 +806,14 @@ class VolumeMomentumTracker:
                 logger.error(f"❌ Failed to send even simplified alert: {e2}")
     
     def _check_high_frequency_alerts(self, ticker, alert_data):
-        """Check if ticker qualifies for Telegram notification (sends every time for 5+ alerts with rate limiting)"""
+        """Check if ticker qualifies for Telegram notification (sends every time for 3+ alerts with rate limiting)"""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
         
         alert_count = self.ticker_counters.get(ticker, 0)
         
-        # Send Telegram alert every time for tickers with 5+ alerts (with rate limiting)
-        if alert_count >= 5:
+        # Send Telegram alert every time for tickers with 3+ alerts (with rate limiting)
+        if alert_count >= 3:
             history = self.ticker_alert_history.get(ticker, {})
             alert_types = list(history.get('alert_types', {}).keys())
             
@@ -1108,6 +1108,7 @@ class VolumeMomentumTracker:
                                 'volume': current_ticker_data.get('volume', 0),
                                 'price': current_ticker_data.get('close', 0),
                                 'change_pct': change_pct,
+                                'relative_volume': current_ticker_data.get('relative_volume_10d_calc', 0),
                                 'sector': current_ticker_data.get('sector', 'Unknown')
                             })
             else:
@@ -1125,6 +1126,7 @@ class VolumeMomentumTracker:
                                 'volume': current_ticker_data.get('volume', 0),
                                 'price': current_ticker_data.get('close', 0),
                                 'change_pct': change_pct,
+                                'relative_volume': current_ticker_data.get('relative_volume_10d_calc', 0),
                                 'sector': current_ticker_data.get('sector', 'Unknown')
                             })
         
@@ -1225,6 +1227,7 @@ class VolumeMomentumTracker:
                         'premarket_change': premarket_change,
                         'current_price': record.get('close', 0),
                         'volume': record.get('volume', 0),
+                        'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
                         'alert_type': 'significant_premarket_move'
                     })
@@ -1236,6 +1239,7 @@ class VolumeMomentumTracker:
                         'premarket_volume': premarket_volume,
                         'current_price': record.get('close', 0),
                         'premarket_change': premarket_change,
+                        'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
                         'alert_type': 'high_premarket_volume'
                     })
@@ -1264,6 +1268,7 @@ class VolumeMomentumTracker:
                         'premarket_change_acceleration': pm_change_acceleration,
                         'current_price': current_record.get('close', 0),
                         'volume': current_record.get('volume', 0),
+                        'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                         'sector': current_record.get('sector', 'Unknown'),
                         'alert_type': 'premarket_acceleration'
                     })
@@ -1278,6 +1283,7 @@ class VolumeMomentumTracker:
                             'premarket_volume_change': pm_volume_change,
                             'current_price': current_record.get('close', 0),
                             'premarket_change': current_pm_change,
+                            'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                             'sector': current_record.get('sector', 'Unknown'),
                             'alert_type': 'premarket_volume_surge'
                         })
@@ -1289,6 +1295,7 @@ class VolumeMomentumTracker:
                         'premarket_change': current_pm_change,
                         'current_price': current_record.get('close', 0),
                         'volume': current_record.get('volume', 0),
+                        'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                         'sector': current_record.get('sector', 'Unknown'),
                         'alert_type': 'new_premarket_move'
                     })
@@ -1352,8 +1359,10 @@ class VolumeMomentumTracker:
             for climber in volume_climbers[:5]:  # Top 5
                 try:
                     count = climber.get('appearance_count', 1)  # Default to 1 if missing
+                    rel_vol = climber.get('relative_volume', 0)
+                    rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
                     print(f"  {climber['ticker']:6} [{count:2d}x] | Rank: {climber['previous_rank']:3d} → {climber['current_rank']:3d} "
-                          f"(+{climber['rank_change']:2d}) | Vol: {climber['volume']:>10,} | "
+                          f"(+{climber['rank_change']:2d}) | Vol: {climber['volume']:>10,} ({rel_vol_str}) | "
                           f"${climber['price']:6.2f} ({climber.get('change_pct', 0):+5.1f}%) | {climber.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing volume climber {climber.get('ticker', 'Unknown')}: {e}")
@@ -1364,8 +1373,10 @@ class VolumeMomentumTracker:
             for newcomer in volume_newcomers[:5]:  # Top 5
                 try:
                     count = newcomer.get('appearance_count', 1)
+                    rel_vol = newcomer.get('relative_volume', 0)
+                    rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
                     print(f"  {newcomer['ticker']:6} [{count:2d}x] | NEW → Rank {newcomer['current_rank']:3d} | "
-                          f"Vol: {newcomer['volume']:>10,} | ${newcomer['price']:6.2f} "
+                          f"Vol: {newcomer['volume']:>10,} ({rel_vol_str}) | ${newcomer['price']:6.2f} "
                           f"({newcomer.get('change_pct', 0):+5.1f}%) | {newcomer.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing volume newcomer {newcomer.get('ticker', 'Unknown')}: {e}")
@@ -1376,8 +1387,10 @@ class VolumeMomentumTracker:
             for spike in price_spikes[:5]:  # Top 5
                 try:
                     count = spike.get('appearance_count', 1)
+                    rel_vol = spike.get('relative_volume', 0)
+                    rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
                     print(f"  {spike['ticker']:6} [{count:2d}x] | ${spike['current_price']:6.2f} ({spike.get('change_pct', 0):+5.1f}%) | "
-                          f"Vol: {spike.get('volume', 0):>10,} | RelVol: {spike.get('relative_volume', 0):4.1f}x | {spike.get('sector', 'Unknown')}")
+                          f"Vol: {spike.get('volume', 0):>10,} ({rel_vol_str}) | {spike.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing price spike {spike.get('ticker', 'Unknown')}: {e}")
         
@@ -1387,12 +1400,14 @@ class VolumeMomentumTracker:
             for alert in premarket_volume_alerts[:5]:  # Top 5
                 try:
                     count = alert.get('appearance_count', 1)
+                    rel_vol = alert.get('relative_volume', 0)
+                    rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
                     if alert.get('alert_type') == 'premarket_volume_surge':
                         print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} "
-                              f"(+{alert.get('premarket_volume_change', 0):5.1f}%) | ${alert.get('current_price', 0):6.2f} "
+                              f"(+{alert.get('premarket_volume_change', 0):5.1f}%) RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} "
                               f"PM: {alert.get('premarket_change', 0):+5.1f}% | {alert.get('sector', 'Unknown')}")
                     else:
-                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} | "
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} RelVol: {rel_vol_str} | "
                               f"${alert.get('current_price', 0):6.2f} PM: {alert.get('premarket_change', 0):+5.1f}% | {alert.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing premarket volume alert {alert.get('ticker', 'Unknown')}: {e}")
@@ -1403,12 +1418,14 @@ class VolumeMomentumTracker:
             for alert in premarket_price_alerts[:5]:  # Top 5
                 try:
                     count = alert.get('appearance_count', 1)
+                    rel_vol = alert.get('relative_volume', 0)
+                    rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
                     if alert.get('alert_type') == 'premarket_acceleration':
                         print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {alert.get('premarket_change', 0):+6.1f}% "
-                              f"(Δ{alert.get('premarket_change_acceleration', 0):+5.1f}%) | ${alert.get('current_price', 0):6.2f} | "
+                              f"(Δ{alert.get('premarket_change_acceleration', 0):+5.1f}%) RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} | "
                               f"Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
                     else:
-                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {alert.get('premarket_change', 0):+6.1f}% | "
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {alert.get('premarket_change', 0):+6.1f}% RelVol: {rel_vol_str} | "
                               f"${alert.get('current_price', 0):6.2f} | Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing premarket price alert {alert.get('ticker', 'Unknown')}: {e}")
@@ -1534,10 +1551,13 @@ class VolumeMomentumTracker:
         
         if self.telegram_bot and self.telegram_chat_id:
             logger.info("📱 Telegram notifications: ✅ ENABLED")
+            logger.info(f"📱 Alert threshold: 3+ alerts per ticker (changed from 5)")
             logger.info(f"📱 Rate limiting: {self.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
             logger.info("📰 Recent headlines (last 3 days) with timestamps will be included in alerts")
+            logger.info("📊 Relative volume information included in alerts")
         else:
             logger.info("📱 Telegram notifications: ❌ DISABLED")
+            logger.info("📰 News headlines: ❌ DISABLED (requires Telegram)")
         
         try:
             while True:
@@ -1608,9 +1628,10 @@ class VolumeMomentumTracker:
             test_message = (
                 "🧪 Test message from Volume Momentum Tracker\n\n"
                 "📊 If you see this, Telegram notifications are working correctly!\n\n"
-                "📱 Notifications will be sent for every alert of tickers with 5+ total alerts "
+                "📱 Notifications will be sent for every alert of tickers with 3+ total alerts "
                 "(rate limited to once per 30 minutes per ticker).\n\n"
-                "📰 Recent headlines (last 3 days) with timestamps will be included automatically."
+                "📰 Recent headlines (last 3 days) with timestamps will be included automatically.\n\n"
+                "📊 Relative volume information is now included in all alerts."
             )
             
             # Handle async send_message properly
@@ -1635,13 +1656,16 @@ class VolumeMomentumTracker:
                 if news_headlines:
                     print(f"✅ Successfully fetched {len(news_headlines)} headlines for {ticker}")
                     
-                    # Send a test news message with timestamps
-                    news_test_message = f"📰 News Test for {ticker} (with enhanced timestamps):\n\n"
+                    # Send a test news message with timestamps and relative volume
+                    news_test_message = f"📰 News Test for {ticker} (with enhanced timestamps and relative volume):\n\n"
                     for i, news_item in enumerate(news_headlines, 1):
                         time_info = news_item.get('time_ago', 'Unknown time')
                         source = news_item.get('source', 'Unknown source')
                         news_test_message += f"{i}. ({time_info}) [{news_item['title']}]({news_item['url']})\n"
                         news_test_message += f"   Source: {source}\n"
+                    
+                    # Add sample relative volume info
+                    news_test_message += f"\n📊 Sample Relative Volume: 2.5x (this would show actual data in real alerts)"
                     
                     loop.run_until_complete(
                         self.telegram_bot.send_message(
@@ -1673,14 +1697,16 @@ class VolumeMomentumTracker:
             
             # Send a summary message
             summary_message = (
-                "✅ Timestamp Testing Complete!\n\n"
-                "🔧 Enhanced features:\n"
-                "• Multiple news source fallbacks\n"
+                "✅ Enhanced Features Testing Complete!\n\n"
+                "🔧 New features:\n"
+                "• Alert threshold lowered to 3+ alerts (from 5)\n"
+                "• Relative volume included in all alerts\n"
+                "• Multiple news source fallbacks\n" 
                 "• Robust timestamp parsing\n" 
                 "• Graduated fallback times when timestamps fail\n"
                 "• Detailed source attribution\n"
                 "• Improved error handling\n\n"
-                "📰 All news alerts will now show article age!"
+                "📰 All news alerts will now show article age and relative volume!"
             )
             
             loop.run_until_complete(
@@ -1699,7 +1725,7 @@ class VolumeMomentumTracker:
 def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Volume Momentum Tracker - Real-time Small Caps Monitor with News Headlines and Timestamps",
+        description="Volume Momentum Tracker - Real-time Small Caps Monitor with News Headlines, Timestamps & Relative Volume",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1767,8 +1793,8 @@ def main():
         )
         
         # Print header
-        print("🎯 Volume Momentum Tracker with News Headlines & Timestamps (LONG TRADES)")
-        print("=" * 80)
+        print("🎯 Volume Momentum Tracker with News Headlines, Timestamps & Relative Volume (LONG TRADES)")
+        print("=" * 85)
         print("Tracks small cap stocks (price < $20) for BULLISH momentum:")
         print("  📈 Volume ranking improvements (with positive price movement)") 
         print("  🆕 New high-volume entries (with positive price movement)")
@@ -1777,27 +1803,31 @@ def main():
         print("  🌄 POSITIVE pre-market price movements only")
         print("  📊 Tracks frequency of alerts per ticker")
         print("  🔥 Shows trending tickers (most frequent)")
-        print("  📱 Sends Telegram alerts for EVERY alert of tickers with 5+ alerts")
+        print("  📱 Sends Telegram alerts for EVERY alert of tickers with 3+ alerts (lowered from 5)")
         print("  📰 Includes recent news headlines (last 3 days) with timestamps")
         print("  ⏰ Shows how old each news article is (e.g., '2h ago', '1d ago')")
+        print("  📊 Shows relative volume (e.g., '3.2x' = 3.2x normal volume)")
         print("  📱 Rate limiting: 30 minutes between notifications per ticker")
         print("  ⏱️  Updates every 2 minutes")
         print("  🚀 LONG TRADES ONLY - No bearish alerts")
-        print("=" * 80)
+        print("=" * 85)
         
         # Show Telegram status
         if tracker.telegram_bot and tracker.telegram_chat_id:
             print("📱 Telegram notifications: ✅ ENABLED")
             print("📰 News headlines: ✅ ENABLED (last 3 days with timestamps)")
             print("⏰ Timestamps: ✅ ENABLED (shows article age)")
+            print("📊 Relative volume: ✅ ENABLED (shows volume vs average)")
+            print(f"📱 Alert threshold: 3+ alerts per ticker (lowered from 5)")
             print(f"📱 Rate limiting: {tracker.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
         else:
             print("📱 Telegram notifications: ❌ DISABLED")
             print("📰 News headlines: ❌ DISABLED (requires Telegram)")
             print("⏰ Timestamps: ❌ DISABLED (requires Telegram)")
+            print("📊 Relative volume: ✅ ENABLED (shown in console)")
             if args.continuous:
-                print("   💡 Use --bot-token and --chat-id for Telegram alerts with timestamped news")
-        print("=" * 80)
+                print("   💡 Use --bot-token and --chat-id for Telegram alerts with timestamped news & relative volume")
+        print("=" * 85)
         
         # Execute the requested action
         if args.single:
@@ -1822,7 +1852,7 @@ def main():
             tracker.print_ticker_stats()
             
         elif args.test_bot:
-            print("\n🧪 Testing Telegram bot and news fetching with timestamps...")
+            print("\n🧪 Testing Telegram bot and news fetching with timestamps and relative volume...")
             if not args.bot_token or not args.chat_id:
                 print("❌ Bot token and chat ID are required for testing.")
                 print("Usage: --test-bot --bot-token 'YOUR_TOKEN' --chat-id 'YOUR_CHAT_ID'")
