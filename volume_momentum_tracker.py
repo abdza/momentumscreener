@@ -10,6 +10,8 @@ Continuously monitors small cap stocks to detect:
 LONG TRADES FOCUS: Only alerts on upward price movements for bullish momentum plays.
 Runs every 2 minutes and compares with previous results to spot emerging momentum plays.
 
+NEW FEATURE: Immediate alerts for very big price spikes (25%+) bypass the 3-alert rule!
+
 Command Line Usage:
     python volume_momentum_tracker.py [options]
 
@@ -20,14 +22,18 @@ Command Line Usage:
         --reset                   Reset ticker counters and exit
         --stats                   Show ticker statistics and exit
         --single                  Run single scan and exit
+        --immediate-threshold PCT Set immediate alert threshold (default: 25%)
         --help                    Show this help message
 
     Examples:
         # Single scan
         python volume_momentum_tracker.py --single
 
-        # Continuous monitoring with Telegram alerts
+        # Continuous monitoring with Telegram alerts (immediate alerts for 25%+ spikes)
         python volume_momentum_tracker.py --continuous --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
+
+        # Set immediate alert threshold to 20%
+        python volume_momentum_tracker.py --continuous --immediate-threshold 20 --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
 
         # Reset counters
         python volume_momentum_tracker.py --reset
@@ -68,7 +74,7 @@ logger = logging.getLogger(__name__)
 PID_FILE = "/tmp/screener.pid"
 
 class VolumeMomentumTracker:
-    def __init__(self, output_dir="momentum_data", browser="firefox", telegram_bot_token=None, telegram_chat_id=None):
+    def __init__(self, output_dir="momentum_data", browser="firefox", telegram_bot_token=None, telegram_chat_id=None, immediate_spike_threshold=25.0):
         """
         Initialize the Volume Momentum Tracker
 
@@ -77,11 +83,15 @@ class VolumeMomentumTracker:
             browser (str): Browser to extract cookies from
             telegram_bot_token (str): Telegram bot token for notifications
             telegram_chat_id (str): Telegram chat ID for notifications
+            immediate_spike_threshold (float): Price change % that triggers immediate alerts (default: 25%)
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.browser = browser
         self.cookies = self._get_cookies()
+
+        # Immediate spike alert threshold
+        self.immediate_spike_threshold = immediate_spike_threshold
 
         # Initialize Telegram bot if credentials provided
         self.telegram_bot = None
@@ -694,8 +704,8 @@ class VolumeMomentumTracker:
         """Generate TradingView chart link for the symbol"""
         return f"https://www.tradingview.com/chart/?symbol={symbol}"
 
-    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types):
-        """Send Telegram alert for high-frequency ticker with rate limiting and news headlines with timestamps"""
+    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False):
+        """Send Telegram alert for high-frequency ticker or immediate big spike with rate limiting and news headlines with timestamps"""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
 
@@ -703,7 +713,7 @@ class VolumeMomentumTracker:
         current_time = datetime.now()
         last_sent_time = self.telegram_last_sent.get(ticker)
 
-        if last_sent_time:
+        if last_sent_time and not is_immediate_spike:  # Skip rate limiting for immediate spikes
             time_since_last = (current_time - datetime.fromisoformat(last_sent_time)).total_seconds()
             if time_since_last < self.telegram_notification_interval:
                 logger.debug(f"Rate limiting: Skipping Telegram alert for {ticker} (sent {time_since_last:.0f}s ago)")
@@ -724,19 +734,35 @@ class VolumeMomentumTracker:
             # Format relative volume display
             rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
 
-            message = (
-                f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
-                f"📊 Ticker: {ticker}\n"
-                f"⚡ Alert Count: {alert_count} times\n"
-                f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
-                f"📈 Volume: {volume:,}\n"
-                f"📊 Relative Volume: {rel_vol_str}\n"
-                f"🏭 Sector: {sector}\n"
-                f"🎯 Alert Types: {alert_types_str}\n\n"
-                f"📋 This ticker has triggered {alert_count} momentum alerts, "
-                f"indicating sustained bullish activity!\n\n"
-                f"📊 View Chart: {tradingview_link}"
-            )
+            # Different message for immediate spikes vs regular high frequency
+            if is_immediate_spike:
+                message = (
+                    f"🚨 IMMEDIATE BIG SPIKE ALERT! 🚨\n\n"
+                    f"📊 Ticker: {ticker}\n"
+                    f"⚡ MASSIVE SPIKE: {change_pct:+.1f}% (≥{self.immediate_spike_threshold:.0f}%)\n"
+                    f"💰 Current Price: ${current_price:.2f}\n"
+                    f"📈 Volume: {volume:,}\n"
+                    f"📊 Relative Volume: {rel_vol_str}\n"
+                    f"🏭 Sector: {sector}\n\n"
+                    f"🔥 This ticker just spiked {change_pct:+.1f}% - immediate alert triggered!\n"
+                    f"📈 Previous alerts: {alert_count}\n"
+                    f"🎯 Alert Types: {alert_types_str}\n\n"
+                    f"📊 View Chart: {tradingview_link}"
+                )
+            else:
+                message = (
+                    f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
+                    f"📊 Ticker: {ticker}\n"
+                    f"⚡ Alert Count: {alert_count} times\n"
+                    f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
+                    f"📈 Volume: {volume:,}\n"
+                    f"📊 Relative Volume: {rel_vol_str}\n"
+                    f"🏭 Sector: {sector}\n"
+                    f"🎯 Alert Types: {alert_types_str}\n\n"
+                    f"📋 This ticker has triggered {alert_count} momentum alerts, "
+                    f"indicating sustained bullish activity!\n\n"
+                    f"📊 View Chart: {tradingview_link}"
+                )
 
             # Add recent news headlines if available with timestamps
             if recent_news:
@@ -771,24 +797,37 @@ class VolumeMomentumTracker:
 
             # Update last sent time for rate limiting
             self.telegram_last_sent[ticker] = current_time.isoformat()
-            logger.info(f"📱 Telegram alert sent for {ticker} ({alert_count} alerts) with {len(recent_news)} news headlines with timestamps")
+            alert_type = "IMMEDIATE SPIKE" if is_immediate_spike else "HIGH FREQUENCY"
+            logger.info(f"📱 Telegram {alert_type} alert sent for {ticker} ({change_pct:+.1f}%, {alert_count} alerts) with {len(recent_news)} news headlines")
 
         except Exception as e:
             logger.error(f"❌ Failed to send Telegram alert for {ticker}: {e}")
             # Try sending without markdown if it fails
             try:
                 rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
-                simple_message = (
-                    f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
-                    f"📊 Ticker: {ticker}\n"
-                    f"⚡ Alert Count: {alert_count} times\n"
-                    f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
-                    f"📈 Volume: {volume:,}\n"
-                    f"📊 Relative Volume: {rel_vol_str}\n"
-                    f"🏭 Sector: {sector}\n"
-                    f"🎯 Alert Types: {alert_types_str}\n\n"
-                    f"📊 Chart: {tradingview_link}"
-                )
+                if is_immediate_spike:
+                    simple_message = (
+                        f"🚨 IMMEDIATE BIG SPIKE ALERT! 🚨\n\n"
+                        f"📊 Ticker: {ticker}\n"
+                        f"⚡ MASSIVE SPIKE: {change_pct:+.1f}% (≥{self.immediate_spike_threshold:.0f}%)\n"
+                        f"💰 Current Price: ${current_price:.2f}\n"
+                        f"📈 Volume: {volume:,}\n"
+                        f"📊 Relative Volume: {rel_vol_str}\n"
+                        f"🏭 Sector: {sector}\n\n"
+                        f"📊 Chart: {tradingview_link}"
+                    )
+                else:
+                    simple_message = (
+                        f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
+                        f"📊 Ticker: {ticker}\n"
+                        f"⚡ Alert Count: {alert_count} times\n"
+                        f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
+                        f"📈 Volume: {volume:,}\n"
+                        f"📊 Relative Volume: {rel_vol_str}\n"
+                        f"🏭 Sector: {sector}\n"
+                        f"🎯 Alert Types: {alert_types_str}\n\n"
+                        f"📊 Chart: {tradingview_link}"
+                    )
 
                 if recent_news:
                     simple_message += f"\n\nRecent Headlines:"
@@ -800,10 +839,31 @@ class VolumeMomentumTracker:
                 loop.run_until_complete(
                     self.telegram_bot.send_message(self.telegram_chat_id, simple_message)
                 )
-                logger.info(f"📱 Sent simplified Telegram alert for {ticker}")
+                alert_type = "IMMEDIATE SPIKE" if is_immediate_spike else "HIGH FREQUENCY"
+                logger.info(f"📱 Sent simplified Telegram {alert_type} alert for {ticker}")
 
             except Exception as e2:
                 logger.error(f"❌ Failed to send even simplified alert: {e2}")
+
+    def _send_immediate_spike_alert(self, ticker, alert_data):
+        """Send immediate alert for very big price spikes"""
+        if not self.telegram_bot or not self.telegram_chat_id:
+            return
+
+        history = self.ticker_alert_history.get(ticker, {})
+        alert_types = list(history.get('alert_types', {}).keys())
+        alert_count = self.ticker_counters.get(ticker, 1)
+
+        # Get current data from the alert
+        current_price = alert_data.get('current_price', alert_data.get('price', 0))
+        change_pct = alert_data.get('change_pct', alert_data.get('premarket_change', 0))
+        volume = alert_data.get('volume', 0)
+        # Extract relative volume from different possible keys
+        relative_volume = alert_data.get('relative_volume',
+                        alert_data.get('relative_volume_10d_calc', 0))
+        sector = alert_data.get('sector', 'Unknown')
+
+        self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=True)
 
     def _check_high_frequency_alerts(self, ticker, alert_data):
         """Check if ticker qualifies for Telegram notification (sends every time for 3+ alerts with rate limiting)"""
@@ -826,7 +886,7 @@ class VolumeMomentumTracker:
                             alert_data.get('relative_volume_10d_calc', 0))
             sector = alert_data.get('sector', 'Unknown')
 
-            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types)
+            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False)
 
     def _get_cookies(self):
         """Get cookies from browser using rookiepy"""
@@ -950,7 +1010,16 @@ class VolumeMomentumTracker:
         if len(history['recent_alerts']) > 10:
             history['recent_alerts'].pop(0)
 
-        # Check if this ticker qualifies for Telegram notification
+        # Check for immediate spike alert (very big price spikes)
+        if alert_data and alert_type == 'price_spike':
+            change_pct = alert_data.get('change_pct', 0)
+            if change_pct >= self.immediate_spike_threshold:
+                logger.info(f"🚨 IMMEDIATE SPIKE DETECTED: {ticker} +{change_pct:.1f}% (≥{self.immediate_spike_threshold:.0f}%)")
+                print(f"🚨 IMMEDIATE SPIKE: {ticker} +{change_pct:.1f}% - Sending immediate alert!")
+                self._send_immediate_spike_alert(ticker, alert_data)
+                return  # Skip regular high frequency check since we already sent immediate alert
+
+        # Check if this ticker qualifies for regular Telegram notification
         if alert_data:
             self._check_high_frequency_alerts(ticker, alert_data)
 
@@ -1361,9 +1430,14 @@ class VolumeMomentumTracker:
                     count = climber.get('appearance_count', 1)  # Default to 1 if missing
                     rel_vol = climber.get('relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
+                    change_pct = climber.get('change_pct', 0)
+                    
+                    # Mark immediate spikes
+                    spike_marker = " 🚨" if change_pct >= self.immediate_spike_threshold else ""
+                    
                     print(f"  {climber['ticker']:6} [{count:2d}x] | Rank: {climber['previous_rank']:3d} → {climber['current_rank']:3d} "
                           f"(+{climber['rank_change']:2d}) | Vol: {climber['volume']:>10,} ({rel_vol_str}) | "
-                          f"${climber['price']:6.2f} ({climber.get('change_pct', 0):+5.1f}%) | {climber.get('sector', 'Unknown')}")
+                          f"${climber['price']:6.2f} ({change_pct:+5.1f}%{spike_marker}) | {climber.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing volume climber {climber.get('ticker', 'Unknown')}: {e}")
 
@@ -1375,9 +1449,14 @@ class VolumeMomentumTracker:
                     count = newcomer.get('appearance_count', 1)
                     rel_vol = newcomer.get('relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
+                    change_pct = newcomer.get('change_pct', 0)
+                    
+                    # Mark immediate spikes
+                    spike_marker = " 🚨" if change_pct >= self.immediate_spike_threshold else ""
+                    
                     print(f"  {newcomer['ticker']:6} [{count:2d}x] | NEW → Rank {newcomer['current_rank']:3d} | "
                           f"Vol: {newcomer['volume']:>10,} ({rel_vol_str}) | ${newcomer['price']:6.2f} "
-                          f"({newcomer.get('change_pct', 0):+5.1f}%) | {newcomer.get('sector', 'Unknown')}")
+                          f"({change_pct:+5.1f}%{spike_marker}) | {newcomer.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing volume newcomer {newcomer.get('ticker', 'Unknown')}: {e}")
 
@@ -1389,7 +1468,12 @@ class VolumeMomentumTracker:
                     count = spike.get('appearance_count', 1)
                     rel_vol = spike.get('relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
-                    print(f"  {spike['ticker']:6} [{count:2d}x] | ${spike['current_price']:6.2f} ({spike.get('change_pct', 0):+5.1f}%) | "
+                    change_pct = spike.get('change_pct', 0)
+                    
+                    # Mark immediate spikes
+                    spike_marker = " 🚨 IMMEDIATE" if change_pct >= self.immediate_spike_threshold else ""
+                    
+                    print(f"  {spike['ticker']:6} [{count:2d}x] | ${spike['current_price']:6.2f} ({change_pct:+5.1f}%{spike_marker}) | "
                           f"Vol: {spike.get('volume', 0):>10,} ({rel_vol_str}) | {spike.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing price spike {spike.get('ticker', 'Unknown')}: {e}")
@@ -1402,13 +1486,18 @@ class VolumeMomentumTracker:
                     count = alert.get('appearance_count', 1)
                     rel_vol = alert.get('relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
+                    pm_change = alert.get('premarket_change', 0)
+                    
+                    # Mark immediate spikes
+                    spike_marker = " 🚨" if pm_change >= self.immediate_spike_threshold else ""
+                    
                     if alert.get('alert_type') == 'premarket_volume_surge':
                         print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} "
                               f"(+{alert.get('premarket_volume_change', 0):5.1f}%) RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} "
-                              f"PM: {alert.get('premarket_change', 0):+5.1f}% | {alert.get('sector', 'Unknown')}")
+                              f"PM: {pm_change:+5.1f}%{spike_marker} | {alert.get('sector', 'Unknown')}")
                     else:
                         print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} RelVol: {rel_vol_str} | "
-                              f"${alert.get('current_price', 0):6.2f} PM: {alert.get('premarket_change', 0):+5.1f}% | {alert.get('sector', 'Unknown')}")
+                              f"${alert.get('current_price', 0):6.2f} PM: {pm_change:+5.1f}%{spike_marker} | {alert.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing premarket volume alert {alert.get('ticker', 'Unknown')}: {e}")
 
@@ -1420,12 +1509,17 @@ class VolumeMomentumTracker:
                     count = alert.get('appearance_count', 1)
                     rel_vol = alert.get('relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
+                    pm_change = alert.get('premarket_change', 0)
+                    
+                    # Mark immediate spikes
+                    spike_marker = " 🚨" if pm_change >= self.immediate_spike_threshold else ""
+                    
                     if alert.get('alert_type') == 'premarket_acceleration':
-                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {alert.get('premarket_change', 0):+6.1f}% "
-                              f"(Δ{alert.get('premarket_change_acceleration', 0):+5.1f}%) RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} | "
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {pm_change:+6.1f}% "
+                              f"(Δ{alert.get('premarket_change_acceleration', 0):+5.1f}%{spike_marker}) RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} | "
                               f"Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
                     else:
-                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {alert.get('premarket_change', 0):+6.1f}% RelVol: {rel_vol_str} | "
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {pm_change:+6.1f}%{spike_marker} RelVol: {rel_vol_str} | "
                               f"${alert.get('current_price', 0):6.2f} | Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing premarket price alert {alert.get('ticker', 'Unknown')}: {e}")
@@ -1546,18 +1640,25 @@ class VolumeMomentumTracker:
         logger.info("🚀 Starting continuous volume momentum monitoring...")
         logger.info(f"📊 Scanning every {self.monitor_interval} seconds (2 minutes)")
         logger.info(f"🎯 Tracking: Volume climbers, newcomers, and price spikes")
+        logger.info(f"🚨 IMMEDIATE SPIKE THRESHOLD: {self.immediate_spike_threshold:.0f}% (bypasses 3-alert rule)")
         logger.info(f"💾 Data saved to: {self.output_dir}")
         logger.info(f"📰 News headlines: Recent news with timestamps included in Telegram alerts")
 
         if self.telegram_bot and self.telegram_chat_id:
             logger.info("📱 Telegram notifications: ✅ ENABLED")
-            logger.info(f"📱 Alert threshold: 3+ alerts per ticker (changed from 5)")
+            logger.info(f"📱 Alert threshold: 3+ alerts per ticker")
+            logger.info(f"🚨 Immediate alerts: ≥{self.immediate_spike_threshold:.0f}% price spikes (no waiting!)")
             logger.info(f"📱 Rate limiting: {self.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
             logger.info("📰 Recent headlines (last 3 days) with timestamps will be included in alerts")
             logger.info("📊 Relative volume information included in alerts")
         else:
             logger.info("📱 Telegram notifications: ❌ DISABLED")
             logger.info("📰 News headlines: ❌ DISABLED (requires Telegram)")
+            logger.info("⏰ Timestamps: ❌ DISABLED (requires Telegram)")
+            logger.info("📊 Relative volume: ✅ ENABLED (shown in console)")
+            if True:  # Always show this tip
+                logger.info("   💡 Use --bot-token and --chat-id for immediate spike alerts with timestamped news & relative volume")
+        logger.info("=" * 85)
 
         try:
             while True:
@@ -1604,6 +1705,7 @@ class VolumeMomentumTracker:
 
         print(f"Total tracked tickers: {len(sorted_tickers)}")
         print(f"Most active ticker: {sorted_tickers[0][0]} ({sorted_tickers[0][1]} alerts)")
+        print(f"Immediate spike threshold: {self.immediate_spike_threshold:.0f}%")
 
         print(f"\nTop 10 Most Active Tickers:")
         print("-" * 60)
@@ -1630,6 +1732,7 @@ class VolumeMomentumTracker:
                 "📊 If you see this, Telegram notifications are working correctly!\n\n"
                 "📱 Notifications will be sent for every alert of tickers with 3+ total alerts "
                 "(rate limited to once per 30 minutes per ticker).\n\n"
+                f"🚨 IMMEDIATE ALERTS: Price spikes ≥{self.immediate_spike_threshold:.0f}% bypass the 3-alert rule!\n\n"
                 "📰 Recent headlines (last 3 days) with timestamps will be included automatically.\n\n"
                 "📊 Relative volume information is now included in all alerts."
             )
@@ -1666,6 +1769,7 @@ class VolumeMomentumTracker:
 
                     # Add sample relative volume info
                     news_test_message += f"\n📊 Sample Relative Volume: 2.5x (this would show actual data in real alerts)"
+                    news_test_message += f"\n🚨 Immediate spike threshold: {self.immediate_spike_threshold:.0f}%"
 
                     loop.run_until_complete(
                         self.telegram_bot.send_message(
@@ -1700,13 +1804,15 @@ class VolumeMomentumTracker:
                 "✅ Enhanced Features Testing Complete!\n\n"
                 "🔧 New features:\n"
                 "• Alert threshold lowered to 3+ alerts (from 5)\n"
+                f"• 🚨 IMMEDIATE alerts for spikes ≥{self.immediate_spike_threshold:.0f}% (no waiting!)\n"
                 "• Relative volume included in all alerts\n"
                 "• Multiple news source fallbacks\n"
                 "• Robust timestamp parsing\n"
                 "• Graduated fallback times when timestamps fail\n"
                 "• Detailed source attribution\n"
                 "• Improved error handling\n\n"
-                "📰 All news alerts will now show article age and relative volume!"
+                "📰 All news alerts will now show article age and relative volume!\n"
+                f"🚨 Big spikes (≥{self.immediate_spike_threshold:.0f}%) get instant alerts!"
             )
 
             loop.run_until_complete(
@@ -1725,15 +1831,18 @@ class VolumeMomentumTracker:
 def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Volume Momentum Tracker - Real-time Small Caps Monitor with News Headlines, Timestamps & Relative Volume",
+        description="Volume Momentum Tracker - Real-time Small Caps Monitor with News Headlines, Timestamps, Relative Volume & IMMEDIATE BIG SPIKE ALERTS",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   Single scan:
     python volume_momentum_tracker.py --single
 
-  Continuous monitoring with Telegram:
+  Continuous monitoring with Telegram (immediate alerts for 25%+ spikes):
     python volume_momentum_tracker.py --continuous --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
+
+  Set immediate alert threshold to 20%:
+    python volume_momentum_tracker.py --continuous --immediate-threshold 20 --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
 
   Reset counters:
     python volume_momentum_tracker.py --reset
@@ -1741,7 +1850,7 @@ Examples:
   Show statistics:
     python volume_momentum_tracker.py --stats
 
-  Test Telegram bot and news fetching with timestamps:
+  Test Telegram bot and news fetching with immediate spike alerts:
     python volume_momentum_tracker.py --test-bot --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
 
   Kill running process:
@@ -1760,13 +1869,17 @@ Examples:
     action_group.add_argument('--stats', action='store_true',
                             help='Show ticker statistics and exit')
     action_group.add_argument('--test-bot', action='store_true',
-                            help='Test Telegram bot connectivity and news fetching with timestamps, then exit')
+                            help='Test Telegram bot connectivity and news fetching with immediate spike alerts, then exit')
 
     # Telegram configuration
     parser.add_argument('--bot-token', type=str,
                        help='Telegram bot token for notifications')
     parser.add_argument('--chat-id', type=str,
                        help='Telegram chat ID for notifications')
+
+    # Immediate spike threshold
+    parser.add_argument('--immediate-threshold', type=float, default=25.0,
+                       help='Price change percentage that triggers immediate alerts (default: 25.0)')
 
     # Optional configuration
     parser.add_argument('--output-dir', type=str, default='momentum_data',
@@ -1789,12 +1902,13 @@ def main():
             output_dir=args.output_dir,
             browser=args.browser,
             telegram_bot_token=args.bot_token,
-            telegram_chat_id=args.chat_id
+            telegram_chat_id=args.chat_id,
+            immediate_spike_threshold=args.immediate_threshold
         )
 
         # Print header
-        print("🎯 Volume Momentum Tracker with News Headlines, Timestamps & Relative Volume (LONG TRADES)")
-        print("=" * 85)
+        print("🎯 Volume Momentum Tracker with News Headlines, Timestamps, Relative Volume & IMMEDIATE BIG SPIKE ALERTS (LONG TRADES)")
+        print("=" * 110)
         print("Tracks small cap stocks (price < $20) for BULLISH momentum:")
         print("  📈 Volume ranking improvements (with positive price movement)")
         print("  🆕 New high-volume entries (with positive price movement)")
@@ -1803,14 +1917,15 @@ def main():
         print("  🌄 POSITIVE pre-market price movements only")
         print("  📊 Tracks frequency of alerts per ticker")
         print("  🔥 Shows trending tickers (most frequent)")
-        print("  📱 Sends Telegram alerts for EVERY alert of tickers with 3+ alerts (lowered from 5)")
+        print("  📱 Sends Telegram alerts for EVERY alert of tickers with 3+ alerts")
+        print(f"  🚨 IMMEDIATE ALERTS: Price spikes ≥{args.immediate_threshold:.0f}% bypass the 3-alert rule!")
         print("  📰 Includes recent news headlines (last 3 days) with timestamps")
         print("  ⏰ Shows how old each news article is (e.g., '2h ago', '1d ago')")
         print("  📊 Shows relative volume (e.g., '3.2x' = 3.2x normal volume)")
         print("  📱 Rate limiting: 30 minutes between notifications per ticker")
         print("  ⏱️  Updates every 2 minutes")
         print("  🚀 LONG TRADES ONLY - No bearish alerts")
-        print("=" * 85)
+        print("=" * 110)
 
         # Show Telegram status
         if tracker.telegram_bot and tracker.telegram_chat_id:
@@ -1818,16 +1933,18 @@ def main():
             print("📰 News headlines: ✅ ENABLED (last 3 days with timestamps)")
             print("⏰ Timestamps: ✅ ENABLED (shows article age)")
             print("📊 Relative volume: ✅ ENABLED (shows volume vs average)")
-            print(f"📱 Alert threshold: 3+ alerts per ticker (lowered from 5)")
+            print(f"📱 Alert threshold: 3+ alerts per ticker")
+            print(f"🚨 IMMEDIATE alerts: ≥{args.immediate_threshold:.0f}% price spikes (no waiting required!)")
             print(f"📱 Rate limiting: {tracker.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
         else:
             print("📱 Telegram notifications: ❌ DISABLED")
             print("📰 News headlines: ❌ DISABLED (requires Telegram)")
             print("⏰ Timestamps: ❌ DISABLED (requires Telegram)")
+            print(f"🚨 IMMEDIATE alerts: ❌ DISABLED (requires Telegram for ≥{args.immediate_threshold:.0f}% spikes)")
             print("📊 Relative volume: ✅ ENABLED (shown in console)")
             if args.continuous:
-                print("   💡 Use --bot-token and --chat-id for Telegram alerts with timestamped news & relative volume")
-        print("=" * 85)
+                print("   💡 Use --bot-token and --chat-id for immediate spike alerts with timestamped news & relative volume")
+        print("=" * 110)
 
         # Execute the requested action
         if args.single:
@@ -1839,6 +1956,7 @@ def main():
             print("\n🔄 Resetting ticker counters before continuous monitoring...")
             tracker.reset_ticker_counters()
             print("✅ Counters reset. Starting continuous monitoring...")
+            print(f"🚨 IMMEDIATE SPIKE THRESHOLD: {args.immediate_threshold:.0f}% (bypasses 3-alert rule)")
             print("Press Ctrl+C to stop")
             tracker.run_continuous_monitoring()
 
@@ -1852,14 +1970,15 @@ def main():
             tracker.print_ticker_stats()
 
         elif args.test_bot:
-            print("\n🧪 Testing Telegram bot and news fetching with timestamps and relative volume...")
+            print(f"\n🧪 Testing Telegram bot and news fetching with immediate spike alerts (threshold: {args.immediate_threshold:.0f}%)...")
             if not args.bot_token or not args.chat_id:
                 print("❌ Bot token and chat ID are required for testing.")
                 print("Usage: --test-bot --bot-token 'YOUR_TOKEN' --chat-id 'YOUR_CHAT_ID'")
                 sys.exit(1)
 
             if tracker.test_telegram_bot():
-                print("✅ Telegram bot and timestamped news fetching test successful!")
+                print("✅ Telegram bot and immediate spike alert test successful!")
+                print(f"🚨 Big price spikes (≥{args.immediate_threshold:.0f}%) will trigger instant alerts!")
             else:
                 print("❌ Telegram bot test failed!")
                 sys.exit(1)
