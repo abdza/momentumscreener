@@ -704,6 +704,124 @@ class VolumeMomentumTracker:
         """Generate TradingView chart link for the symbol"""
         return f"https://www.tradingview.com/chart/?symbol={symbol}"
 
+    def _analyze_winning_patterns(self, current_price, change_pct, relative_volume, sector, alert_type="price_spike"):
+        """Analyze alert against winning patterns and return probability score and flags"""
+        flags = []
+        score = 0
+        probability_category = "LOW"
+        
+        # FLAT-TO-SPIKE PATTERN ANALYSIS (newly validated!)
+        # Sudden intraday spikes significantly outperform premarket gaps (11.9% vs 4.4%)
+        if alert_type == "price_spike":
+            flags.append("⚡ SUDDEN SPIKE")
+            score += 30  # 11.9% success rate vs 4.4% for premarket
+            
+            # Extra bonus for larger sudden spikes (these have 21-28% success rates!)
+            if change_pct >= 75:
+                flags.append("🚀 BIG SUDDEN SPIKE")
+                score += 20  # 28.1% success rate for 75-150% sudden spikes
+        elif alert_type in ["premarket_price", "premarket_volume"]:
+            # Premarket gaps have much lower success rates
+            score -= 15  # Penalty for premarket gaps (4.4% success rate)
+        
+        # Price range analysis
+        if current_price < 1:
+            flags.append("🎯 Under $1")
+            score += 20  # 12.1% success rate
+        elif current_price < 2:
+            flags.append("💎 Under $2") 
+            score += 15  # 8.8% success rate
+        elif current_price < 5:
+            score += 5
+        else:
+            score -= 10  # Higher prices have lower success rates
+        
+        # Initial change percentage analysis
+        if change_pct >= 200:
+            flags.append("🚀 MEGA SPIKE 200%+")
+            score += 50  # 27.3% success rate
+        elif change_pct >= 100:
+            flags.append("🔥 BIG SPIKE 100%+")
+            score += 40  # 25.0% success rate
+        elif change_pct >= 50:
+            flags.append("⚡ STRONG 50%+")
+            score += 25  # 14.0% success rate
+        elif change_pct >= 25:
+            score += 10  # 10.9% success rate
+        else:
+            score -= 5   # Lower changes have poor success rates
+        
+        # Relative volume analysis
+        if relative_volume and relative_volume >= 500:
+            flags.append("🌊 EXTREME VOL 500x+")
+            score += 40  # 29.2% success rate
+        elif relative_volume and relative_volume >= 100:
+            flags.append("📈 HIGH VOL 100x+")
+            score += 30  # 18.1% success rate
+        elif relative_volume and relative_volume >= 20:
+            flags.append("📊 GOOD VOL 20x+")
+            score += 15  # 7.8% success rate
+        elif relative_volume and relative_volume < 5:
+            score -= 15  # Low volume has poor success rates
+        
+        # Sector analysis (best performing sectors)
+        high_success_sectors = {
+            "Health Services": 25.0,
+            "Utilities": 16.7,
+            "Distribution Services": 15.0,
+            "Consumer Durables": 14.3,
+            "Finance": 12.0
+        }
+        
+        if sector in high_success_sectors:
+            success_rate = high_success_sectors[sector]
+            if success_rate >= 20:
+                flags.append(f"💼 TOP SECTOR")
+                score += 25
+            elif success_rate >= 15:
+                flags.append(f"🏭 GOOD SECTOR")
+                score += 15
+            elif success_rate >= 12:
+                flags.append(f"📋 OK SECTOR")
+                score += 10
+        
+        # Alert type analysis
+        if alert_type == "price_spike":
+            score += 10  # 11.9% success rate (best type)
+        else:
+            score -= 5   # Premarket alerts have lower success rates
+        
+        # Calculate probability category based on score
+        if score >= 80:
+            probability_category = "VERY HIGH"
+        elif score >= 60:
+            probability_category = "HIGH"
+        elif score >= 40:
+            probability_category = "MEDIUM"
+        elif score >= 20:
+            probability_category = "LOW"
+        else:
+            probability_category = "VERY LOW"
+        
+        # Estimate success probability percentage
+        if score >= 80:
+            estimated_probability = 25.0  # Top tier
+        elif score >= 60:
+            estimated_probability = 18.0  # High tier
+        elif score >= 40:
+            estimated_probability = 12.0  # Medium tier  
+        elif score >= 20:
+            estimated_probability = 8.0   # Low tier
+        else:
+            estimated_probability = 4.0   # Very low tier
+        
+        return {
+            'flags': flags,
+            'score': score,
+            'probability_category': probability_category,
+            'estimated_probability': estimated_probability
+        }
+
     def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False):
         """Send Telegram alert for high-frequency ticker or immediate big spike with rate limiting and news headlines with timestamps"""
         if not self.telegram_bot or not self.telegram_chat_id:
@@ -722,6 +840,12 @@ class VolumeMomentumTracker:
         try:
             import asyncio
 
+            # Analyze winning patterns
+            primary_alert_type = alert_types[0] if alert_types else "price_spike"
+            pattern_analysis = self._analyze_winning_patterns(
+                current_price, change_pct, relative_volume, sector, primary_alert_type
+            )
+            
             # Get recent news headlines
             logger.info(f"Fetching recent news for {ticker}...")
             recent_news = self._get_recent_news(ticker, max_headlines=3)
@@ -733,6 +857,10 @@ class VolumeMomentumTracker:
 
             # Format relative volume display
             rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
+            
+            # Create winning pattern flags string
+            pattern_flags_str = " ".join(pattern_analysis['flags']) if pattern_analysis['flags'] else "📊 Standard Alert"
+            probability_str = f"{pattern_analysis['probability_category']} ({pattern_analysis['estimated_probability']:.1f}%)"
 
             # Different message for immediate spikes vs regular high frequency
             if is_immediate_spike:
@@ -744,6 +872,8 @@ class VolumeMomentumTracker:
                     f"📈 Volume: {volume:,}\n"
                     f"📊 Relative Volume: {rel_vol_str}\n"
                     f"🏭 Sector: {sector}\n\n"
+                    f"🎯 WIN PROBABILITY: {probability_str}\n"
+                    f"🚀 PATTERN FLAGS: {pattern_flags_str}\n\n"
                     f"🔥 This ticker just spiked {change_pct:+.1f}% - immediate alert triggered!\n"
                     f"📈 Previous alerts: {alert_count}\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
@@ -757,10 +887,12 @@ class VolumeMomentumTracker:
                     f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
                     f"📈 Volume: {volume:,}\n"
                     f"📊 Relative Volume: {rel_vol_str}\n"
-                    f"🏭 Sector: {sector}\n"
-                    f"🎯 Alert Types: {alert_types_str}\n\n"
+                    f"🏭 Sector: {sector}\n\n"
+                    f"🎯 WIN PROBABILITY: {probability_str}\n"
+                    f"🚀 PATTERN FLAGS: {pattern_flags_str}\n\n"
                     f"📋 This ticker has triggered {alert_count} momentum alerts, "
-                    f"indicating sustained bullish activity!\n\n"
+                    f"indicating sustained bullish activity!\n"
+                    f"🎯 Alert Types: {alert_types_str}\n\n"
                     f"📊 View Chart: {tradingview_link}"
                 )
 
@@ -805,6 +937,15 @@ class VolumeMomentumTracker:
             # Try sending without markdown if it fails
             try:
                 rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
+                
+                # Recreate pattern analysis for simple message
+                primary_alert_type = alert_types[0] if alert_types else "price_spike"
+                pattern_analysis = self._analyze_winning_patterns(
+                    current_price, change_pct, relative_volume, sector, primary_alert_type
+                )
+                pattern_flags_str = " ".join(pattern_analysis['flags']) if pattern_analysis['flags'] else "📊 Standard Alert"
+                probability_str = f"{pattern_analysis['probability_category']} ({pattern_analysis['estimated_probability']:.1f}%)"
+                
                 if is_immediate_spike:
                     simple_message = (
                         f"🚨 IMMEDIATE BIG SPIKE ALERT! 🚨\n\n"
@@ -814,6 +955,8 @@ class VolumeMomentumTracker:
                         f"📈 Volume: {volume:,}\n"
                         f"📊 Relative Volume: {rel_vol_str}\n"
                         f"🏭 Sector: {sector}\n\n"
+                        f"🎯 WIN PROBABILITY: {probability_str}\n"
+                        f"🚀 PATTERN FLAGS: {pattern_flags_str}\n\n"
                         f"📊 Chart: {tradingview_link}"
                     )
                 else:
@@ -824,8 +967,9 @@ class VolumeMomentumTracker:
                         f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
                         f"📈 Volume: {volume:,}\n"
                         f"📊 Relative Volume: {rel_vol_str}\n"
-                        f"🏭 Sector: {sector}\n"
-                        f"🎯 Alert Types: {alert_types_str}\n\n"
+                        f"🏭 Sector: {sector}\n\n"
+                        f"🎯 WIN PROBABILITY: {probability_str}\n"
+                        f"🚀 PATTERN FLAGS: {pattern_flags_str}\n\n"
                         f"📊 Chart: {tradingview_link}"
                     )
 
