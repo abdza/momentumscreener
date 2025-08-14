@@ -173,4 +173,5 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 screener.sh
+end_of_day.sh
 momentum_data/
