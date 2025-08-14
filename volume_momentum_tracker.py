@@ -119,6 +119,12 @@ class VolumeMomentumTracker:
         self.previous_rankings = {}
         self.price_history = {}
         self.premarket_history = {}  # Track pre-market data
+        
+        # Flat-to-spike detection
+        self.flat_period_history = {}  # Track recent price data for flat detection
+        self.flat_period_window = 30 * 60  # 30 minutes for flat period detection
+        self.flat_volatility_threshold = 3.0  # Max % volatility to consider "flat" (increased from 2.0)
+        self.min_flat_duration = 8 * 60  # Minimum 8 minutes of flat behavior (reduced from 10)
 
         # Ticker frequency tracking
         self.ticker_counters = self._load_ticker_counters()
@@ -710,9 +716,17 @@ class VolumeMomentumTracker:
         score = 0
         probability_category = "LOW"
         
-        # FLAT-TO-SPIKE PATTERN ANALYSIS (newly validated!)
-        # Sudden intraday spikes significantly outperform premarket gaps (11.9% vs 4.4%)
-        if alert_type == "price_spike":
+        # ENHANCED FLAT-TO-SPIKE PATTERN ANALYSIS
+        # True flat-to-spike patterns should have the highest success rates
+        if alert_type == "flat_to_spike":
+            flags.append("🎯 FLAT-TO-SPIKE")
+            score += 50  # Premium for verified flat-to-spike pattern
+            
+            # Extra bonus for larger flat-to-spike patterns
+            if change_pct >= 75:
+                flags.append("🚀 BIG FLAT-TO-SPIKE")
+                score += 30  # Maximum bonus for large flat-to-spike
+        elif alert_type == "price_spike":
             flags.append("⚡ SUDDEN SPIKE")
             score += 30  # 11.9% success rate vs 4.4% for premarket
             
@@ -1227,14 +1241,17 @@ class VolumeMomentumTracker:
         if alert_data:
             self._check_high_frequency_alerts(ticker, alert_data)
 
-    def _add_counter_to_alerts(self, alerts, alert_type):
+    def _add_counter_to_alerts(self, alerts, default_alert_type):
         """Add appearance counter to alert data and sort by frequency"""
         # First pass: Update counters and add appearance_count to all alerts
         for alert in alerts:
             ticker = alert['ticker']
+            
+            # Use individual alert_type if available, otherwise use default
+            individual_alert_type = alert.get('alert_type', default_alert_type)
 
             # Update counter
-            self._update_ticker_counter(ticker, alert_type, alert)
+            self._update_ticker_counter(ticker, individual_alert_type, alert)
 
             # Add counter to alert data
             alert['appearance_count'] = self.ticker_counters.get(ticker, 0)
@@ -1242,16 +1259,16 @@ class VolumeMomentumTracker:
 
         # Second pass: Sort by appearance count (highest first), then by the original metric
         try:
-            if alert_type == 'volume_climber':
+            if default_alert_type == 'volume_climber':
                 alerts.sort(key=lambda x: (x.get('appearance_count', 0), x.get('rank_change', 0)), reverse=True)
-            elif alert_type == 'volume_newcomer':
+            elif default_alert_type == 'volume_newcomer':
                 alerts.sort(key=lambda x: (x.get('appearance_count', 0), -x.get('current_rank', 999)), reverse=True)
-            elif alert_type in ['price_spike', 'premarket_price']:
+            elif default_alert_type in ['price_spike', 'premarket_price', 'flat_to_spike']:
                 alerts.sort(key=lambda x: (x.get('appearance_count', 0), abs(x.get('change_pct', x.get('premarket_change', 0)))), reverse=True)
-            elif alert_type == 'premarket_volume':
+            elif default_alert_type == 'premarket_volume':
                 alerts.sort(key=lambda x: (x.get('appearance_count', 0), x.get('premarket_volume', 0)), reverse=True)
         except Exception as e:
-            logger.error(f"Error sorting alerts for {alert_type}: {e}")
+            logger.error(f"Error sorting alerts for {default_alert_type}: {e}")
             # Fall back to simple sort by appearance count only
             alerts.sort(key=lambda x: x.get('appearance_count', 0), reverse=True)
 
@@ -1413,6 +1430,86 @@ class VolumeMomentumTracker:
 
         return volume_climbers, volume_newcomers
 
+    def _detect_flat_period(self, ticker, current_price, current_time):
+        """
+        Detect if a ticker was in a flat period before the current spike
+        
+        Args:
+            ticker: Stock symbol
+            current_price: Current stock price
+            current_time: Current timestamp
+            
+        Returns:
+            dict: {
+                'is_flat': bool,
+                'flat_duration_minutes': int,
+                'flat_volatility': float,
+                'flat_avg_price': float,
+                'flat_price_range': tuple
+            }
+        """
+        if ticker not in self.flat_period_history:
+            self.flat_period_history[ticker] = []
+        
+        # Add current price data
+        self.flat_period_history[ticker].append({
+            'timestamp': current_time,
+            'price': current_price
+        })
+        
+        # Clean old data (keep only data within the flat detection window)
+        cutoff_time = current_time - timedelta(seconds=self.flat_period_window)
+        self.flat_period_history[ticker] = [
+            entry for entry in self.flat_period_history[ticker]
+            if entry['timestamp'] > cutoff_time
+        ]
+        
+        # Need at least several data points to determine flatness
+        price_history = self.flat_period_history[ticker]
+        if len(price_history) < 3:
+            return {
+                'is_flat': False,
+                'flat_duration_minutes': 0,
+                'flat_volatility': 0,
+                'flat_avg_price': current_price,
+                'flat_price_range': (current_price, current_price),
+                'reason': 'insufficient_data'
+            }
+        
+        # Calculate price statistics over the window
+        prices = [entry['price'] for entry in price_history]
+        avg_price = sum(prices) / len(prices)
+        min_price = min(prices)
+        max_price = max(prices)
+        
+        # Calculate volatility as percentage range
+        if avg_price > 0:
+            volatility = ((max_price - min_price) / avg_price) * 100
+        else:
+            volatility = 0
+        
+        # Calculate duration of the period
+        if len(price_history) >= 2:
+            duration_seconds = (price_history[-1]['timestamp'] - price_history[0]['timestamp']).total_seconds()
+            duration_minutes = duration_seconds / 60
+        else:
+            duration_minutes = 0
+        
+        # Determine if this constitutes a "flat" period
+        is_flat = (
+            volatility <= self.flat_volatility_threshold and
+            duration_minutes >= (self.min_flat_duration / 60)  # Convert to minutes
+        )
+        
+        return {
+            'is_flat': is_flat,
+            'flat_duration_minutes': duration_minutes,
+            'flat_volatility': volatility,
+            'flat_avg_price': avg_price,
+            'flat_price_range': (min_price, max_price),
+            'reason': 'flat_detected' if is_flat else f'volatility_{volatility:.1f}%_duration_{duration_minutes:.1f}min'
+        }
+
     def analyze_price_spikes(self, current_data, time_window_minutes=10):
         """Analyze which tickers have the biggest POSITIVE price increases (long trades only)"""
         price_spikes = []
@@ -1444,6 +1541,9 @@ class VolumeMomentumTracker:
                     if entry['timestamp'] > cutoff_time
                 ]
 
+                # Detect flat period before potential spike
+                flat_analysis = self._detect_flat_period(ticker, current_price, current_time)
+                
                 # Analyze price movement if we have enough history
                 if len(self.price_history[ticker]) >= 2:
                     oldest_entry = self.price_history[ticker][0]
@@ -1451,7 +1551,10 @@ class VolumeMomentumTracker:
 
                     # Significant POSITIVE price spike criteria (long trades only)
                     if (change_pct > 10 or price_change > 15) and current_price < 20 and change_pct > 0:
-                        price_spikes.append({
+                        # Determine if this is a true flat-to-spike or just a regular spike
+                        alert_type = 'flat_to_spike' if flat_analysis['is_flat'] else 'price_spike'
+                        
+                        spike_data = {
                             'ticker': ticker,
                             'current_price': current_price,
                             'change_pct': change_pct,
@@ -1459,10 +1562,16 @@ class VolumeMomentumTracker:
                             'volume': record.get('volume', 0),
                             'relative_volume': record.get('relative_volume_10d_calc', 0),
                             'sector': record.get('sector', 'Unknown'),
-                            'time_window': time_window_minutes
-                        })
+                            'time_window': time_window_minutes,
+                            'alert_type': alert_type,
+                            'flat_analysis': flat_analysis
+                        }
+                        
+                        price_spikes.append(spike_data)
+                        
                 elif change_pct > 10:  # First time seeing this ticker but significant positive move
-                    price_spikes.append({
+                    # For new tickers, we can't determine flat period, so mark as regular spike
+                    spike_data = {
                         'ticker': ticker,
                         'current_price': current_price,
                         'change_pct': change_pct,
@@ -1470,8 +1579,12 @@ class VolumeMomentumTracker:
                         'volume': record.get('volume', 0),
                         'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
-                        'time_window': time_window_minutes
-                    })
+                        'time_window': time_window_minutes,
+                        'alert_type': 'price_spike',  # Can't confirm flat period for new ticker
+                        'flat_analysis': flat_analysis
+                    }
+                    
+                    price_spikes.append(spike_data)
 
         # Sort by biggest POSITIVE price increases
         price_spikes.sort(key=lambda x: x['change_pct'], reverse=True)
@@ -1673,12 +1786,21 @@ class VolumeMomentumTracker:
                     rel_vol = spike.get('relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
                     change_pct = spike.get('change_pct', 0)
+                    alert_type = spike.get('alert_type', 'price_spike')
+                    flat_analysis = spike.get('flat_analysis', {})
                     
                     # Mark immediate spikes
-                    spike_marker = " 🚨 IMMEDIATE" if change_pct >= self.immediate_spike_threshold else ""
+                    spike_marker = " 🚨" if change_pct >= self.immediate_spike_threshold else ""
+                    
+                    # Mark flat-to-spike pattern
+                    pattern_marker = ""
+                    if alert_type == 'flat_to_spike':
+                        flat_duration = flat_analysis.get('flat_duration_minutes', 0)
+                        flat_volatility = flat_analysis.get('flat_volatility', 0)
+                        pattern_marker = f" 🎯FLAT→SPIKE({flat_duration:.0f}m,{flat_volatility:.1f}%)"
                     
                     print(f"  {spike['ticker']:6} [{count:2d}x] | ${spike['current_price']:6.2f} ({change_pct:+5.1f}%{spike_marker}) | "
-                          f"Vol: {spike.get('volume', 0):>10,} ({rel_vol_str}) | {spike.get('sector', 'Unknown')}")
+                          f"Vol: {spike.get('volume', 0):>10,} ({rel_vol_str}) | {spike.get('sector', 'Unknown')}{pattern_marker}")
                 except Exception as e:
                     logger.error(f"Error printing price spike {spike.get('ticker', 'Unknown')}: {e}")
 
