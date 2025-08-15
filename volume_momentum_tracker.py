@@ -52,6 +52,7 @@ import atexit
 import requests
 import re
 from datetime import datetime, timedelta
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 import logging
 import pandas as pd
@@ -104,7 +105,10 @@ class VolumeMomentumTracker:
 
         # News cache to avoid repeated API calls
         self.news_cache = {}
-        self.news_cache_duration = 60 * 60  # Cache news for 1 hour
+        self.news_cache_duration = 15 * 60  # Cache news for 15 minutes
+        
+        # Company name cache for better news filtering
+        self.company_name_cache = {}
 
         if telegram_bot_token and telegram_chat_id:
             try:
@@ -178,6 +182,221 @@ class VolumeMomentumTracker:
             logger.debug(f"Error formatting time difference: {e}")
             return "Unknown"
 
+    def _get_company_name(self, ticker):
+        """
+        Get company name for a ticker symbol to improve news filtering
+        Uses free sources with caching
+        """
+        ticker_upper = ticker.upper()
+        
+        # Check cache first
+        if ticker_upper in self.company_name_cache:
+            return self.company_name_cache[ticker_upper]
+        
+        company_name = None
+        
+        try:
+            # Method 1: Try Yahoo Finance for company name (free)
+            url = f"https://finance.yahoo.com/quote/{ticker_upper}"
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                # Look for company name in the page
+                import re
+                # Try to find the company name in the title or h1 tags
+                name_patterns = [
+                    r'<title>([^(]+)\s*\([^)]*\)\s*Stock Price',
+                    r'<h1[^>]*>([^(]+)\s*\([^)]*\)',
+                    r'"shortName":"([^"]+)"',
+                    r'"longName":"([^"]+)"'
+                ]
+                
+                for pattern in name_patterns:
+                    match = re.search(pattern, response.text)
+                    if match:
+                        company_name = match.group(1).strip()
+                        break
+                
+                # Clean up common suffixes
+                if company_name:
+                    company_name = re.sub(r'\s+(Inc|Corp|Corporation|Ltd|Limited|Co|Company|Group|Holdings|Technologies|Systems|Solutions|Services|Enterprises|International)(\.)?$', '', company_name, flags=re.IGNORECASE)
+                    company_name = company_name.strip()
+        
+        except Exception as e:
+            logger.debug(f"Error fetching company name for {ticker}: {e}")
+        
+        # Fallback: use ticker as company name
+        if not company_name:
+            company_name = ticker_upper
+        
+        # Cache the result
+        self.company_name_cache[ticker_upper] = company_name
+        logger.debug(f"Company name for {ticker}: {company_name}")
+        
+        return company_name
+    
+    def _create_search_keywords(self, ticker):
+        """
+        Create comprehensive search keywords for news filtering
+        """
+        ticker_upper = ticker.upper()
+        company_name = self._get_company_name(ticker)
+        
+        keywords = [
+            ticker_upper,
+            ticker.lower(),
+            'stock',
+            'shares',
+            'trading',
+            'earnings',
+            'revenue',
+            'quarterly',
+            'financial',
+            'announcement',
+            'results',
+            'guidance',
+            'outlook'
+        ]
+        
+        # Add company name variations
+        if company_name and company_name != ticker_upper:
+            keywords.extend([
+                company_name.lower(),
+                company_name.upper(),
+                company_name.title()
+            ])
+            
+            # Add partial company name matches (for multi-word company names)
+            name_words = company_name.split()
+            if len(name_words) > 1:
+                # Add individual words that are longer than 3 characters
+                for word in name_words:
+                    if len(word) > 3:
+                        keywords.extend([word.lower(), word.upper(), word.title()])
+        
+        return list(set(keywords))  # Remove duplicates
+    
+    def _is_relevant_news(self, title, ticker, keywords=None):
+        """
+        Improved relevance checking for news articles
+        """
+        if not keywords:
+            keywords = self._create_search_keywords(ticker)
+        
+        title_lower = title.lower()
+        
+        # Check for exact ticker match (high relevance)
+        if ticker.upper() in title.upper() or ticker.lower() in title_lower:
+            return True
+        
+        # Check for company name match (high relevance)
+        company_name = self._get_company_name(ticker)
+        if company_name and company_name != ticker.upper():
+            if company_name.lower() in title_lower:
+                return True
+            
+            # Check partial company name matches
+            name_words = company_name.split()
+            if len(name_words) > 1:
+                matches = sum(1 for word in name_words if len(word) > 3 and word.lower() in title_lower)
+                if matches >= len(name_words) // 2:  # At least half the words match
+                    return True
+        
+        # Check for financial keywords (medium relevance)
+        financial_keywords = ['stock', 'shares', 'earnings', 'revenue', 'financial', 'quarterly']
+        if any(keyword in title_lower for keyword in financial_keywords):
+            return True
+        
+        # Check for general business keywords (lower relevance)
+        business_keywords = ['trading', 'announcement', 'results', 'guidance', 'outlook']
+        if any(keyword in title_lower for keyword in business_keywords):
+            return True
+        
+        return False
+    
+    def _parse_date_with_fallbacks(self, date_string, ticker):
+        """
+        Improved date parsing with multiple fallback methods
+        """
+        if not date_string:
+            return datetime.now() - timedelta(hours=1)
+        
+        date_string = date_string.strip()
+        
+        # List of parsing methods to try
+        parsing_methods = [
+            # Method 1: RFC 2822 format (most RSS feeds)
+            lambda ds: parsedate_to_datetime(ds),
+            
+            # Method 2: ISO format with Z
+            lambda ds: datetime.fromisoformat(ds.replace('Z', '+00:00')) if 'T' in ds else None,
+            
+            # Method 3: ISO format without timezone
+            lambda ds: datetime.fromisoformat(ds) if 'T' in ds else None,
+            
+            # Method 4: Common formats
+            lambda ds: datetime.strptime(ds, '%Y-%m-%d %H:%M:%S'),
+            lambda ds: datetime.strptime(ds, '%Y-%m-%d'),
+            lambda ds: datetime.strptime(ds, '%d %b %Y %H:%M:%S'),
+            lambda ds: datetime.strptime(ds, '%d %b %Y'),
+            lambda ds: datetime.strptime(ds, '%B %d, %Y'),
+            lambda ds: datetime.strptime(ds, '%b %d, %Y'),
+            
+            # Method 5: Parse relative times ("2 hours ago", "1 day ago")
+            lambda ds: self._parse_relative_time(ds),
+        ]
+        
+        for i, parse_method in enumerate(parsing_methods):
+            try:
+                result = parse_method(date_string)
+                if result:
+                    logger.debug(f"Date parsing method {i+1} succeeded for {ticker}: {result}")
+                    return result
+            except Exception as e:
+                logger.debug(f"Date parsing method {i+1} failed for {ticker}: {e}")
+                continue
+        
+        # If all parsing fails, return a recent time
+        logger.debug(f"All date parsing methods failed for {ticker}, using fallback")
+        return datetime.now() - timedelta(hours=1)
+    
+    def _parse_relative_time(self, time_string):
+        """
+        Parse relative time strings like "2 hours ago", "1 day ago"
+        """
+        import re
+        
+        time_string = time_string.lower().strip()
+        
+        # Pattern for "X time_unit ago"
+        patterns = [
+            (r'(\d+)\s*h(?:our)?s?\s*ago', 'hours'),
+            (r'(\d+)\s*m(?:in(?:ute)?)?s?\s*ago', 'minutes'),
+            (r'(\d+)\s*d(?:ay)?s?\s*ago', 'days'),
+            (r'(\d+)\s*w(?:eek)?s?\s*ago', 'weeks'),
+            (r'(\d+)\s*mo(?:nth)?s?\s*ago', 'months'),
+        ]
+        
+        for pattern, unit in patterns:
+            match = re.search(pattern, time_string)
+            if match:
+                value = int(match.group(1))
+                if unit == 'hours':
+                    return datetime.now() - timedelta(hours=value)
+                elif unit == 'minutes':
+                    return datetime.now() - timedelta(minutes=value)
+                elif unit == 'days':
+                    return datetime.now() - timedelta(days=value)
+                elif unit == 'weeks':
+                    return datetime.now() - timedelta(weeks=value)
+                elif unit == 'months':
+                    return datetime.now() - timedelta(days=value * 30)
+        
+        return None
+    
     def _get_recent_news(self, ticker, max_headlines=3):
         """
         Get recent news headlines for a ticker (within last 3 days)
@@ -211,30 +430,35 @@ class VolumeMomentumTracker:
         headlines = []
 
         try:
-            # Method 1: Try Google News search
-            logger.debug(f"Trying Google News for {ticker}...")
-            headlines = self._search_google_news(ticker, max_headlines)
+            # Method 1: Try free news APIs first
+            logger.debug(f"Trying free news APIs for {ticker}...")
+            headlines = self._search_free_news_api(ticker, max_headlines)
+            
+            # Method 2: If free APIs fail, try Google News search
+            if not headlines:
+                logger.debug(f"Free APIs failed, trying Google News for {ticker}...")
+                headlines = self._search_google_news(ticker, max_headlines)
 
-            # Method 2: If Google News fails or gives no timestamps, try Bing News
+            # Method 3: If Google News fails or gives no timestamps, try Bing News
             if not headlines or all(h.get('published_date') is None for h in headlines):
                 logger.debug(f"Google News failed or no timestamps, trying Bing for {ticker}...")
                 bing_headlines = self._search_bing_news(ticker, max_headlines)
                 if bing_headlines:
                     headlines = bing_headlines
 
-            # Method 3: If both fail, try Yahoo Finance
+            # Method 4: If both fail, try Yahoo Finance
             if not headlines or all(h.get('published_date') is None for h in headlines):
                 logger.debug(f"Previous methods failed, trying Yahoo Finance for {ticker}...")
                 yahoo_headlines = self._search_yahoo_finance_news(ticker, max_headlines)
                 if yahoo_headlines:
                     headlines = yahoo_headlines
 
-            # Method 4: Fallback - try a simple web search for recent news
+            # Method 5: Fallback - try a simple web search for recent news
             if not headlines:
                 logger.debug(f"All standard methods failed, trying fallback search for {ticker}...")
                 headlines = self._fallback_news_search(ticker, max_headlines)
 
-            # Method 5: If still no headlines, create a default "no news found" entry
+            # Method 6: If still no headlines, create a default "no news found" entry
             if not headlines:
                 logger.debug(f"No news found anywhere for {ticker}")
                 headlines = [{
@@ -320,7 +544,7 @@ class VolumeMomentumTracker:
                 # Clean up title
                 title = re.sub(r'<[^>]*>', '', title).strip()
 
-                if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares']):
+                if self._is_relevant_news(title, ticker):
                     # Assign staggered recent times
                     pub_time = current_time - timedelta(hours=i+1)
 
@@ -338,6 +562,84 @@ class VolumeMomentumTracker:
 
         return headlines
 
+    def _search_free_news_api(self, ticker, max_headlines=3):
+        """
+        Try to get news from free APIs before falling back to web scraping
+        """
+        headlines = []
+        
+        # Try Financial Modeling Prep (free tier - no API key needed for some endpoints)
+        try:
+            url = f"https://financialmodelingprep.com/api/v3/stock_news?tickers={ticker}&limit={max_headlines}"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    for item in data[:max_headlines]:
+                        if isinstance(item, dict) and 'title' in item and 'url' in item:
+                            # Parse the date
+                            pub_date = None
+                            if 'publishedDate' in item:
+                                pub_date = self._parse_date_with_fallbacks(item['publishedDate'], ticker)
+                            
+                            headlines.append({
+                                'title': item['title'][:100] + '...' if len(item['title']) > 100 else item['title'],
+                                'url': item['url'],
+                                'published_date': pub_date.isoformat() if pub_date else None,
+                                'source': 'Financial Modeling Prep'
+                            })
+                            
+                            if len(headlines) >= max_headlines:
+                                break
+        except Exception as e:
+            logger.debug(f"Financial Modeling Prep API failed for {ticker}: {e}")
+        
+        if headlines:
+            logger.debug(f"Free API found {len(headlines)} headlines for {ticker}")
+            return headlines
+        
+        # Try a simple web search for recent stock news
+        try:
+            search_query = f"{ticker} stock news recent"
+            url = f"https://www.google.com/search?q={search_query}&tbm=nws&num=10"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                import re
+                # Look for news article patterns
+                patterns = [
+                    r'<h3[^>]*><a[^>]*href="([^"]+)"[^>]*>([^<]+)</a></h3>',
+                    r'<a[^>]*href="([^"]+)"[^>]*><h3[^>]*>([^<]+)</h3></a>'
+                ]
+                
+                for pattern in patterns:
+                    matches = re.findall(pattern, response.text)
+                    for url_match, title in matches[:max_headlines]:
+                        title = re.sub(r'<[^>]*>', '', title).strip()
+                        if self._is_relevant_news(title, ticker):
+                            headlines.append({
+                                'title': title[:100] + '...' if len(title) > 100 else title,
+                                'url': url_match,
+                                'published_date': (datetime.now() - timedelta(hours=2)).isoformat(),
+                                'source': 'Google Search'
+                            })
+                            
+                            if len(headlines) >= max_headlines:
+                                break
+                    
+                    if headlines:
+                        break
+        
+        except Exception as e:
+            logger.debug(f"Simple web search failed for {ticker}: {e}")
+        
+        return headlines
+    
     def _search_google_news(self, ticker, max_headlines=3):
         """Search Google News for recent ticker news with timestamps"""
         headlines = []
@@ -346,8 +648,13 @@ class VolumeMomentumTracker:
             # Google News RSS feed
             three_days_ago = datetime.now() - timedelta(days=3)
 
-            # Use Google News RSS with search query
-            search_query = f"{ticker} stock"
+            # Use Google News RSS with improved search query
+            company_name = self._get_company_name(ticker)
+            if company_name and company_name != ticker.upper():
+                search_query = f"{company_name} OR {ticker} stock earnings financial"
+            else:
+                search_query = f"{ticker} stock earnings financial"
+            
             url = f"https://news.google.com/rss/search?q={search_query}&hl=en-US&gl=US&ceid=US:en"
 
             headers = {
@@ -373,37 +680,34 @@ class VolumeMomentumTracker:
                         link = link_elem.text
                         published_date = None
 
-                        # Parse publication date - try multiple methods
+                        # Parse publication date using improved method
                         if pub_date_elem is not None and pub_date_elem.text:
-                            try:
-                                # Method 1: RFC 2822 date format
-                                from email.utils import parsedate_to_datetime
-                                published_date = parsedate_to_datetime(pub_date_elem.text)
-                                logger.debug(f"Google News date parsed successfully for {ticker}: {published_date}")
-                            except Exception as date_error:
-                                logger.debug(f"RFC 2822 parsing failed for {ticker}: {date_error}")
-                                # Method 2: Try ISO format
-                                try:
-                                    # Sometimes dates are in different formats
-                                    date_text = pub_date_elem.text.strip()
-                                    if 'T' in date_text:
-                                        published_date = datetime.fromisoformat(date_text.replace('Z', '+00:00'))
-                                except Exception as iso_error:
-                                    logger.debug(f"ISO parsing also failed for {ticker}: {iso_error}")
-                                    # Default to recent time if parsing fails
-                                    published_date = datetime.now() - timedelta(hours=1)
+                            published_date = self._parse_date_with_fallbacks(pub_date_elem.text, ticker)
                         else:
                             # No date found, assume recent
                             logger.debug(f"No pubDate found for {ticker}, assuming recent")
                             published_date = datetime.now() - timedelta(hours=1)
 
                         # Check if within 3 days (but allow articles without proper dates)
-                        if published_date and published_date < three_days_ago:
-                            logger.debug(f"Article too old for {ticker}: {published_date}")
-                            continue
+                        if published_date:
+                            try:
+                                # Handle timezone-aware vs naive datetime comparison
+                                if published_date.tzinfo is not None:
+                                    # Convert to naive datetime for comparison
+                                    published_date_naive = published_date.replace(tzinfo=None)
+                                else:
+                                    published_date_naive = published_date
+                                
+                                if published_date_naive < three_days_ago:
+                                    logger.debug(f"Article too old for {ticker}: {published_date_naive}")
+                                    continue
+                            except Exception as date_compare_error:
+                                logger.debug(f"Date comparison error for {ticker}: {date_compare_error}")
+                                # If comparison fails, assume it's recent enough
+                                pass
 
-                        # Filter out obviously unrelated news
-                        if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares', 'trading']):
+                        # Filter out obviously unrelated news using improved relevance checking
+                        if self._is_relevant_news(title, ticker):
                             headline_item = {
                                 'title': title[:100] + '...' if len(title) > 100 else title,
                                 'url': link,
@@ -485,8 +789,8 @@ class VolumeMomentumTracker:
                                 else:
                                     continue
 
-                                # Filter relevant news
-                                if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares']):
+                                # Filter relevant news using improved relevance checking
+                                if self._is_relevant_news(title, ticker):
                                     # Clean up the URL
                                     if url_match.startswith('/'):
                                         url_match = 'https://www.bing.com' + url_match
@@ -639,8 +943,8 @@ class VolumeMomentumTracker:
                                 elif not url_match.startswith('http'):
                                     continue
 
-                                # Filter for relevant news
-                                if any(keyword in title.lower() for keyword in [ticker.lower(), 'stock', 'shares', 'trading']):
+                                # Filter for relevant news using improved relevance checking
+                                if self._is_relevant_news(title, ticker):
                                     headline_item = {
                                         'title': title[:100] + '...' if len(title) > 100 else title,
                                         'url': url_match,
