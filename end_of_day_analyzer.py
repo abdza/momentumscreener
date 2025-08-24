@@ -74,6 +74,20 @@ class EndOfDayAnalyzer:
             except Exception as e:
                 print(f"❌ Failed to initialize Telegram bot: {e}")
     
+    def format_ticker_link(self, ticker):
+        """
+        Format ticker as a clickable TradingView link for Telegram
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            
+        Returns:
+            str: Formatted ticker with TradingView link
+        """
+        # Use the same format as volume_momentum_tracker.py
+        tradingview_url = f"https://www.tradingview.com/chart/?symbol={ticker}"
+        return f"<a href=\"{tradingview_url}\">{ticker}</a>"
+    
     def get_telegram_alerts_for_date(self, target_date):
         """Get all Telegram alerts sent for a specific date from the log file"""
         telegram_log_file = self.data_dir / "telegram_alerts_sent.jsonl"
@@ -147,7 +161,8 @@ class EndOfDayAnalyzer:
                     ticker_first_alerts[ticker] = alert_info
                     all_alerts.append(alert_info)
                     
-                    print(f"📱 {ticker}: ${alert_price:.2f} ({alert_data.get('change_pct', 0):+.1f}%) - {alert_type}")
+                    ticker_link = self.format_ticker_link(ticker)
+                    print(f"📱 {ticker_link}: ${alert_price:.2f} ({alert_data.get('change_pct', 0):+.1f}%) - {alert_type}")
             
             except Exception as e:
                 print(f"⚠️  Error processing Telegram alert: {e}")
@@ -388,7 +403,8 @@ class EndOfDayAnalyzer:
             ticker = alert_info['ticker']
             alert_type = alert_info['alert_type']
             
-            print(f"[{i:2d}/{len(all_alerts)}] Analyzing {ticker} ({alert_type})...", end=' ')
+            ticker_link = self.format_ticker_link(ticker)
+            print(f"[{i:2d}/{len(all_alerts)}] Analyzing {ticker_link} ({alert_type})...", end=' ')
             
             performance = self.analyze_ticker_performance(alert_info, target_date)
             
@@ -453,19 +469,18 @@ class EndOfDayAnalyzer:
         premarket_results = [r for r in valid_results if r['alert_type'].startswith('premarket')]
         
         # Generate report
-        report = f"""
-📊 END-OF-DAY TELEGRAM ALERT ANALYSIS - {target_date}
+        report = f"""<b>📊 END-OF-DAY TELEGRAM ALERT ANALYSIS - {target_date}</b>
 {'='*60}
 📍 BASELINE: All gains measured from ACTUAL TELEGRAM ALERT PRICE (regular trading hours only)
 📱 SOURCE: Actual Telegram alerts sent to user (not all JSON alerts)
 
-🎯 OVERALL PERFORMANCE
+<b>🎯 OVERALL PERFORMANCE</b>
 {'─'*30}
 Total Alerts Analyzed: {total_alerts}
 Successful (≥{self.success_threshold}%): {success_count}
 Success Rate: {success_rate:.1f}%
 
-📈 PERFORMANCE METRICS (from Alert Price)
+<b>📈 PERFORMANCE METRICS (from Alert Price)</b>
 {'─'*30}
 Average Max Gain: {avg_gain:+5.1f}%
 Average Successful Gain: {avg_successful_gain:+5.1f}%
@@ -473,7 +488,7 @@ Average Drawdown: {avg_drawdown:4.1f}%
 Average Successful Drawdown: {avg_successful_drawdown:4.1f}%
 Maximum Drawdown: {max_drawdown:4.1f}%
 
-🏷️  ALERT TYPE BREAKDOWN
+<b>🏷️  ALERT TYPE BREAKDOWN</b>
 {'─'*30}"""
 
         for alert_type, stats in sorted(type_stats.items()):
@@ -489,7 +504,7 @@ Maximum Drawdown: {max_drawdown:4.1f}%
         if flat_to_spike_results or regular_spike_results:
             report += f"""
 
-🎯 FLAT-TO-SPIKE ANALYSIS
+<b>🎯 FLAT-TO-SPIKE ANALYSIS</b>
 {'─'*30}"""
             
             if flat_to_spike_results:
@@ -526,11 +541,12 @@ Premarket Alerts:       {pm_success}/{len(premarket_results)} ({pm_rate:.1f}%) |
         if top_performers:
             report += f"""
 
-🏆 TOP PERFORMERS
+<b>🏆 TOP PERFORMERS</b>
 {'─'*30}"""
             for i, result in enumerate(top_performers, 1):
+                ticker_link = self.format_ticker_link(result['ticker'])
                 report += f"""
-{i}. {result['ticker']:6} | {result['max_gain']:+6.1f}% | DD: {result['max_drawdown']:4.1f}% | {result['alert_type'].replace('_', ' ').title()}"""
+{i}. {ticker_link} | {result['max_gain']:+6.1f}% | DD: {result['max_drawdown']:4.1f}% | {result['alert_type'].replace('_', ' ').title()}"""
 
         # Worst drawdowns
         worst_drawdowns = sorted(valid_results, key=lambda x: x['max_drawdown'], reverse=True)[:5]
@@ -538,16 +554,17 @@ Premarket Alerts:       {pm_success}/{len(premarket_results)} ({pm_rate:.1f}%) |
         if worst_drawdowns:
             report += f"""
 
-📉 LARGEST DRAWDOWNS
+<b>📉 LARGEST DRAWDOWNS</b>
 {'─'*30}"""
             for i, result in enumerate(worst_drawdowns, 1):
                 success_marker = "✅" if result['success'] else "❌"
+                ticker_link = self.format_ticker_link(result['ticker'])
                 report += f"""
-{i}. {result['ticker']:6} | DD: {result['max_drawdown']:4.1f}% | Gain: {result['max_gain']:+5.1f}% {success_marker} | {result['alert_type'].replace('_', ' ').title()}"""
+{i}. {ticker_link} | DD: {result['max_drawdown']:4.1f}% | Gain: {result['max_gain']:+5.1f}% {success_marker} | {result['alert_type'].replace('_', ' ').title()}"""
 
         report += f"""
 
-📊 ANALYSIS COMPLETE
+<b>📊 ANALYSIS COMPLETE</b>
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
         
@@ -564,7 +581,7 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             max_length = 4000  # Telegram message limit
             
             if len(report) <= max_length:
-                await self.telegram_bot.send_message(self.telegram_chat_id, f"```\\n{report}\\n```", parse_mode='Markdown')
+                await self.telegram_bot.send_message(self.telegram_chat_id, report, parse_mode='HTML')
             else:
                 # Split into chunks
                 lines = report.split('\\n')
@@ -575,12 +592,12 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                         current_chunk += line + "\\n"
                     else:
                         if current_chunk:
-                            await self.telegram_bot.send_message(self.telegram_chat_id, f"```\\n{current_chunk}```", parse_mode='Markdown')
+                            await self.telegram_bot.send_message(self.telegram_chat_id, current_chunk, parse_mode='HTML')
                         current_chunk = line + "\\n"
                 
                 # Send remaining chunk
                 if current_chunk:
-                    await self.telegram_bot.send_message(self.telegram_chat_id, f"```\\n{current_chunk}```", parse_mode='Markdown')
+                    await self.telegram_bot.send_message(self.telegram_chat_id, current_chunk, parse_mode='HTML')
             
             print("📱 Telegram report sent successfully")
             
