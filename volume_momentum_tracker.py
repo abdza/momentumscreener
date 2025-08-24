@@ -1023,118 +1023,137 @@ class VolumeMomentumTracker:
         score = 0
         probability_category = "LOW"
         
-        # ENHANCED FLAT-TO-SPIKE PATTERN ANALYSIS
-        # True flat-to-spike patterns should have the highest success rates
+        # UPDATED PATTERN ANALYSIS BASED ON REAL PERFORMANCE DATA
+        # Data from Aug 15-23, 2025: Overall success rates vary from 0-50%
+        
         if alert_type == "flat_to_spike":
             flags.append("🎯 FLAT-TO-SPIKE")
-            score += 50  # Premium for verified flat-to-spike pattern
+            score += 60  # Premium for verified flat-to-spike pattern (limited data but promising)
             
             # Extra bonus for larger flat-to-spike patterns
             if change_pct >= 75:
                 flags.append("🚀 BIG FLAT-TO-SPIKE")
-                score += 30  # Maximum bonus for large flat-to-spike
-        elif alert_type == "price_spike":
-            flags.append("⚡ SUDDEN SPIKE")
-            score += 30  # 11.9% success rate vs 4.4% for premarket
+                score += 40  # Maximum bonus for large flat-to-spike
+        elif alert_type == "immediate_spike":
+            flags.append("⚡ IMMEDIATE SPIKE")
+            score += 45  # 20-50% success rate (best performing type)
             
-            # Extra bonus for larger sudden spikes (these have 21-28% success rates!)
+            # Extra bonus for larger immediate spikes
             if change_pct >= 75:
-                flags.append("🚀 BIG SUDDEN SPIKE")
-                score += 20  # 28.1% success rate for 75-150% sudden spikes
-        elif alert_type in ["premarket_price", "premarket_volume"]:
-            # Premarket gaps have much lower success rates
-            score -= 15  # Penalty for premarket gaps (4.4% success rate)
+                flags.append("🚀 BIG IMMEDIATE SPIKE")
+                score += 25  # Higher chance for bigger spikes
+        elif alert_type == "price_spike":
+            flags.append("📈 PRICE SPIKE")
+            score += 35  # 50% success rate on good days
+            
+            if change_pct >= 75:
+                flags.append("🚀 BIG PRICE SPIKE")
+                score += 20
+        elif alert_type == "volume_climber":
+            flags.append("📊 VOLUME CLIMBER")
+            score += 25  # 33% success rate (LASE had 117% gain)
+        elif alert_type in ["premarket_price", "premarket_volume", "new_premarket_move"]:
+            flags.append("🌅 PREMARKET")
+            score -= 20  # 0% success rate in recent data
         
-        # Price range analysis
+        # Price range analysis based on recent real data
         if current_price < 1:
             flags.append("🎯 Under $1")
-            score += 20  # 12.1% success rate
-        elif current_price < 2:
-            flags.append("💎 Under $2") 
-            score += 15  # 8.8% success rate
-        elif current_price < 5:
-            score += 5
+            score += 15  # Mixed results in penny stocks
+        elif current_price < 3:
+            flags.append("💎 Under $3") 
+            score += 20  # Sweet spot: LASE ($2.46), GXAI ($1.70), TZUP ($5.35) were winners
+        elif current_price < 6:
+            flags.append("💰 Mid-Range")
+            score += 25  # Best range: SNGX ($3.96-5.26), PPCB ($7.11) were winners
         else:
-            score -= 10  # Higher prices have lower success rates
+            flags.append("📈 Higher Price")
+            score += 5   # Higher prices can work but less frequent
         
-        # Initial change percentage analysis
-        if change_pct >= 200:
-            flags.append("🚀 MEGA SPIKE 200%+")
-            score += 50  # 27.3% success rate
+        # Initial change percentage analysis based on real winners
+        if change_pct >= 145:
+            flags.append("🚀 MASSIVE SPIKE 145%+")
+            score += 35  # PMNT had 145.6% but failed, mixed results
         elif change_pct >= 100:
-            flags.append("🔥 BIG SPIKE 100%+")
-            score += 40  # 25.0% success rate
+            flags.append("🔥 BIG SPIKE 100%+") 
+            score += 30  # LASE had 117% gain (winner), PRFX 121% (failed)
         elif change_pct >= 50:
-            flags.append("⚡ STRONG 50%+")
-            score += 25  # 14.0% success rate
-        elif change_pct >= 25:
-            score += 10  # 10.9% success rate
-        else:
-            score -= 5   # Lower changes have poor success rates
+            flags.append("⚡ STRONG SPIKE 50%+")
+            score += 25  # GXAI 53.6% (winner), SNGX 57.4% (winner)
+        elif change_pct >= 30:
+            flags.append("📈 SOLID MOVE 30%+")
+            score += 15  # VELO 34.2%, ADD 36.1%, VCIG 32.6% (mixed results)
+        elif change_pct >= 15:
+            score += 10  # Moderate moves
         
-        # Relative volume analysis
-        if relative_volume and relative_volume >= 500:
-            flags.append("🌊 EXTREME VOL 500x+")
-            score += 40  # 29.2% success rate
-        elif relative_volume and relative_volume >= 100:
-            flags.append("📈 HIGH VOL 100x+")
-            score += 30  # 18.1% success rate
-        elif relative_volume and relative_volume >= 20:
-            flags.append("📊 GOOD VOL 20x+")
-            score += 15  # 7.8% success rate
+        # Relative volume analysis based on real winners
+        if relative_volume and relative_volume >= 400:
+            flags.append("🌊 EXTREME VOL 400x+")
+            score += 35  # VTAK had 433x (failed), PPCB had 425-970x (winner)
+        elif relative_volume and relative_volume >= 200:
+            flags.append("📈 VERY HIGH VOL 200x+")
+            score += 30  # PPSI 282x (failed), ASBP 250-452x (winner)
+        elif relative_volume and relative_volume >= 50:
+            flags.append("📊 HIGH VOL 50x+")
+            score += 20  # PMNT 68x (failed), TIVC 73x (failed), SRXH 31-168x (winner)
+        elif relative_volume and relative_volume >= 10:
+            flags.append("📊 GOOD VOL 10x+")
+            score += 10  # Mixed results in this range
         elif relative_volume and relative_volume < 5:
-            score -= 15  # Low volume has poor success rates
+            score -= 10  # Low volume typically fails
         
-        # Sector analysis (best performing sectors)
-        high_success_sectors = {
-            "Health Services": 25.0,
-            "Utilities": 16.7,
-            "Distribution Services": 15.0,
-            "Consumer Durables": 14.3,
-            "Finance": 12.0
+        # Sector analysis based on real winners from recent data
+        successful_sectors = {
+            "Health Technology": 40,  # LASE, GXAI, SNGX, ASBP, PPCB were winners
+            "Electronic Technology": 30,  # LASE (+117%) was a big winner  
+            "Transportation": 25,  # TZUP was a winner
+            "Distribution Services": 20,  # Mixed results
+            "Producer Manufacturing": 10,  # DFLI, MCRP mostly failed
+            "Retail Trade": 5,  # Mixed results
+            "Consumer Services": 5,  # Limited data
         }
         
-        if sector in high_success_sectors:
-            success_rate = high_success_sectors[sector]
-            if success_rate >= 20:
-                flags.append(f"💼 TOP SECTOR")
-                score += 25
-            elif success_rate >= 15:
+        if sector in successful_sectors:
+            sector_score = successful_sectors[sector]
+            if sector_score >= 35:
+                flags.append(f"💊 BIOTECH/HEALTH")
+                score += 25  # Health Technology is hot sector
+            elif sector_score >= 20:
                 flags.append(f"🏭 GOOD SECTOR")
                 score += 15
-            elif success_rate >= 12:
+            elif sector_score >= 10:
                 flags.append(f"📋 OK SECTOR")
-                score += 10
-        
-        # Alert type analysis
-        if alert_type == "price_spike":
-            score += 10  # 11.9% success rate (best type)
+                score += 5
         else:
-            score -= 5   # Premarket alerts have lower success rates
+            score -= 5  # Unknown sectors are riskier
         
-        # Calculate probability category based on score
-        if score >= 80:
+        # Calculate probability category based on updated score
+        if score >= 100:
             probability_category = "VERY HIGH"
-        elif score >= 60:
+        elif score >= 80:
             probability_category = "HIGH"
-        elif score >= 40:
+        elif score >= 50:
             probability_category = "MEDIUM"
-        elif score >= 20:
+        elif score >= 25:
             probability_category = "LOW"
         else:
             probability_category = "VERY LOW"
         
-        # Estimate success probability percentage
-        if score >= 80:
-            estimated_probability = 25.0  # Top tier
-        elif score >= 60:
-            estimated_probability = 18.0  # High tier
-        elif score >= 40:
-            estimated_probability = 12.0  # Medium tier  
-        elif score >= 20:
-            estimated_probability = 8.0   # Low tier
+        # Estimate success probability percentage based on real performance data
+        # Recent data shows: 0-50% success rates depending on day and conditions
+        # Even "perfect" setups can fail due to market unpredictability, so we cap probabilities realistically
+        if score >= 130:
+            estimated_probability = 40.0  # Best possible conditions (still realistic ceiling)
+        elif score >= 100:
+            estimated_probability = 30.0  # Very high tier 
+        elif score >= 80:
+            estimated_probability = 25.0  # High tier 
+        elif score >= 50:
+            estimated_probability = 20.0  # Medium tier 
+        elif score >= 25:
+            estimated_probability = 15.0  # Low tier 
         else:
-            estimated_probability = 4.0   # Very low tier
+            estimated_probability = 5.0   # Very low tier
         
         # Calculate recommended stop-loss based on historical data
         # 87.9% of winners never dropped below alert price
