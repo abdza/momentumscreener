@@ -1,0 +1,380 @@
+{
+  "analysis_date": "2025-08-24T17:56:14.054844",
+  "trading_days_analyzed": 4,
+  "day_conditions": {
+    "2025-08-15": {
+      "date": "2025-08-15",
+      "market_indicators": {
+        "SPY": {
+          "daily_return": -0.2341281862229483,
+          "volume_ratio": NaN,
+          "close": 643.4400024414062,
+          "volume": 68592500.0
+        },
+        "QQQ": {
+          "daily_return": -0.43973645494046476,
+          "volume_ratio": NaN,
+          "close": 577.3400268554688,
+          "volume": 49480200.0
+        },
+        "IWM": {
+          "daily_return": -0.4863304344710051,
+          "volume_ratio": NaN,
+          "close": 227.1300048828125,
+          "volume": 33571400.0
+        },
+        "DIA": {
+          "daily_return": 0.1416853135262519,
+          "volume_ratio": NaN,
+          "close": 449.5299987792969,
+          "volume": 5584400.0
+        }
+      },
+      "sector_performance": {
+        "XLV": {
+          "daily_return": 1.679605768314052,
+          "volume_ratio": NaN,
+          "close": 136.2100067138672
+        },
+        "XLK": {
+          "daily_return": -0.7582260844864908,
+          "volume_ratio": NaN,
+          "close": 265.70001220703125
+        },
+        "XLB": {
+          "daily_return": 0.0,
+          "volume_ratio": NaN,
+          "close": 90.02999877929688
+        },
+        "XLE": {
+          "daily_return": 0.0,
+          "volume_ratio": NaN,
+          "close": 85.55999755859375
+        },
+        "XLF": {
+          "daily_return": -1.037538680391037,
+          "volume_ratio": NaN,
+          "close": 52.459999084472656
+        },
+        "XLI": {
+          "daily_return": -0.4565621776703388,
+          "volume_ratio": NaN,
+          "close": 150.44000244140625
+        },
+        "XLP": {
+          "daily_return": 0.15874618926228212,
+          "volume_ratio": NaN,
+          "close": 82.0199966430664
+        },
+        "XLY": {
+          "daily_return": -0.23955880505714955,
+          "volume_ratio": NaN,
+          "close": 229.0399932861328
+        },
+        "XLU": {
+          "daily_return": -0.29113775707891865,
+          "volume_ratio": NaN,
+          "close": 85.62000274658203
+        },
+        "XLRE": {
+          "daily_return": 0.6575753744112234,
+          "volume_ratio": NaN,
+          "close": 41.33000183105469
+        },
+        "IBB": {
+          "daily_return": 1.0854448808915285,
+          "volume_ratio": NaN,
+          "close": 138.75999450683594
+        }
+      },
+      "volatility": {},
+      "volume_patterns": {}
+    },
+    "2025-08-18": {
+      "date": "2025-08-18",
+      "market_indicators": {
+        "SPY": {
+          "daily_return": -0.0217603269778488,
+          "volume_ratio": NaN,
+          "close": 643.2999877929688,
+          "volume": 43804900.0
+        },
+        "QQQ": {
+          "daily_return": -0.039845064122645546,
+          "volume_ratio": NaN,
+          "close": 577.1099853515625,
+          "volume": 29831000.0
+        },
+        "IWM": {
+          "daily_return": 0.36543028803390776,
+          "volume_ratio": NaN,
+          "close": 227.9600067138672,
+          "volume": 20144100.0
+        },
+        "DIA": {
+          "daily_return": -0.10678063480337174,
+          "volume_ratio": NaN,
+          "close": 449.04998779296875,
+          "volume": 3809100.0
+        }
+      },
+      "sector_performance": {
+        "XLV": {
+          "daily_return": -0.2349367215662701,
+          "volume_ratio": NaN,
+          "close": 135.88999938964844
+        },
+        "XLK": {
+          "daily_return": 0.2145189237690026,
+          "volume_ratio": NaN,
+          "close": 266.2699890136719
+        },
+        "XLB": {
+          "daily_return": -0.5775815285093411,
+          "volume_ratio": NaN,
+          "close": 89.51000213623047
+        },
+        "XLE": {
+          "daily_return": -0.5960665280368649,
+          "volume_ratio": NaN,
+          "close": 85.05000305175781
+        },
+        "XLF": {
+          "daily_return": 0.07625031686129269,
+          "volume_ratio": NaN,
+          "close": 52.5
+        },
+        "XLI": {
+          "daily_return": 0.3921804894415848,
+          "volume_ratio": NaN,
+          "close": 151.02999877929688
+        },
+        "XLP": {
+          "daily_return": -0.1341050785891862,
+          "volume_ratio": NaN,
+          "close": 81.91000366210938
+        },
+        "XLY": {
+          "daily_return": 0.4016824374357242,
+          "volume_ratio": NaN,
+          "close": 229.9600067138672
+        },
+        "XLU": {
+          "daily_return": -0.43214521690353447,
+          "volume_ratio": NaN,
+          "close": 85.25
+        },
+        "XLRE": {
+          "daily_return": -0.9436321971141526,
+          "volume_ratio": NaN,
+          "close": 40.939998626708984
+        },
+        "IBB": {
+          "daily_return": -0.27384666983732986,
+          "volume_ratio": NaN,
+          "close": 138.3800048828125
+        }
+      },
+      "volatility": {},
+      "volume_patterns": {}
+    },
+    "2025-08-19": {
+      "date": "2025-08-19",
+      "market_indicators": {
+        "SPY": {
+          "daily_return": -0.5425136484688009,
+          "volume_ratio": NaN,
+          "close": 639.8099975585938,
+          "volume": 69750700.0
+        },
+        "QQQ": {
+          "daily_return": -1.3567528293445985,
+          "volume_ratio": NaN,
+          "close": 569.280029296875,
+          "volume": 53752600.0
+        },
+        "IWM": {
+          "daily_return": -0.7676785174851264,
+          "volume_ratio": NaN,
+          "close": 226.2100067138672,
+          "volume": 25000700.0
+        },
+        "DIA": {
+          "daily_return": 0.053450786878483925,
+          "volume_ratio": NaN,
+          "close": 449.2900085449219,
+          "volume": 5794900.0
+        }
+      },
+      "sector_performance": {
+        "XLV": {
+          "daily_return": 0.6402201200199409,
+          "volume_ratio": NaN,
+          "close": 136.75999450683594
+        },
+        "XLK": {
+          "daily_return": -1.7463454720184846,
+          "volume_ratio": NaN,
+          "close": 261.6199951171875
+        },
+        "XLB": {
+          "daily_return": 0.6032855576357576,
+          "volume_ratio": NaN,
+          "close": 90.05000305175781
+        },
+        "XLE": {
+          "daily_return": 0.03527193206402934,
+          "volume_ratio": NaN,
+          "close": 85.08000183105469
+        },
+        "XLF": {
+          "daily_return": 0.19047328404018238,
+          "volume_ratio": NaN,
+          "close": 52.599998474121094
+        },
+        "XLI": {
+          "daily_return": 0.21850084997809827,
+          "volume_ratio": NaN,
+          "close": 151.36000061035156
+        },
+        "XLP": {
+          "daily_return": 1.0255112932917587,
+          "volume_ratio": NaN,
+          "close": 82.75
+        },
+        "XLY": {
+          "daily_return": -0.047834670003477076,
+          "volume_ratio": NaN,
+          "close": 229.85000610351562
+        },
+        "XLU": {
+          "daily_return": 0.9736091859879004,
+          "volume_ratio": NaN,
+          "close": 86.08000183105469
+        },
+        "XLRE": {
+          "daily_return": 1.7830961571163373,
+          "volume_ratio": NaN,
+          "close": 41.66999816894531
+        },
+        "IBB": {
+          "daily_return": -0.35410137004910913,
+          "volume_ratio": NaN,
+          "close": 137.88999938964844
+        }
+      },
+      "volatility": {},
+      "volume_patterns": {}
+    },
+    "2025-08-23": {
+      "date": "2025-08-23",
+      "market_indicators": {},
+      "sector_performance": {},
+      "volatility": {},
+      "volume_patterns": {}
+    }
+  },
+  "patterns": {
+    "market_indicators": {
+      "SPY": {
+        "good_day_avg": -0.12794425660039854,
+        "bad_day_avg": -0.5425136484688009,
+        "difference": 0.41456939186840236,
+        "name": "S&P 500 ETF"
+      },
+      "QQQ": {
+        "good_day_avg": -0.23979075953155515,
+        "bad_day_avg": -1.3567528293445985,
+        "difference": 1.1169620698130434,
+        "name": "NASDAQ ETF"
+      },
+      "IWM": {
+        "good_day_avg": -0.06045007321854867,
+        "bad_day_avg": -0.7676785174851264,
+        "difference": 0.7072284442665777,
+        "name": "Russell 2000 (Small Cap)"
+      },
+      "DIA": {
+        "good_day_avg": 0.017452339361440083,
+        "bad_day_avg": 0.053450786878483925,
+        "difference": -0.03599844751704384,
+        "name": "Dow Jones ETF"
+      }
+    },
+    "sector_patterns": {
+      "XLK": {
+        "good_day_avg": -0.2718535803587441,
+        "bad_day_avg": -1.7463454720184846,
+        "difference": 1.4744918916597405,
+        "name": "Technology"
+      },
+      "IBB": {
+        "good_day_avg": 0.4057991055270993,
+        "bad_day_avg": -0.35410137004910913,
+        "difference": 0.7599004755762084,
+        "name": "Biotech ETF"
+      },
+      "XLY": {
+        "good_day_avg": 0.08106181618928732,
+        "bad_day_avg": -0.047834670003477076,
+        "difference": 0.1288964861927644,
+        "name": "Consumer Discretionary"
+      },
+      "XLV": {
+        "good_day_avg": 0.7223345233738909,
+        "bad_day_avg": 0.6402201200199409,
+        "difference": 0.08211440335395004,
+        "name": "Health Care"
+      },
+      "XLI": {
+        "good_day_avg": -0.032190844114377004,
+        "bad_day_avg": 0.21850084997809827,
+        "difference": -0.25069169409247527,
+        "name": "Industrial"
+      },
+      "XLE": {
+        "good_day_avg": -0.29803326401843244,
+        "bad_day_avg": 0.03527193206402934,
+        "difference": -0.3333051960824618,
+        "name": "Energy"
+      },
+      "XLF": {
+        "good_day_avg": -0.4806441817648721,
+        "bad_day_avg": 0.19047328404018238,
+        "difference": -0.6711174658050545,
+        "name": "Financial"
+      },
+      "XLB": {
+        "good_day_avg": -0.28879076425467054,
+        "bad_day_avg": 0.6032855576357576,
+        "difference": -0.8920763218904282,
+        "name": "Materials"
+      },
+      "XLP": {
+        "good_day_avg": 0.012320555336547967,
+        "bad_day_avg": 1.0255112932917587,
+        "difference": -1.0131907379552108,
+        "name": "Consumer Staples"
+      },
+      "XLU": {
+        "good_day_avg": -0.36164148699122656,
+        "bad_day_avg": 0.9736091859879004,
+        "difference": -1.335250672979127,
+        "name": "Utilities"
+      },
+      "XLRE": {
+        "good_day_avg": -0.1430284113514646,
+        "bad_day_avg": 1.7830961571163373,
+        "difference": -1.926124568467802,
+        "name": "Real Estate"
+      }
+    },
+    "volatility_patterns": {},
+    "recommendations": []
+  },
+  "summary": {
+    "good_days": 2,
+    "bad_days": 2,
+    "avg_success_rate": 24.1
+  }
+}

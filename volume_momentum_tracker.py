@@ -60,6 +60,13 @@ from collections import defaultdict
 
 from tradingview_screener import Query
 
+try:
+    from market_sentiment_scorer import MarketSentimentScorer
+    MARKET_SENTIMENT_AVAILABLE = True
+except ImportError:
+    print("⚠️  market_sentiment_scorer not available. Position sizing recommendations disabled.")
+    MARKET_SENTIMENT_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -120,6 +127,15 @@ class VolumeMomentumTracker:
                 logger.warning("📱 python-telegram-bot not installed. Run: pip install python-telegram-bot")
             except Exception as e:
                 logger.error(f"❌ Failed to initialize Telegram bot: {e}")
+
+        # Initialize Market Sentiment Scorer for position sizing recommendations
+        self.market_scorer = None
+        if MARKET_SENTIMENT_AVAILABLE:
+            try:
+                self.market_scorer = MarketSentimentScorer()
+                logger.info("✅ Market sentiment scorer initialized successfully")
+            except Exception as e:
+                logger.warning(f"⚠️  Failed to initialize market sentiment scorer: {e}")
 
         # Historical data storage
         self.historical_data = []
@@ -1017,6 +1033,67 @@ class VolumeMomentumTracker:
         """Generate TradingView chart link for the symbol"""
         return f"https://www.tradingview.com/chart/?symbol={symbol}"
 
+    def _get_position_size_recommendation(self, market_score=None):
+        """
+        Get position sizing recommendation based on market sentiment
+        
+        Args:
+            market_score (int): Market sentiment score 0-100, if None will fetch current
+            
+        Returns:
+            dict: {
+                'recommendation': str,
+                'score': int,
+                'category': str
+            }
+        """
+        if not self.market_scorer:
+            return {
+                'recommendation': "📊 Standard position size (market sentiment unavailable)",
+                'score': 50,
+                'category': 'UNKNOWN'
+            }
+        
+        try:
+            if market_score is None:
+                market_conditions = self.market_scorer.get_current_market_sentiment_score()
+                market_score = market_conditions['score']
+                category = market_conditions['category']
+            else:
+                # Determine category from score
+                if market_score >= 80:
+                    category = "EXCELLENT"
+                elif market_score >= 65:
+                    category = "GOOD"
+                elif market_score >= 45:
+                    category = "FAIR"
+                else:
+                    category = "POOR"
+            
+            # Generate position sizing recommendation
+            if market_score >= 80:
+                recommendation = "🚀 LARGE: Consider 1.5-2x normal position size"
+            elif market_score >= 65:
+                recommendation = "✅ NORMAL: Standard position size"
+            elif market_score >= 45:
+                recommendation = "⚠️  SMALL: Reduce to 0.5x position size"
+            else:
+                recommendation = "🛑 MINIMAL: Avoid or paper trade only"
+            
+            return {
+                'recommendation': recommendation,
+                'score': market_score,
+                'category': category
+            }
+            
+        except Exception as e:
+            logger.warning(f"Error getting position size recommendation: {e}")
+            return {
+                'recommendation': "📊 Standard position size (error getting market data)",
+                'score': 50,
+                'category': 'ERROR'
+            }
+
     def _analyze_winning_patterns(self, current_price, change_pct, relative_volume, sector, alert_type="price_spike"):
         """Analyze alert against winning patterns and return probability score and flags"""
         flags = []
@@ -1285,6 +1362,9 @@ class VolumeMomentumTracker:
             # Calculate 30% target price
             target_price = current_price * 1.30
             target_str = f"30.0% (${target_price:.2f})"
+            
+            # Get position sizing recommendation based on market conditions
+            position_sizing = self._get_position_size_recommendation()
 
             # Different message for immediate spikes vs regular high frequency
             if is_immediate_spike:
@@ -1299,7 +1379,9 @@ class VolumeMomentumTracker:
                     f"🎯 WIN PROBABILITY: {probability_str}\n"
                     f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
                     f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
-                    f"🎯 TARGET PRICE: {target_str}\n\n"
+                    f"🎯 TARGET PRICE: {target_str}\n"
+                    f"💰 POSITION SIZE: {position_sizing['recommendation']}\n"
+                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']})\n\n"
                     f"🔥 This ticker just spiked {change_pct:+.1f}% - immediate alert triggered!\n"
                     f"📈 Previous alerts: {alert_count}\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
@@ -1317,7 +1399,9 @@ class VolumeMomentumTracker:
                     f"🎯 WIN PROBABILITY: {probability_str}\n"
                     f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
                     f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
-                    f"🎯 TARGET PRICE: {target_str}\n\n"
+                    f"🎯 TARGET PRICE: {target_str}\n"
+                    f"💰 POSITION SIZE: {position_sizing['recommendation']}\n"
+                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']})\n\n"
                     f"📋 This ticker has triggered {alert_count} momentum alerts, "
                     f"indicating sustained bullish activity!\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
@@ -1383,6 +1467,9 @@ class VolumeMomentumTracker:
                 target_price = current_price * 1.30
                 target_str = f"30.0% (${target_price:.2f})"
                 
+                # Get position sizing recommendation
+                position_sizing = self._get_position_size_recommendation()
+                
                 if is_immediate_spike:
                     simple_message = (
                         f"🚨 IMMEDIATE BIG SPIKE ALERT! 🚨\n\n"
@@ -1395,7 +1482,9 @@ class VolumeMomentumTracker:
                         f"🎯 WIN PROBABILITY: {probability_str}\n"
                         f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
                         f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
-                        f"🎯 TARGET PRICE: {target_str}\n\n"
+                        f"🎯 TARGET PRICE: {target_str}\n"
+                        f"💰 POSITION SIZE: {position_sizing['recommendation']}\n"
+                        f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']})\n\n"
                         f"📊 Chart: {tradingview_link}"
                     )
                 else:
@@ -1410,7 +1499,9 @@ class VolumeMomentumTracker:
                         f"🎯 WIN PROBABILITY: {probability_str}\n"
                         f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
                         f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
-                        f"🎯 TARGET PRICE: {target_str}\n\n"
+                        f"🎯 TARGET PRICE: {target_str}\n"
+                        f"💰 POSITION SIZE: {position_sizing['recommendation']}\n"
+                        f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']})\n\n"
                         f"📊 Chart: {tradingview_link}"
                     )
 
