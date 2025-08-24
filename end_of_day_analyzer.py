@@ -155,6 +155,10 @@ class EndOfDayAnalyzer:
                         'alert_count': alert_data.get('alert_count', 1),
                         'is_immediate_spike': alert_data.get('is_immediate_spike', False),
                         'alert_types': alert_data.get('alert_types', [alert_type]),
+                        'win_probability_category': alert_data.get('win_probability_category', 'UNKNOWN'),
+                        'estimated_win_probability': alert_data.get('estimated_win_probability', 0),
+                        'pattern_flags': alert_data.get('pattern_flags', []),
+                        'pattern_score': alert_data.get('pattern_score', 0),
                         'original_alert': alert_data
                     }
                     
@@ -545,8 +549,10 @@ Premarket Alerts:       {pm_success}/{len(premarket_results)} ({pm_rate:.1f}%) |
 {'─'*30}"""
             for i, result in enumerate(top_performers, 1):
                 ticker_link = self.format_ticker_link(result['ticker'])
+                alert_time = result['timestamp'].strftime('%H:%M:%S')
+                win_prob_display = f"{result['win_probability_category']} ({result['estimated_win_probability']:.0f}%)" if result['estimated_win_probability'] > 0 else result['win_probability_category']
                 report += f"""
-{i}. {ticker_link} | {result['max_gain']:+6.1f}% | DD: {result['max_drawdown']:4.1f}% | {result['alert_type'].replace('_', ' ').title()}"""
+{i}. {ticker_link} | {result['max_gain']:+6.1f}% | DD: {result['max_drawdown']:4.1f}% | Alert: {alert_time} | Win Prob: {win_prob_display} | {result['alert_type'].replace('_', ' ').title()}"""
 
         # Worst drawdowns
         worst_drawdowns = sorted(valid_results, key=lambda x: x['max_drawdown'], reverse=True)[:5]
@@ -559,8 +565,10 @@ Premarket Alerts:       {pm_success}/{len(premarket_results)} ({pm_rate:.1f}%) |
             for i, result in enumerate(worst_drawdowns, 1):
                 success_marker = "✅" if result['success'] else "❌"
                 ticker_link = self.format_ticker_link(result['ticker'])
+                alert_time = result['timestamp'].strftime('%H:%M:%S')
+                win_prob_display = f"{result['win_probability_category']} ({result['estimated_win_probability']:.0f}%)" if result['estimated_win_probability'] > 0 else result['win_probability_category']
                 report += f"""
-{i}. {ticker_link} | DD: {result['max_drawdown']:4.1f}% | Gain: {result['max_gain']:+5.1f}% {success_marker} | {result['alert_type'].replace('_', ' ').title()}"""
+{i}. {ticker_link} | DD: {result['max_drawdown']:4.1f}% | Gain: {result['max_gain']:+5.1f}% {success_marker} | Alert: {alert_time} | Win Prob: {win_prob_display} | {result['alert_type'].replace('_', ' ').title()}"""
 
         report += f"""
 

@@ -1289,7 +1289,7 @@ class VolumeMomentumTracker:
             'historical_note': "87.9% of winners never dropped below alert price"
         }
     
-    def _log_telegram_alert_sent(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False):
+    def _log_telegram_alert_sent(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, pattern_analysis=None):
         """Log the details of a successfully sent Telegram alert for end-of-day analysis"""
         try:
             alert_log_entry = {
@@ -1305,6 +1305,15 @@ class VolumeMomentumTracker:
                 'is_immediate_spike': is_immediate_spike,
                 'alert_type': 'immediate_spike' if is_immediate_spike else alert_types[0] if alert_types else 'price_spike'
             }
+            
+            # Include pattern analysis data if provided
+            if pattern_analysis:
+                alert_log_entry.update({
+                    'win_probability_category': pattern_analysis.get('probability_category', 'UNKNOWN'),
+                    'estimated_win_probability': pattern_analysis.get('estimated_probability', 0),
+                    'pattern_flags': pattern_analysis.get('flags', []),
+                    'pattern_score': pattern_analysis.get('score', 0)
+                })
             
             # Append to JSONL file (one JSON object per line)
             with open(self.telegram_alerts_log, 'a', encoding='utf-8') as f:
@@ -1445,7 +1454,7 @@ class VolumeMomentumTracker:
             logger.info(f"📱 Telegram {alert_type} alert sent for {ticker} ({change_pct:+.1f}%, {alert_count} alerts) with {len(recent_news)} news headlines")
             
             # Log the successful Telegram alert for end-of-day analysis
-            self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike)
+            self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, pattern_analysis)
 
         except Exception as e:
             logger.error(f"❌ Failed to send Telegram alert for {ticker}: {e}")
@@ -1519,7 +1528,7 @@ class VolumeMomentumTracker:
                 logger.info(f"📱 Sent simplified Telegram {alert_type} alert for {ticker}")
                 
                 # Log the successful Telegram alert for end-of-day analysis
-                self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike)
+                self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, pattern_analysis)
 
             except Exception as e2:
                 logger.error(f"❌ Failed to send even simplified alert: {e2}")
