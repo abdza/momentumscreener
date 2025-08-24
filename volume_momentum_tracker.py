@@ -1262,6 +1262,10 @@ class VolumeMomentumTracker:
             # Create stop-loss recommendation string
             stop_loss = pattern_analysis['recommended_stop_loss']
             stop_loss_str = f"{stop_loss['percentage']:.1f}% (${stop_loss['stop_price']:.2f})"
+            
+            # Calculate 30% target price
+            target_price = current_price * 1.30
+            target_str = f"30.0% (${target_price:.2f})"
 
             # Different message for immediate spikes vs regular high frequency
             if is_immediate_spike:
@@ -1275,7 +1279,8 @@ class VolumeMomentumTracker:
                     f"🏭 Sector: {sector}\n\n"
                     f"🎯 WIN PROBABILITY: {probability_str}\n"
                     f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
-                    f"🛑 RECOMMENDED STOP: {stop_loss_str}\n\n"
+                    f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
+                    f"🎯 TARGET PRICE: {target_str}\n\n"
                     f"🔥 This ticker just spiked {change_pct:+.1f}% - immediate alert triggered!\n"
                     f"📈 Previous alerts: {alert_count}\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
@@ -1292,7 +1297,8 @@ class VolumeMomentumTracker:
                     f"🏭 Sector: {sector}\n\n"
                     f"🎯 WIN PROBABILITY: {probability_str}\n"
                     f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
-                    f"🛑 RECOMMENDED STOP: {stop_loss_str}\n\n"
+                    f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
+                    f"🎯 TARGET PRICE: {target_str}\n\n"
                     f"📋 This ticker has triggered {alert_count} momentum alerts, "
                     f"indicating sustained bullish activity!\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
@@ -1354,6 +1360,10 @@ class VolumeMomentumTracker:
                 stop_loss = pattern_analysis['recommended_stop_loss']
                 stop_loss_str = f"{stop_loss['percentage']:.1f}% (${stop_loss['stop_price']:.2f})"
                 
+                # Calculate 30% target price
+                target_price = current_price * 1.30
+                target_str = f"30.0% (${target_price:.2f})"
+                
                 if is_immediate_spike:
                     simple_message = (
                         f"🚨 IMMEDIATE BIG SPIKE ALERT! 🚨\n\n"
@@ -1365,7 +1375,8 @@ class VolumeMomentumTracker:
                         f"🏭 Sector: {sector}\n\n"
                         f"🎯 WIN PROBABILITY: {probability_str}\n"
                         f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
-                        f"🛑 RECOMMENDED STOP: {stop_loss_str}\n\n"
+                        f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
+                        f"🎯 TARGET PRICE: {target_str}\n\n"
                         f"📊 Chart: {tradingview_link}"
                     )
                 else:
@@ -1379,7 +1390,8 @@ class VolumeMomentumTracker:
                         f"🏭 Sector: {sector}\n\n"
                         f"🎯 WIN PROBABILITY: {probability_str}\n"
                         f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
-                        f"🛑 RECOMMENDED STOP: {stop_loss_str}\n\n"
+                        f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
+                        f"🎯 TARGET PRICE: {target_str}\n\n"
                         f"📊 Chart: {tradingview_link}"
                     )
 
