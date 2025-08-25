@@ -1094,6 +1094,25 @@ class VolumeMomentumTracker:
                 'category': 'ERROR'
             }
 
+    def _calculate_gap_percentage(self, current_price, change_from_open):
+        """Calculate gap percentage from previous close"""
+        if not current_price or not change_from_open:
+            return None
+        
+        try:
+            # Calculate opening price: current_price / (1 + change_from_open/100)
+            open_price = current_price / (1 + change_from_open / 100)
+            
+            # Gap is the difference between open price and previous close
+            # Previous close would be the opening price if there's no gap
+            # But since we don't have direct previous close, we'll use change_from_open
+            # as a proxy for the gap when it's the opening movement
+            gap_pct = change_from_open
+            
+            return gap_pct
+        except (ValueError, ZeroDivisionError):
+            return None
+
     def _analyze_winning_patterns(self, current_price, change_pct, relative_volume, sector, alert_type="price_spike"):
         """Analyze alert against winning patterns and return probability score and flags"""
         flags = []
@@ -1324,7 +1343,7 @@ class VolumeMomentumTracker:
         except Exception as e:
             logger.error(f"❌ Failed to log Telegram alert for {ticker}: {e}")
 
-    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False):
+    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=None):
         """Send Telegram alert for high-frequency ticker or immediate big spike with rate limiting and news headlines with timestamps"""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
@@ -1360,6 +1379,9 @@ class VolumeMomentumTracker:
             # Format relative volume display
             rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
             
+            # Format gap display
+            gap_str = f"{gap_pct:+.1f}%" if gap_pct is not None else "N/A"
+            
             # Create winning pattern flags string
             pattern_flags_str = " ".join(pattern_analysis['flags']) if pattern_analysis['flags'] else "📊 Standard Alert"
             probability_str = f"{pattern_analysis['probability_category']} ({pattern_analysis['estimated_probability']:.1f}%)"
@@ -1384,6 +1406,7 @@ class VolumeMomentumTracker:
                     f"💰 Current Price: ${current_price:.2f}\n"
                     f"📈 Volume: {volume:,}\n"
                     f"📊 Relative Volume: {rel_vol_str}\n"
+                    f"📈 Gap: {gap_str}\n"
                     f"🏭 Sector: {sector}\n\n"
                     f"🎯 WIN PROBABILITY: {probability_str}\n"
                     f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
@@ -1404,6 +1427,7 @@ class VolumeMomentumTracker:
                     f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
                     f"📈 Volume: {volume:,}\n"
                     f"📊 Relative Volume: {rel_vol_str}\n"
+                    f"📈 Gap: {gap_str}\n"
                     f"🏭 Sector: {sector}\n\n"
                     f"🎯 WIN PROBABILITY: {probability_str}\n"
                     f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
@@ -1550,8 +1574,12 @@ class VolumeMomentumTracker:
         relative_volume = alert_data.get('relative_volume',
                         alert_data.get('relative_volume_10d_calc', 0))
         sector = alert_data.get('sector', 'Unknown')
+        
+        # Calculate gap percentage
+        change_from_open = alert_data.get('change_from_open', 0)
+        gap_pct = self._calculate_gap_percentage(current_price, change_from_open)
 
-        self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=True)
+        self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=True, gap_pct=gap_pct)
 
     def _check_high_frequency_alerts(self, ticker, alert_data):
         """Check if ticker qualifies for Telegram notification (sends every time for 3+ alerts with rate limiting)"""
@@ -1573,8 +1601,12 @@ class VolumeMomentumTracker:
             relative_volume = alert_data.get('relative_volume',
                             alert_data.get('relative_volume_10d_calc', 0))
             sector = alert_data.get('sector', 'Unknown')
+            
+            # Calculate gap percentage
+            change_from_open = alert_data.get('change_from_open', 0)
+            gap_pct = self._calculate_gap_percentage(current_price, change_from_open)
 
-            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False)
+            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=gap_pct)
 
     def _get_cookies(self):
         """Get cookies from browser using rookiepy"""
@@ -1869,7 +1901,8 @@ class VolumeMomentumTracker:
                                 'price': current_ticker_data.get('close', 0),
                                 'change_pct': change_pct,
                                 'relative_volume': current_ticker_data.get('relative_volume_10d_calc', 0),
-                                'sector': current_ticker_data.get('sector', 'Unknown')
+                                'sector': current_ticker_data.get('sector', 'Unknown'),
+                                'change_from_open': current_ticker_data.get('change_from_open', 0)
                             })
             else:
                 # New ticker in top rankings
@@ -1887,7 +1920,8 @@ class VolumeMomentumTracker:
                                 'price': current_ticker_data.get('close', 0),
                                 'change_pct': change_pct,
                                 'relative_volume': current_ticker_data.get('relative_volume_10d_calc', 0),
-                                'sector': current_ticker_data.get('sector', 'Unknown')
+                                'sector': current_ticker_data.get('sector', 'Unknown'),
+                                'change_from_open': current_ticker_data.get('change_from_open', 0)
                             })
 
         # Sort by rank improvement
@@ -2034,7 +2068,8 @@ class VolumeMomentumTracker:
                             'sector': record.get('sector', 'Unknown'),
                             'time_window': time_window_minutes,
                             'alert_type': alert_type,
-                            'flat_analysis': flat_analysis
+                            'flat_analysis': flat_analysis,
+                            'change_from_open': record.get('change_from_open', 0)
                         }
                         
                         price_spikes.append(spike_data)
@@ -2051,7 +2086,8 @@ class VolumeMomentumTracker:
                         'sector': record.get('sector', 'Unknown'),
                         'time_window': time_window_minutes,
                         'alert_type': 'price_spike',  # Can't confirm flat period for new ticker
-                        'flat_analysis': flat_analysis
+                        'flat_analysis': flat_analysis,
+                        'change_from_open': record.get('change_from_open', 0)
                     }
                     
                     price_spikes.append(spike_data)
@@ -2085,7 +2121,8 @@ class VolumeMomentumTracker:
                         'volume': record.get('volume', 0),
                         'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
-                        'alert_type': 'significant_premarket_move'
+                        'alert_type': 'significant_premarket_move',
+                        'change_from_open': record.get('change_from_open', 0)
                     })
 
                 # Alert on high pre-market volume (if available)
@@ -2097,7 +2134,8 @@ class VolumeMomentumTracker:
                         'premarket_change': premarket_change,
                         'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
-                        'alert_type': 'high_premarket_volume'
+                        'alert_type': 'high_premarket_volume',
+                        'change_from_open': record.get('change_from_open', 0)
                     })
 
             return premarket_volume_alerts, premarket_price_alerts
@@ -2126,7 +2164,8 @@ class VolumeMomentumTracker:
                         'volume': current_record.get('volume', 0),
                         'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                         'sector': current_record.get('sector', 'Unknown'),
-                        'alert_type': 'premarket_acceleration'
+                        'alert_type': 'premarket_acceleration',
+                        'change_from_open': current_record.get('change_from_open', 0)
                     })
 
                 # Pre-market volume surge (regardless of price direction)
@@ -2141,7 +2180,8 @@ class VolumeMomentumTracker:
                             'premarket_change': current_pm_change,
                             'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                             'sector': current_record.get('sector', 'Unknown'),
-                            'alert_type': 'premarket_volume_surge'
+                            'alert_type': 'premarket_volume_surge',
+                            'change_from_open': current_record.get('change_from_open', 0)
                         })
             else:
                 # New pre-market activity - ONLY POSITIVE moves (long trades)
@@ -2153,7 +2193,8 @@ class VolumeMomentumTracker:
                         'volume': current_record.get('volume', 0),
                         'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                         'sector': current_record.get('sector', 'Unknown'),
-                        'alert_type': 'new_premarket_move'
+                        'alert_type': 'new_premarket_move',
+                        'change_from_open': current_record.get('change_from_open', 0)
                     })
 
         # Sort alerts - price alerts by biggest POSITIVE moves
