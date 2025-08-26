@@ -106,6 +106,7 @@ class VolumeMomentumTracker:
         self.telegram_chat_id = telegram_chat_id
         self.telegram_last_sent = {}  # Track last notification time per ticker for rate limiting
         self.session_alert_count = {}  # Track how many alerts sent per ticker in current session
+        self.disregarded_tickers = set()  # Track tickers to ignore for alerts in current session
         
         # Telegram alerts log file for end-of-day analysis
         self.telegram_alerts_log = self.output_dir / "telegram_alerts_sent.jsonl"
@@ -123,6 +124,7 @@ class VolumeMomentumTracker:
                 import telegram
                 self.telegram_bot = telegram.Bot(token=telegram_bot_token)
                 self.telegram_last_sent = self._load_telegram_last_sent()
+                self._start_telegram_listener()  # Start listening for user commands
                 logger.info("✅ Telegram bot initialized successfully")
             except ImportError:
                 logger.warning("📱 python-telegram-bot not installed. Run: pip install python-telegram-bot")
@@ -1309,7 +1311,7 @@ class VolumeMomentumTracker:
             'historical_note': "87.9% of winners never dropped below alert price"
         }
     
-    def _log_telegram_alert_sent(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, pattern_analysis=None):
+    def _log_telegram_alert_sent(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, pattern_analysis=None, disregarded=False):
         """Log the details of a successfully sent Telegram alert for end-of-day analysis"""
         try:
             alert_log_entry = {
@@ -1323,7 +1325,8 @@ class VolumeMomentumTracker:
                 'alert_types': alert_types,
                 'alert_count': alert_count,
                 'is_immediate_spike': is_immediate_spike,
-                'alert_type': 'immediate_spike' if is_immediate_spike else alert_types[0] if alert_types else 'price_spike'
+                'alert_type': 'immediate_spike' if is_immediate_spike else alert_types[0] if alert_types else 'price_spike',
+                'disregarded': disregarded
             }
             
             # Include pattern analysis data if provided
@@ -1358,6 +1361,13 @@ class VolumeMomentumTracker:
             if time_since_last < self.telegram_notification_interval:
                 logger.debug(f"Rate limiting: Skipping Telegram alert for {ticker} (sent {time_since_last:.0f}s ago)")
                 return
+
+        # Check if ticker is disregarded by user
+        if ticker in self.disregarded_tickers:
+            logger.info(f"📵 Alert disregarded for {ticker} ({change_pct:+.1f}%, {alert_count} alerts) - user disabled alerts for this ticker")
+            # Log the disregarded alert for end-of-day analysis
+            self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, None, disregarded=True)
+            return
 
         try:
             import asyncio
@@ -2536,9 +2546,10 @@ class VolumeMomentumTracker:
         self.ticker_alert_history = {}
         self.telegram_last_sent = {}  # Reset Telegram rate limiting too
         self.session_alert_count = {}  # Reset session alert counts too
+        self.disregarded_tickers.clear()  # Reset disregarded tickers too
         self.news_cache = {}  # Reset news cache too
         self._save_ticker_data()
-        logger.info("🔄 Ticker counters, history, news cache, session alert counts, and Telegram rate limiting reset")
+        logger.info("🔄 Ticker counters, history, news cache, session alert counts, disregarded tickers, and Telegram rate limiting reset")
 
     def print_ticker_stats(self):
         """Print detailed ticker statistics"""
@@ -2564,6 +2575,111 @@ class VolumeMomentumTracker:
             types_str = ', '.join([f"{k}({v})" for k, v in alert_types.items()])
 
             print(f"{i:2d}. {ticker:6} | {count:3d} total | {types_str}")
+
+    def _process_telegram_command(self, text, chat_id):
+        """Process incoming telegram commands from users"""
+        if not text or not text.startswith('/'):
+            return
+            
+        try:
+            # Only process commands from the configured chat ID
+            if str(chat_id) != str(self.telegram_chat_id):
+                logger.warning(f"Ignoring command from unauthorized chat ID: {chat_id}")
+                return
+                
+            parts = text.strip().split()
+            command = parts[0].lower()
+            
+            if command == '/disregard' and len(parts) >= 2:
+                ticker = parts[1].upper()
+                if ticker not in self.disregarded_tickers:
+                    self.disregarded_tickers.add(ticker)
+                    response = f"✅ {ticker} alerts disabled for this session. You will no longer receive alerts for {ticker} until the next session."
+                    logger.info(f"📵 User disregarded ticker: {ticker}")
+                else:
+                    response = f"ℹ️ {ticker} alerts are already disabled for this session."
+                
+                # Send confirmation
+                import asyncio
+                asyncio.run(self.telegram_bot.send_message(
+                    chat_id=self.telegram_chat_id,
+                    text=response,
+                    disable_web_page_preview=True
+                ))
+                
+            elif command == '/list_disregarded':
+                if self.disregarded_tickers:
+                    tickers_list = ', '.join(sorted(self.disregarded_tickers))
+                    response = f"📵 Currently disregarded tickers: {tickers_list}"
+                else:
+                    response = "ℹ️ No tickers are currently disregarded."
+                    
+                # Send list
+                import asyncio
+                asyncio.run(self.telegram_bot.send_message(
+                    chat_id=self.telegram_chat_id,
+                    text=response,
+                    disable_web_page_preview=True
+                ))
+                
+            elif command == '/help':
+                response = (
+                    "📱 Volume Momentum Tracker Commands:\n\n"
+                    "• /disregard TICKER - Disable alerts for a ticker this session\n"
+                    "• /list_disregarded - Show currently disregarded tickers\n"
+                    "• /help - Show this help message\n\n"
+                    "Example: /disregard AAPL"
+                )
+                
+                # Send help
+                import asyncio
+                asyncio.run(self.telegram_bot.send_message(
+                    chat_id=self.telegram_chat_id,
+                    text=response,
+                    disable_web_page_preview=True
+                ))
+                
+        except Exception as e:
+            logger.error(f"❌ Error processing Telegram command '{text}': {e}")
+
+    def _start_telegram_listener(self):
+        """Start listening for telegram messages in a separate thread"""
+        if not self.telegram_bot or not self.telegram_chat_id:
+            return
+            
+        try:
+            import threading
+            from telegram.ext import Application, MessageHandler, CommandHandler, filters
+            
+            def message_handler(update, context):
+                """Handle incoming messages"""
+                if update.message and update.message.text:
+                    self._process_telegram_command(
+                        update.message.text, 
+                        update.message.chat_id
+                    )
+            
+            # Create application
+            app = Application.builder().token(self.telegram_bot.token).build()
+            
+            # Add command handlers
+            app.add_handler(CommandHandler("disregard", message_handler))
+            app.add_handler(CommandHandler("list_disregarded", message_handler))
+            app.add_handler(CommandHandler("help", message_handler))
+            
+            # Start polling in a separate thread
+            def run_bot():
+                try:
+                    app.run_polling(allowed_updates=["message"])
+                except Exception as e:
+                    logger.error(f"❌ Telegram bot polling error: {e}")
+                    
+            bot_thread = threading.Thread(target=run_bot, daemon=True)
+            bot_thread.start()
+            logger.info("📱 Telegram message listener started")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to start Telegram listener: {e}")
 
     def test_telegram_bot(self):
         """Test Telegram bot connectivity and news fetching with timestamps"""
