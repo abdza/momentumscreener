@@ -2601,7 +2601,7 @@ class VolumeMomentumTracker:
 
             print(f"{i:2d}. {ticker:6} | {count:3d} total | {types_str}")
 
-    def _process_telegram_command(self, text, chat_id):
+    async def _process_telegram_command(self, text, chat_id):
         """Process incoming telegram commands from users"""
         if not text or not text.startswith('/'):
             return
@@ -2625,12 +2625,11 @@ class VolumeMomentumTracker:
                     response = f"ℹ️ {ticker} alerts are already disabled for this session."
                 
                 # Send confirmation
-                import asyncio
-                asyncio.run(self.telegram_bot.send_message(
+                await self.telegram_bot.send_message(
                     chat_id=self.telegram_chat_id,
                     text=response,
                     disable_web_page_preview=True
-                ))
+                )
                 
             elif command == '/list_disregarded':
                 if self.disregarded_tickers:
@@ -2640,12 +2639,11 @@ class VolumeMomentumTracker:
                     response = "ℹ️ No tickers are currently disregarded."
                     
                 # Send list
-                import asyncio
-                asyncio.run(self.telegram_bot.send_message(
+                await self.telegram_bot.send_message(
                     chat_id=self.telegram_chat_id,
                     text=response,
                     disable_web_page_preview=True
-                ))
+                )
                 
             elif command == '/help':
                 response = (
@@ -2657,12 +2655,11 @@ class VolumeMomentumTracker:
                 )
                 
                 # Send help
-                import asyncio
-                asyncio.run(self.telegram_bot.send_message(
+                await self.telegram_bot.send_message(
                     chat_id=self.telegram_chat_id,
                     text=response,
                     disable_web_page_preview=True
-                ))
+                )
                 
         except Exception as e:
             logger.error(f"❌ Error processing Telegram command '{text}': {e}")
@@ -2676,10 +2673,11 @@ class VolumeMomentumTracker:
             import threading
             from telegram.ext import Application, MessageHandler, CommandHandler, filters
             
-            def message_handler(update, context):
+            async def message_handler(update, context):
                 """Handle incoming messages"""
                 if update.message and update.message.text:
-                    self._process_telegram_command(
+                    logger.info(f"📱 Received message: '{update.message.text}' from chat {update.message.chat_id}")
+                    await self._process_telegram_command(
                         update.message.text, 
                         update.message.chat_id
                     )
@@ -2692,10 +2690,18 @@ class VolumeMomentumTracker:
             app.add_handler(CommandHandler("list_disregarded", message_handler))
             app.add_handler(CommandHandler("help", message_handler))
             
+            # Add a general message handler to catch all other messages
+            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+            
             # Start polling in a separate thread
             def run_bot():
                 try:
-                    app.run_polling(allowed_updates=["message"])
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    
+                    # Disable signal handling to avoid thread issues
+                    app.run_polling(allowed_updates=["message"], stop_signals=None)
                 except Exception as e:
                     logger.error(f"❌ Telegram bot polling error: {e}")
                     
