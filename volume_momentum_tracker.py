@@ -160,6 +160,28 @@ class VolumeMomentumTracker:
         self.monitor_interval = 120  # 2 minutes in seconds
         self.max_history = 50  # Keep last 50 data points
 
+    def _escape_markdown(self, text):
+        """
+        Escape special characters that could break Telegram Markdown parsing
+        
+        Args:
+            text (str): Text to escape
+            
+        Returns:
+            str: Escaped text safe for Markdown
+        """
+        if not text:
+            return ""
+        
+        # Characters that need escaping in Telegram Markdown
+        special_chars = ['[', ']', '(', ')', '*', '_', '`', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        
+        escaped_text = text
+        for char in special_chars:
+            escaped_text = escaped_text.replace(char, f'\\{char}')
+        
+        return escaped_text
+
     def _format_time_ago(self, published_date):
         """
         Format the time difference between now and published date in a readable format
@@ -1466,8 +1488,11 @@ class VolumeMomentumTracker:
                     title = news_item['title']
                     url = news_item['url']
 
+                    # Escape markdown special characters in title
+                    escaped_title = self._escape_markdown(title)
+                    
                     # Telegram supports markdown links: [text](url)
-                    message += f"\n{i}. ({time_info}) [{title}]({url})"
+                    message += f"\n{i}. ({time_info}) [{escaped_title}]({url})"
             else:
                 message += f"\n\n📰 No recent headlines found for {ticker}"
 
@@ -2728,7 +2753,8 @@ class VolumeMomentumTracker:
                     for i, news_item in enumerate(news_headlines, 1):
                         time_info = news_item.get('time_ago', 'Unknown time')
                         source = news_item.get('source', 'Unknown source')
-                        news_test_message += f"{i}. ({time_info}) [{news_item['title']}]({news_item['url']})\n"
+                        escaped_title = self._escape_markdown(news_item['title'])
+                        news_test_message += f"{i}. ({time_info}) [{escaped_title}]({news_item['url']})\n"
                         news_test_message += f"   Source: {source}\n"
 
                     # Add sample relative volume info
