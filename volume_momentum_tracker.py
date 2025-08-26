@@ -105,6 +105,7 @@ class VolumeMomentumTracker:
         self.telegram_bot = None
         self.telegram_chat_id = telegram_chat_id
         self.telegram_last_sent = {}  # Track last notification time per ticker for rate limiting
+        self.session_alert_count = {}  # Track how many alerts sent per ticker in current session
         
         # Telegram alerts log file for end-of-day analysis
         self.telegram_alerts_log = self.output_dir / "telegram_alerts_sent.jsonl"
@@ -1397,6 +1398,9 @@ class VolumeMomentumTracker:
             # Get position sizing recommendation based on market conditions
             position_sizing = self._get_position_size_recommendation()
 
+            # Get current session alert count (before increment)
+            current_session_count = self.session_alert_count.get(ticker, 0)
+
             # Different message for immediate spikes vs regular high frequency
             if is_immediate_spike:
                 message = (
@@ -1416,6 +1420,7 @@ class VolumeMomentumTracker:
                     f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']})\n\n"
                     f"🔥 This ticker just spiked {change_pct:+.1f}% - immediate alert triggered!\n"
                     f"📈 Previous alerts: {alert_count}\n"
+                    f"📱 Session alerts: {current_session_count + 1} (this session)\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
                     f"📊 View Chart: {tradingview_link}"
                 )
@@ -1424,6 +1429,7 @@ class VolumeMomentumTracker:
                     f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
                     f"📊 Ticker: {ticker}\n"
                     f"⚡ Alert Count: {alert_count} times\n"
+                    f"📱 Session alerts: {current_session_count + 1} (this session)\n"
                     f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
                     f"📈 Volume: {volume:,}\n"
                     f"📊 Relative Volume: {rel_vol_str}\n"
@@ -1474,8 +1480,12 @@ class VolumeMomentumTracker:
 
             # Update last sent time for rate limiting
             self.telegram_last_sent[ticker] = current_time.isoformat()
+            
+            # Increment session alert count
+            self.session_alert_count[ticker] = self.session_alert_count.get(ticker, 0) + 1
+            
             alert_type = "IMMEDIATE SPIKE" if is_immediate_spike else "HIGH FREQUENCY"
-            logger.info(f"📱 Telegram {alert_type} alert sent for {ticker} ({change_pct:+.1f}%, {alert_count} alerts) with {len(recent_news)} news headlines")
+            logger.info(f"📱 Telegram {alert_type} alert sent for {ticker} ({change_pct:+.1f}%, {alert_count} alerts, {self.session_alert_count[ticker]} session alerts) with {len(recent_news)} news headlines")
             
             # Log the successful Telegram alert for end-of-day analysis
             self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, pattern_analysis)
@@ -2525,9 +2535,10 @@ class VolumeMomentumTracker:
         self.ticker_counters = {}
         self.ticker_alert_history = {}
         self.telegram_last_sent = {}  # Reset Telegram rate limiting too
+        self.session_alert_count = {}  # Reset session alert counts too
         self.news_cache = {}  # Reset news cache too
         self._save_ticker_data()
-        logger.info("🔄 Ticker counters, history, news cache, and Telegram rate limiting reset")
+        logger.info("🔄 Ticker counters, history, news cache, session alert counts, and Telegram rate limiting reset")
 
     def print_ticker_stats(self):
         """Print detailed ticker statistics"""
