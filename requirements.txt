@@ -4,3 +4,5 @@ pandas
 schedule
 python-telegram-bot
 pyTelegramBotAPI
+ib-insync
+matplotlib
