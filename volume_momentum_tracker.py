@@ -1369,7 +1369,7 @@ class VolumeMomentumTracker:
         except Exception as e:
             logger.error(f"❌ Failed to log Telegram alert for {ticker}: {e}")
 
-    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=None):
+    def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=None, float_shares=None):
         """Send Telegram alert for high-frequency ticker or immediate big spike with rate limiting and news headlines with timestamps"""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
@@ -1412,6 +1412,9 @@ class VolumeMomentumTracker:
             # Format relative volume display
             rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
             
+            # Format float shares display
+            float_str = f"{float_shares:,.0f}" if float_shares and float_shares > 0 else "N/A"
+            
             # Format gap display
             gap_str = f"{gap_pct:+.1f}%" if gap_pct is not None else "N/A"
             
@@ -1442,6 +1445,7 @@ class VolumeMomentumTracker:
                     f"💰 Current Price: ${current_price:.2f}\n"
                     f"📈 Volume: {volume:,}\n"
                     f"📊 Relative Volume: {rel_vol_str}\n"
+                    f"🏦 Float: {float_str}\n"
                     f"📈 Gap: {gap_str}\n"
                     f"🏭 Sector: {sector}\n\n"
                     f"🎯 WIN PROBABILITY: {probability_str}\n"
@@ -1465,6 +1469,7 @@ class VolumeMomentumTracker:
                     f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
                     f"📈 Volume: {volume:,}\n"
                     f"📊 Relative Volume: {rel_vol_str}\n"
+                    f"🏦 Float: {float_str}\n"
                     f"📈 Gap: {gap_str}\n"
                     f"🏭 Sector: {sector}\n\n"
                     f"🎯 WIN PROBABILITY: {probability_str}\n"
@@ -1530,6 +1535,7 @@ class VolumeMomentumTracker:
             # Try sending without markdown if it fails
             try:
                 rel_vol_str = f"{relative_volume:.1f}x" if relative_volume and relative_volume > 0 else "N/A"
+                float_str = f"{float_shares:,.0f}" if float_shares and float_shares > 0 else "N/A"
                 
                 # Recreate pattern analysis for simple message
                 primary_alert_type = alert_types[0] if alert_types else "price_spike"
@@ -1556,6 +1562,7 @@ class VolumeMomentumTracker:
                         f"💰 Current Price: ${current_price:.2f}\n"
                         f"📈 Volume: {volume:,}\n"
                         f"📊 Relative Volume: {rel_vol_str}\n"
+                        f"🏦 Float: {float_str}\n"
                         f"🏭 Sector: {sector}\n\n"
                         f"🎯 WIN PROBABILITY: {probability_str}\n"
                         f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
@@ -1573,6 +1580,7 @@ class VolumeMomentumTracker:
                         f"💰 Current Price: ${current_price:.2f} ({change_pct:+.1f}%)\n"
                         f"📈 Volume: {volume:,}\n"
                         f"📊 Relative Volume: {rel_vol_str}\n"
+                        f"🏦 Float: {float_str}\n"
                         f"🏭 Sector: {sector}\n\n"
                         f"🎯 WIN PROBABILITY: {probability_str}\n"
                         f"🚀 PATTERN FLAGS: {pattern_flags_str}\n"
@@ -1619,12 +1627,13 @@ class VolumeMomentumTracker:
         relative_volume = alert_data.get('relative_volume',
                         alert_data.get('relative_volume_10d_calc', 0))
         sector = alert_data.get('sector', 'Unknown')
+        float_shares = alert_data.get('float_shares_outstanding', 0)
         
         # Calculate gap percentage
         change_from_open = alert_data.get('change_from_open', 0)
         gap_pct = self._calculate_gap_percentage(current_price, change_from_open)
 
-        self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=True, gap_pct=gap_pct)
+        self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=True, gap_pct=gap_pct, float_shares=float_shares)
 
     def _check_high_frequency_alerts(self, ticker, alert_data):
         """Check if ticker qualifies for Telegram notification (sends every time for 3+ alerts with rate limiting)"""
@@ -1646,12 +1655,13 @@ class VolumeMomentumTracker:
             relative_volume = alert_data.get('relative_volume',
                             alert_data.get('relative_volume_10d_calc', 0))
             sector = alert_data.get('sector', 'Unknown')
+            float_shares = alert_data.get('float_shares_outstanding', 0)
             
             # Calculate gap percentage
             change_from_open = alert_data.get('change_from_open', 0)
             gap_pct = self._calculate_gap_percentage(current_price, change_from_open)
 
-            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=gap_pct)
+            self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=gap_pct, float_shares=float_shares)
 
     def _get_cookies(self):
         """Get cookies from browser using rookiepy"""
