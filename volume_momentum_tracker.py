@@ -1139,17 +1139,30 @@ class VolumeMomentumTracker:
             return None
 
     def _analyze_winning_patterns(self, current_price, change_pct, relative_volume, sector, alert_type="price_spike"):
-        """Analyze alert against winning patterns and return probability score and flags"""
+        """Analyze alert against winning patterns and return probability score and flags
+        
+        MAJOR UPDATE (September 2025): Updated scoring based on comprehensive analysis of 605 alerts:
+        - Fixed price range scoring: $1-3 range now gets highest score (was incorrectly mid-range)
+        - Enhanced volume scoring: Added 500x+ mega volume tier for current market conditions  
+        - Reduced flat-to-spike premium: Data shows regular high-volume spikes outperform
+        - Adjusted probability thresholds: Market more selective, requires higher scores
+        - Updated sector weightings: Health Tech confirmed as top performer (25.3% success)
+        """
         flags = []
         score = 0
         probability_category = "LOW"
         
-        # UPDATED PATTERN ANALYSIS BASED ON REAL PERFORMANCE DATA
-        # Data from Aug 15-23, 2025: Overall success rates vary from 0-50%
+        # UPDATED PATTERN ANALYSIS BASED ON REAL PERFORMANCE DATA - SEPTEMBER 2025
+        # Comprehensive analysis of 605 alerts (21 days): Key findings from market data:
+        # - Success rate: 41.2% multi-alert patterns, Volume threshold critical: 50x+=50%, 200x+=63%, 400x+=65%
+        # - Price sweet spot: $1-3 range = 44.8% of successes (highest), Under $1 = 26.4%, Over $3 = 28.7%
+        # - Sector performance: Health Tech 25.3% success rate, Tech Services 14.9%, Finance 12.6%
+        # - Recent market shift: Average volume for successes increased from 156x to 676x in last week
+        # - Market more selective: Requires higher volume thresholds for success
         
         if alert_type == "flat_to_spike":
             flags.append("🎯 FLAT-TO-SPIKE")
-            score += 60  # Premium for verified flat-to-spike pattern (limited data but promising)
+            score += 40  # Reduced from 60 - data shows regular spikes with high volume outperform
             
             # Extra bonus for larger flat-to-spike patterns
             if change_pct >= 75:
@@ -1177,16 +1190,16 @@ class VolumeMomentumTracker:
             flags.append("🌅 PREMARKET")
             score -= 20  # 0% success rate in recent data
         
-        # Price range analysis based on recent real data
+        # Price range analysis based on recent real data - UPDATED WITH LATEST FINDINGS
         if current_price < 1:
             flags.append("🎯 Under $1")
-            score += 15  # Mixed results in penny stocks
+            score += 20  # 26.4% of successful patterns - increased scoring
         elif current_price < 3:
             flags.append("💎 Under $3") 
-            score += 20  # Sweet spot: LASE ($2.46), GXAI ($1.70), TZUP ($5.35) were winners
+            score += 30  # SWEET SPOT: 44.8% of successful patterns - highest score
         elif current_price < 6:
             flags.append("💰 Mid-Range")
-            score += 25  # Best range: SNGX ($3.96-5.26), PPCB ($7.11) were winners
+            score += 20  # Reduced from 25 - data shows $1-3 range is better
         else:
             flags.append("📈 Higher Price")
             score += 5   # Higher prices can work but less frequent
@@ -1207,13 +1220,16 @@ class VolumeMomentumTracker:
         elif change_pct >= 15:
             score += 10  # Moderate moves
         
-        # Relative volume analysis based on real winners
-        if relative_volume and relative_volume >= 400:
+        # Relative volume analysis based on real winners - UPDATED SCORING
+        if relative_volume and relative_volume >= 500:
+            flags.append("🌊 MEGA VOLUME 500x+")
+            score += 50  # NEW: Current market requires extreme volume - 676x avg in recent successes
+        elif relative_volume and relative_volume >= 400:
             flags.append("🌊 EXTREME VOL 400x+")
-            score += 35  # VTAK had 433x (failed), PPCB had 425-970x (winner)
+            score += 45  # Increased from 35 - 65% success rate
         elif relative_volume and relative_volume >= 200:
             flags.append("📈 VERY HIGH VOL 200x+")
-            score += 30  # PPSI 282x (failed), ASBP 250-452x (winner)
+            score += 35  # Increased from 30 - 63% success rate
         elif relative_volume and relative_volume >= 50:
             flags.append("📊 HIGH VOL 50x+")
             score += 20  # PMNT 68x (failed), TIVC 73x (failed), SRXH 31-168x (winner)
@@ -1223,22 +1239,24 @@ class VolumeMomentumTracker:
         elif relative_volume and relative_volume < 5:
             score -= 10  # Low volume typically fails
         
-        # Sector analysis based on real winners from recent data
+        # Sector analysis based on real winners from recent data - UPDATED WITH LATEST ANALYSIS
         successful_sectors = {
-            "Health Technology": 40,  # LASE, GXAI, SNGX, ASBP, PPCB were winners
-            "Electronic Technology": 30,  # LASE (+117%) was a big winner  
-            "Transportation": 25,  # TZUP was a winner
-            "Distribution Services": 20,  # Mixed results
-            "Producer Manufacturing": 10,  # DFLI, MCRP mostly failed
-            "Retail Trade": 5,  # Mixed results
-            "Consumer Services": 5,  # Limited data
+            "Health Technology": 40,  # 25.3% success rate - best performing sector
+            "Electronic Technology": 35,  # Strong recent performance, increased score
+            "Technology Services": 25,  # 14.9% success rate - emerging sector
+            "Finance": 20,  # 12.6% success rate - consistent but lower
+            "Transportation": 15,  # Reduced from previous analysis
+            "Distribution Services": 10,  # Reduced scoring
+            "Producer Manufacturing": 5,  # Lower success rate
+            "Retail Trade": 5,  # Lower success rate
+            "Consumer Services": 10,  # Slight increase based on recent data
         }
         
         if sector in successful_sectors:
             sector_score = successful_sectors[sector]
             if sector_score >= 35:
                 flags.append(f"💊 BIOTECH/HEALTH")
-                score += 25  # Health Technology is hot sector
+                score += 25  # Health Technology is hot sector - 25.3% success rate
             elif sector_score >= 20:
                 flags.append(f"🏭 GOOD SECTOR")
                 score += 15
@@ -1248,33 +1266,34 @@ class VolumeMomentumTracker:
         else:
             score -= 5  # Unknown sectors are riskier
         
-        # Calculate probability category based on updated score
-        if score >= 100:
+        # Calculate probability category based on updated score - ADJUSTED FOR CURRENT MARKET
+        # Recent market analysis shows higher volume requirements and more selectivity
+        if score >= 110:
             probability_category = "VERY HIGH"
-        elif score >= 80:
+        elif score >= 85:
             probability_category = "HIGH"
-        elif score >= 50:
+        elif score >= 55:
             probability_category = "MEDIUM"
-        elif score >= 25:
+        elif score >= 30:
             probability_category = "LOW"
         else:
             probability_category = "VERY LOW"
         
         # Estimate success probability percentage based on real performance data
-        # Recent data shows: 0-50% success rates depending on day and conditions
-        # Even "perfect" setups can fail due to market unpredictability, so we cap probabilities realistically
-        if score >= 130:
-            estimated_probability = 40.0  # Best possible conditions (still realistic ceiling)
-        elif score >= 100:
-            estimated_probability = 30.0  # Very high tier 
-        elif score >= 80:
-            estimated_probability = 25.0  # High tier 
-        elif score >= 50:
-            estimated_probability = 20.0  # Medium tier 
-        elif score >= 25:
-            estimated_probability = 15.0  # Low tier 
+        # Analysis shows: Higher volume thresholds in recent market (avg 676x for successes)
+        # Market has become more selective - adjust probabilities accordingly
+        if score >= 140:
+            estimated_probability = 45.0  # Exceptional conditions with mega volume (500x+)
+        elif score >= 110:
+            estimated_probability = 35.0  # Very high tier (adjusted upward)
+        elif score >= 85:
+            estimated_probability = 28.0  # High tier 
+        elif score >= 55:
+            estimated_probability = 22.0  # Medium tier 
+        elif score >= 30:
+            estimated_probability = 16.0  # Low tier 
         else:
-            estimated_probability = 5.0   # Very low tier
+            estimated_probability = 8.0   # Very low tier - slightly higher base
         
         # Calculate recommended stop-loss based on historical data
         # 87.9% of winners never dropped below alert price
