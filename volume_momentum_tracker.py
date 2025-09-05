@@ -10,7 +10,7 @@ Continuously monitors small cap stocks to detect:
 LONG TRADES FOCUS: Only alerts on upward price movements for bullish momentum plays.
 Runs every 2 minutes and compares with previous results to spot emerging momentum plays.
 
-NEW FEATURE: Immediate alerts for very big price spikes (25%+) bypass the 3-alert rule!
+NEW FEATURE: Immediate alerts for very big price spikes (15%+) bypass the 3-alert rule!
 
 Command Line Usage:
     python volume_momentum_tracker.py [options]
@@ -29,7 +29,7 @@ Command Line Usage:
         # Single scan
         python volume_momentum_tracker.py --single
 
-        # Continuous monitoring with Telegram alerts (immediate alerts for 25%+ spikes)
+        # Continuous monitoring with Telegram alerts (immediate alerts for 15%+ spikes)
         python volume_momentum_tracker.py --continuous --bot-token "YOUR_TOKEN" --chat-id "YOUR_CHAT_ID"
 
         # Set immediate alert threshold to 20%
@@ -51,6 +51,7 @@ import os
 import atexit
 import requests
 import re
+import math
 from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -81,8 +82,21 @@ logger = logging.getLogger(__name__)
 # PID file path
 PID_FILE = "/tmp/screener.pid"
 
+def get_float_shares_value(data, key='float_shares_outstanding'):
+    """
+    Helper function to properly extract float shares value, handling NaN and None cases
+    """
+    value = data.get(key, None)
+    if value is None:
+        return None
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    if isinstance(value, (int, float)) and value > 0:
+        return value
+    return None
+
 class VolumeMomentumTracker:
-    def __init__(self, output_dir="momentum_data", browser="firefox", telegram_bot_token=None, telegram_chat_id=None, immediate_spike_threshold=25.0):
+    def __init__(self, output_dir="momentum_data", browser="firefox", telegram_bot_token=None, telegram_chat_id=None, immediate_spike_threshold=15.0):
         """
         Initialize the Volume Momentum Tracker
 
@@ -91,7 +105,7 @@ class VolumeMomentumTracker:
             browser (str): Browser to extract cookies from
             telegram_bot_token (str): Telegram bot token for notifications
             telegram_chat_id (str): Telegram chat ID for notifications
-            immediate_spike_threshold (float): Price change % that triggers immediate alerts (default: 25%)
+            immediate_spike_threshold (float): Price change % that triggers immediate alerts (default: 15%)
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
@@ -155,6 +169,47 @@ class VolumeMomentumTracker:
         # Ticker frequency tracking
         self.ticker_counters = self._load_ticker_counters()
         self.ticker_alert_history = self._load_ticker_alert_history()
+        
+        # NEW: Ticker cooldown system
+        self.ticker_cooldowns = {}  # Track last alert time per ticker
+        self.cooldown_periods = {
+            'high_performer': 5 * 60,      # 5 minutes for >20% avg change
+            'regular': 10 * 60,            # 10 minutes for 5-20% avg change  
+            'poor_performer': 20 * 60,     # 20 minutes for <5% avg change
+            'default': 10 * 60             # Default 10 minutes
+        }
+        
+        # NEW: Sector-specific tuning
+        self.sector_config = {
+            'Finance': {
+                'relative_volume_multiplier': 1.5,    # Higher threshold to reduce noise
+                'price_change_multiplier': 1.0
+            },
+            'Health Technology': {
+                'relative_volume_multiplier': 1.5,    # Higher threshold to reduce noise
+                'price_change_multiplier': 1.0
+            },
+            'Technology Services': {
+                'relative_volume_multiplier': 0.9,    # Lower threshold for early momentum
+                'price_change_multiplier': 0.9
+            },
+            'Electronic Technology': {
+                'relative_volume_multiplier': 0.8,    # Prioritize for high momentum
+                'price_change_multiplier': 0.8
+            },
+            'Utilities': {
+                'relative_volume_multiplier': 1.0,
+                'price_change_multiplier': 1.0,
+                'max_ticker_concentration': 0.3       # Max 30% of alerts from one ticker
+            },
+            'default': {
+                'relative_volume_multiplier': 1.0,
+                'price_change_multiplier': 1.0
+            }
+        }
+        
+        # NEW: Enhanced flat-to-spike threshold
+        self.flat_to_spike_threshold = 12.1  # Lowered from 15% for earlier detection
 
         # Tracking settings
         self.monitor_interval = 120  # 2 minutes in seconds
@@ -1352,6 +1407,135 @@ class VolumeMomentumTracker:
             'historical_note': "87.9% of winners never dropped below alert price"
         }
     
+    def calculate_momentum_score(self, price_change, relative_volume, change_from_open, alert_type="price_spike"):
+        """
+        NEW: Calculate composite momentum score for alert prioritization
+        Based on analysis recommendation: (price_change × 0.4) + (rel_volume × 0.3) + (change_from_open × 0.3)
+        """
+        try:
+            # Normalize relative volume (cap at 1000x for scoring)
+            normalized_rel_vol = min(relative_volume, 1000) / 10  # Scale down for scoring
+            
+            # Apply weights from analysis
+            score = (
+                (abs(price_change) * 0.4) +           # 40% weight on price change
+                (normalized_rel_vol * 0.3) +          # 30% weight on relative volume  
+                (abs(change_from_open) * 0.3)         # 30% weight on change from open
+            )
+            
+            # Bonus for flat-to-spike patterns
+            if alert_type == "flat_to_spike":
+                score *= 1.2  # 20% bonus for flat-to-spike
+            
+            return round(score, 2)
+        except:
+            return 0.0
+    
+    def get_ticker_cooldown_category(self, ticker):
+        """Determine cooldown category based on ticker's historical performance"""
+        if ticker not in self.ticker_alert_history:
+            return 'default'
+        
+        # Calculate average change for this ticker
+        history = self.ticker_alert_history[ticker]
+        if len(history) == 0:
+            return 'default'
+        
+        avg_change = sum(entry.get('change_pct', 0) for entry in history) / len(history)
+        
+        if avg_change >= 20:
+            return 'high_performer'
+        elif avg_change >= 5:
+            return 'regular'
+        else:
+            return 'poor_performer'
+    
+    def is_ticker_in_cooldown(self, ticker):
+        """Check if ticker is currently in cooldown period"""
+        if ticker not in self.ticker_cooldowns:
+            return False
+        
+        cooldown_category = self.get_ticker_cooldown_category(ticker)
+        cooldown_duration = self.cooldown_periods.get(cooldown_category, self.cooldown_periods['default'])
+        
+        last_alert_time = self.ticker_cooldowns[ticker]
+        time_since_last = (datetime.now() - last_alert_time).total_seconds()
+        
+        return time_since_last < cooldown_duration
+    
+    def get_sector_adjusted_thresholds(self, sector, base_relative_volume=3.0, base_price_change=10.0):
+        """Apply sector-specific threshold adjustments"""
+        config = self.sector_config.get(sector, self.sector_config['default'])
+        
+        adjusted_rel_vol = base_relative_volume * config['relative_volume_multiplier']
+        adjusted_price_change = base_price_change * config['price_change_multiplier']
+        
+        return adjusted_rel_vol, adjusted_price_change
+    
+    def should_send_alert(self, ticker, sector, price_change, relative_volume, change_from_open, alert_type="price_spike"):
+        """
+        NEW: Comprehensive alert filtering with momentum scoring, cooldowns, and sector tuning
+        """
+        # Calculate momentum score
+        momentum_score = self.calculate_momentum_score(price_change, relative_volume, change_from_open, alert_type)
+        
+        # High priority alerts (>50) bypass cooldowns
+        if momentum_score > 50:
+            logger.info(f"🚀 HIGH PRIORITY ALERT: {ticker} score={momentum_score} (bypassing cooldown)")
+            return True, momentum_score, "high_priority"
+        
+        # Check cooldown for regular alerts
+        if self.is_ticker_in_cooldown(ticker):
+            logger.info(f"⏰ COOLDOWN: {ticker} still in cooldown period")
+            return False, momentum_score, "cooldown"
+        
+        # Apply sector-specific thresholds
+        adj_rel_vol, adj_price_change = self.get_sector_adjusted_thresholds(sector)
+        
+        # Check if meets adjusted thresholds
+        if relative_volume >= adj_rel_vol and abs(price_change) >= adj_price_change:
+            # Check for Utilities sector concentration (PCG/PC over-concentration issue)
+            if sector == "Utilities" and self.sector_config['Utilities'].get('max_ticker_concentration'):
+                if self._check_ticker_concentration(ticker, sector):
+                    logger.info(f"📊 CONCENTRATION LIMIT: {ticker} exceeds sector concentration limits")
+                    return False, momentum_score, "concentration_limit"
+            
+            return True, momentum_score, "approved"
+        
+        return False, momentum_score, "below_threshold"
+    
+    def _check_ticker_concentration(self, ticker, sector):
+        """Check if ticker exceeds concentration limits for its sector"""
+        # Simple implementation - could be enhanced with time-based windows
+        if not hasattr(self, '_recent_alerts_count'):
+            self._recent_alerts_count = {}
+        
+        # Reset counter periodically (every hour)
+        current_hour = datetime.now().hour
+        if not hasattr(self, '_last_reset_hour') or self._last_reset_hour != current_hour:
+            self._recent_alerts_count = {}
+            self._last_reset_hour = current_hour
+        
+        total_alerts = sum(self._recent_alerts_count.values())
+        ticker_alerts = self._recent_alerts_count.get(ticker, 0)
+        
+        if total_alerts == 0:
+            return False
+        
+        concentration = ticker_alerts / total_alerts
+        max_concentration = self.sector_config.get(sector, {}).get('max_ticker_concentration', 1.0)
+        
+        return concentration > max_concentration
+    
+    def update_ticker_cooldown(self, ticker):
+        """Update the last alert time for ticker cooldown tracking"""
+        self.ticker_cooldowns[ticker] = datetime.now()
+        
+        # Update concentration tracking
+        if not hasattr(self, '_recent_alerts_count'):
+            self._recent_alerts_count = {}
+        self._recent_alerts_count[ticker] = self._recent_alerts_count.get(ticker, 0) + 1
+    
     def _log_telegram_alert_sent(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, pattern_analysis=None, disregarded=False):
         """Log the details of a successfully sent Telegram alert for end-of-day analysis"""
         try:
@@ -1409,6 +1593,23 @@ class VolumeMomentumTracker:
             # Log the disregarded alert for end-of-day analysis
             self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, None, disregarded=True)
             return
+
+        # NEW: Apply enhanced filtering with momentum scoring and cooldowns
+        if not is_immediate_spike:  # Skip for immediate spikes (they override everything)
+            change_from_open = gap_pct if gap_pct is not None else 0  # Use gap_pct as proxy for change_from_open
+            alert_type = alert_types[0] if alert_types else "price_spike"
+            
+            should_send, momentum_score, reason = self.should_send_alert(
+                ticker, sector, change_pct, relative_volume, change_from_open, alert_type
+            )
+            
+            if not should_send:
+                logger.info(f"🚫 FILTERED: {ticker} ({change_pct:+.1f}%, score={momentum_score}) - {reason}")
+                return
+            else:
+                logger.info(f"✅ APPROVED: {ticker} ({change_pct:+.1f}%, score={momentum_score}) - {reason}")
+                # Update cooldown tracking
+                self.update_ticker_cooldown(ticker)
 
         try:
             import asyncio
@@ -1646,7 +1847,7 @@ class VolumeMomentumTracker:
         relative_volume = alert_data.get('relative_volume',
                         alert_data.get('relative_volume_10d_calc', 0))
         sector = alert_data.get('sector', 'Unknown')
-        float_shares = alert_data.get('float_shares_outstanding', 0)
+        float_shares = get_float_shares_value(alert_data)
         
         # Calculate gap percentage
         change_from_open = alert_data.get('change_from_open', 0)
@@ -1674,7 +1875,7 @@ class VolumeMomentumTracker:
             relative_volume = alert_data.get('relative_volume',
                             alert_data.get('relative_volume_10d_calc', 0))
             sector = alert_data.get('sector', 'Unknown')
-            float_shares = alert_data.get('float_shares_outstanding', 0)
+            float_shares = get_float_shares_value(alert_data)
             
             # Calculate gap percentage
             change_from_open = alert_data.get('change_from_open', 0)
@@ -1910,7 +2111,7 @@ class VolumeMomentumTracker:
             try:
                 logger.info("Trying simplified query without all columns...")
                 simple_query = (Query()
-                              .select('name', 'volume', 'close', 'change|5', 'premarket_change', 'sector', 'exchange')
+                              .select('name', 'volume', 'close', 'change|5', 'premarket_change', 'sector', 'exchange', 'float_shares_outstanding')
                               .order_by('volume', ascending=False)
                               .limit(limit * 2))
 
@@ -2127,8 +2328,9 @@ class VolumeMomentumTracker:
                     oldest_entry = self.price_history[ticker][0]
                     price_change = ((current_price - oldest_entry['price']) / oldest_entry['price']) * 100
 
-                    # Significant POSITIVE price spike criteria (long trades only)
-                    if (change_pct > 10 or price_change > 15) and current_price < 20 and change_pct > 0:
+                    # Significant POSITIVE price spike criteria (long trades only) - Enhanced flat-to-spike detection
+                    change_from_open = record.get('change_from_open', 0)
+                    if (change_pct > 10 or price_change > self.flat_to_spike_threshold) and current_price < 20 and change_pct > 0:
                         # Determine if this is a true flat-to-spike or just a regular spike
                         alert_type = 'flat_to_spike' if flat_analysis['is_flat'] else 'price_spike'
                         
