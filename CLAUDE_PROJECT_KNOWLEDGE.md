@@ -9,12 +9,14 @@ This is a real-time momentum trading alert system focused on **LONG TRADES ONLY*
 ### 1. Main Files
 - **`volume_momentum_tracker.py`** - Core momentum tracking and alert system
 - **`tradingview_screener_bot.py`** - TradingView data collection (small caps screener)
+- **`paper_trading_system.py`** - NEW: Automated paper trading simulation
 - **`market_sentiment_scorer.py`** - Market condition analysis
 - **`end_of_day_analyzer.py`** - Post-market performance analysis
 - **`alert_validator.py`** - Alert validation and pattern analysis
 
 ### 2. Data Storage
 - **`momentum_data/`** - Alert files stored as JSON with timestamps
+- **`momentum_data/paper_trades/`** - Paper trading data (trade history, active positions)
 - **`volume_momentum_tracker.log`** - System logs
 - Alert files format: `alerts_YYYYMMDD_HHMMSS.json`
 
@@ -177,6 +179,7 @@ Created `telegram_alert_analyzer.py` for comprehensive performance analysis:
 4. **Sector Tuning**: Custom multipliers per sector
 5. **Concentration Limits**: Prevent ticker dominance
 6. **Enhanced Flat-to-Spike**: 15% → 12.1% threshold
+7. **NEW: Paper Trading System**: Automated strategy backtesting
 
 ### Expected Outcomes
 - Earlier detection of significant moves
@@ -200,6 +203,42 @@ Created `telegram_alert_analyzer.py` for comprehensive performance analysis:
 - Enhanced pattern analysis
 - Market condition adaptability
 
+## Paper Trading System (NEW)
+
+### Strategy Overview
+- **Entry**: Alert triggered + price > 5min 9 EMA
+- **Exit**: Price < 5min 25 EMA
+- **Position Size**: $100 per trade
+- **Purpose**: Validate alert-based strategy profitability
+
+### Key Components
+```python
+class PaperTradingSystem:
+    def calculate_ema()           # EMA calculations (9, 25 periods)
+    def should_enter_trade()      # Entry condition validation  
+    def should_exit_trade()       # Exit condition validation
+    def process_alert()           # Main alert processing
+    def get_performance_summary() # Performance metrics
+```
+
+### Usage Commands
+```bash
+# Enable paper trading
+python volume_momentum_tracker.py --continuous --paper-trading
+
+# Performance report  
+python volume_momentum_tracker.py --paper-report
+
+# Test paper trading
+python test_paper_trading.py
+```
+
+### Performance Metrics
+- Win rate, total P&L, average return per trade
+- Holding time analysis, risk metrics
+- Trade history with full details
+- Market condition correlation analysis
+
 ## Quick Reference Commands
 
 ```bash
@@ -209,11 +248,17 @@ python volume_momentum_tracker.py --single
 # Continuous with alerts (15%+ immediate threshold)
 python volume_momentum_tracker.py --continuous --bot-token "TOKEN" --chat-id "ID"
 
+# Continuous with paper trading
+python volume_momentum_tracker.py --continuous --paper-trading --bot-token "TOKEN" --chat-id "ID"
+
 # Custom threshold
 python volume_momentum_tracker.py --continuous --immediate-threshold 20
 
 # Reset counters
 python volume_momentum_tracker.py --reset
+
+# Paper trading report
+python volume_momentum_tracker.py --paper-report
 
 # Analysis
 python telegram_alert_analyzer.py
@@ -228,5 +273,7 @@ python telegram_alert_analyzer.py
 5. **PCG/PC over-concentration was a major issue** - now addressed with limits
 6. **Sector-specific tuning is critical** - Finance/Health Tech are noisy
 7. **Analysis scripts provide actionable insights** - use them for optimization recommendations
+8. **Paper trading system validates strategy effectiveness** - use it to test alert profitability
+9. **EMA-based exits help manage risk** - 9 EMA entry, 25 EMA exit strategy implemented
 
 This knowledge base should be updated whenever significant changes are made to the system architecture, performance insights are discovered, or optimization strategies are implemented.

@@ -175,3 +175,4 @@ cython_debug/
 screener.sh
 end_of_day.sh
 momentum_data/
+paper_trades/

@@ -62,6 +62,13 @@ from collections import defaultdict
 from tradingview_screener import Query
 
 try:
+    from paper_trading_system import PaperTradingSystem
+    PAPER_TRADING_AVAILABLE = True
+except ImportError:
+    logger.warning("Paper trading system not available - install required dependencies")
+    PAPER_TRADING_AVAILABLE = False
+
+try:
     from market_sentiment_scorer import MarketSentimentScorer
     MARKET_SENTIMENT_AVAILABLE = True
 except ImportError:
@@ -96,7 +103,7 @@ def get_float_shares_value(data, key='float_shares_outstanding'):
     return None
 
 class VolumeMomentumTracker:
-    def __init__(self, output_dir="momentum_data", browser="firefox", telegram_bot_token=None, telegram_chat_id=None, immediate_spike_threshold=15.0):
+    def __init__(self, output_dir="momentum_data", browser="firefox", telegram_bot_token=None, telegram_chat_id=None, immediate_spike_threshold=15.0, enable_paper_trading=False):
         """
         Initialize the Volume Momentum Tracker
 
@@ -106,6 +113,7 @@ class VolumeMomentumTracker:
             telegram_bot_token (str): Telegram bot token for notifications
             telegram_chat_id (str): Telegram chat ID for notifications
             immediate_spike_threshold (float): Price change % that triggers immediate alerts (default: 15%)
+            enable_paper_trading (bool): Enable paper trading simulation (default: False)
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
@@ -214,6 +222,21 @@ class VolumeMomentumTracker:
         # Tracking settings
         self.monitor_interval = 120  # 2 minutes in seconds
         self.max_history = 50  # Keep last 50 data points
+        
+        # NEW: Paper Trading System Integration
+        self.enable_paper_trading = enable_paper_trading
+        self.paper_trader = None
+        if self.enable_paper_trading and PAPER_TRADING_AVAILABLE:
+            try:
+                self.paper_trader = PaperTradingSystem(
+                    initial_balance=10000,
+                    position_size=100,
+                    data_dir=self.output_dir / "paper_trades"
+                )
+                logger.info("📊 Paper trading system initialized successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize paper trading system: {e}")
+                self.enable_paper_trading = False
 
     def _escape_markdown(self, text):
         """
@@ -1536,6 +1559,44 @@ class VolumeMomentumTracker:
             self._recent_alerts_count = {}
         self._recent_alerts_count[ticker] = self._recent_alerts_count.get(ticker, 0) + 1
     
+    def check_paper_trading_exits(self, current_data):
+        """
+        Check all active paper trading positions for exit signals
+        
+        Args:
+            current_data (list): Current screener data
+        """
+        if not self.enable_paper_trading or not self.paper_trader:
+            return
+        
+        try:
+            # Build price dictionary from current data
+            price_data = {}
+            for record in current_data:
+                ticker = record.get('name')
+                price = record.get('close', 0)
+                if ticker and price > 0:
+                    price_data[ticker] = price
+            
+            # Check for exits
+            exits = self.paper_trader.check_all_positions_for_exits(price_data)
+            
+            for exit_info in exits:
+                logger.info(f"📊 AUTO EXIT: {exit_info['ticker']} - P&L: ${exit_info['profit_loss']:+.2f} ({exit_info['profit_pct']:+.2f}%)")
+                
+        except Exception as e:
+            logger.error(f"❌ Error checking paper trading exits: {e}")
+    
+    def get_paper_trading_summary(self):
+        """Get paper trading performance summary"""
+        if not self.enable_paper_trading or not self.paper_trader:
+            return "Paper trading not enabled"
+        
+        try:
+            return self.paper_trader.generate_performance_report()
+        except Exception as e:
+            return f"Error generating paper trading report: {e}"
+    
     def _log_telegram_alert_sent(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, pattern_analysis=None, disregarded=False):
         """Log the details of a successfully sent Telegram alert for end-of-day analysis"""
         try:
@@ -1610,6 +1671,24 @@ class VolumeMomentumTracker:
                 logger.info(f"✅ APPROVED: {ticker} ({change_pct:+.1f}%, score={momentum_score}) - {reason}")
                 # Update cooldown tracking
                 self.update_ticker_cooldown(ticker)
+
+        # NEW: Paper Trading Integration - Process alert for trading simulation
+        if self.enable_paper_trading and self.paper_trader:
+            try:
+                trade_action = self.paper_trader.process_alert(
+                    ticker=ticker,
+                    current_price=current_price,
+                    alert_type=alert_types[0] if alert_types else "price_spike"
+                )
+                
+                if trade_action['entry']:
+                    logger.info(f"📊 PAPER TRADE ENTRY: {ticker} at ${current_price:.4f}")
+                if trade_action['exit']:
+                    exit_info = trade_action['exit']
+                    logger.info(f"📊 PAPER TRADE EXIT: {ticker} - P&L: ${exit_info['profit_loss']:+.2f} ({exit_info['profit_pct']:+.2f}%)")
+                    
+            except Exception as e:
+                logger.error(f"❌ Paper trading error for {ticker}: {e}")
 
         try:
             import asyncio
@@ -2679,6 +2758,9 @@ class VolumeMomentumTracker:
                 logger.error("Failed to get current data")
                 return
 
+            # NEW: Check for paper trading exits before analyzing new movements
+            self.check_paper_trading_exits(current_data)
+
             # Analyze movements
             previous_data = self.historical_data[-1] if self.historical_data else None
 
@@ -2756,6 +2838,13 @@ class VolumeMomentumTracker:
         logger.info(f"🚨 IMMEDIATE SPIKE THRESHOLD: {self.immediate_spike_threshold:.0f}% (bypasses 3-alert rule)")
         logger.info(f"💾 Data saved to: {self.output_dir}")
         logger.info(f"📰 News headlines: Recent news with timestamps included in Telegram alerts")
+        
+        if self.enable_paper_trading and self.paper_trader:
+            logger.info("📈 Paper Trading: ✅ ENABLED")
+            logger.info("   📊 Strategy: Buy on alert + price > 9 EMA, Sell on price < 25 EMA")
+            logger.info(f"   💰 Position Size: ${self.paper_trader.position_size} per trade")
+        else:
+            logger.info("📈 Paper Trading: ❌ DISABLED")
 
         if self.telegram_bot and self.telegram_chat_id:
             logger.info("📱 Telegram notifications: ✅ ENABLED")
@@ -3097,6 +3186,8 @@ Examples:
                             help='Show ticker statistics and exit')
     action_group.add_argument('--test-bot', action='store_true',
                             help='Test Telegram bot connectivity and news fetching with immediate spike alerts, then exit')
+    action_group.add_argument('--paper-report', action='store_true',
+                            help='Generate paper trading performance report and exit')
 
     # Telegram configuration
     parser.add_argument('--bot-token', type=str,
@@ -3105,8 +3196,12 @@ Examples:
                        help='Telegram chat ID for notifications')
 
     # Immediate spike threshold
-    parser.add_argument('--immediate-threshold', type=float, default=25.0,
-                       help='Price change percentage that triggers immediate alerts (default: 25.0)')
+    parser.add_argument('--immediate-threshold', type=float, default=15.0,
+                       help='Price change percentage that triggers immediate alerts (default: 15.0)')
+    
+    # Paper trading
+    parser.add_argument('--paper-trading', action='store_true',
+                       help='Enable paper trading simulation to test alert-based strategy')
 
     # Optional configuration
     parser.add_argument('--output-dir', type=str, default='momentum_data',
@@ -3130,7 +3225,8 @@ def main():
             browser=args.browser,
             telegram_bot_token=args.bot_token,
             telegram_chat_id=args.chat_id,
-            immediate_spike_threshold=args.immediate_threshold
+            immediate_spike_threshold=args.immediate_threshold,
+            enable_paper_trading=args.paper_trading
         )
 
         # Print header
@@ -3209,6 +3305,10 @@ def main():
             else:
                 print("❌ Telegram bot test failed!")
                 sys.exit(1)
+                
+        elif args.paper_report:
+            print("\n📊 Paper Trading Performance Report:")
+            print(tracker.get_paper_trading_summary())
 
     except KeyboardInterrupt:
         logger.info("🛑 Operation stopped by user")
