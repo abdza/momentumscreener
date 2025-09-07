@@ -21,6 +21,7 @@ import logging
 from collections import defaultdict, deque
 import requests
 import time
+import pytz
 
 # Set up logging
 logging.basicConfig(
@@ -196,6 +197,89 @@ class PaperTradingSystem:
         
         return should_exit
     
+    def should_force_exit_eod(self, current_time=None):
+        """
+        Check if we should force exit all positions due to end of day (3:45 PM ET)
+        
+        Args:
+            current_time (datetime): Current time (defaults to now)
+            
+        Returns:
+            bool: True if we should force exit all positions
+        """
+        if current_time is None:
+            current_time = datetime.now()
+        
+        # Convert to Eastern Time
+        et_tz = pytz.timezone('US/Eastern')
+        
+        # If current_time is naive, assume it's already in local time and convert to ET
+        if current_time.tzinfo is None:
+            # Assume local time is ET for now - in production, you might want to handle this differently
+            current_time = et_tz.localize(current_time)
+        else:
+            # Convert to ET if it has timezone info
+            current_time = current_time.astimezone(et_tz)
+        
+        # Check if it's after 3:45 PM ET on a weekday
+        cutoff_time = current_time.replace(hour=15, minute=45, second=0, microsecond=0)
+        is_weekday = current_time.weekday() < 5  # 0-4 are Mon-Fri
+        
+        return is_weekday and current_time >= cutoff_time
+    
+    def force_exit_all_positions(self, current_prices=None, timestamp=None, reason="EOD_CUTOFF"):
+        """
+        Force exit all active positions (e.g., end of day cutoff)
+        
+        Args:
+            current_prices (dict): {ticker: current_price} - if None, will try to fetch
+            timestamp (datetime): Exit timestamp
+            reason (str): Reason for forced exit
+            
+        Returns:
+            list: List of completed trades
+        """
+        if timestamp is None:
+            timestamp = datetime.now()
+        
+        if not self.active_positions:
+            return []
+        
+        logger.info(f"🚨 FORCE EXITING ALL {len(self.active_positions)} POSITIONS - {reason}")
+        
+        completed_trades = []
+        
+        for ticker in list(self.active_positions.keys()):
+            # Use provided price or last entry price as fallback
+            if current_prices and ticker in current_prices:
+                exit_price = current_prices[ticker]
+            else:
+                # Fallback to entry price if no current price available
+                exit_price = self.active_positions[ticker]['entry_price']
+                logger.warning(f"No current price for {ticker}, using entry price ${exit_price:.4f}")
+            
+            exit_result = self.exit_trade(ticker, exit_price, timestamp, reason)
+            if exit_result:
+                completed_trades.append(exit_result)
+        
+        logger.info(f"✅ FORCE EXIT COMPLETE - {len(completed_trades)} positions closed")
+        return completed_trades
+    
+    def check_eod_exit(self, current_prices=None, current_time=None):
+        """
+        Check and execute end-of-day exits if needed
+        
+        Args:
+            current_prices (dict): {ticker: current_price}
+            current_time (datetime): Current time
+            
+        Returns:
+            list: List of completed trades if EOD exit was triggered, empty list otherwise
+        """
+        if self.should_force_exit_eod(current_time):
+            return self.force_exit_all_positions(current_prices, current_time, "EOD_CUTOFF_3:45PM_ET")
+        return []
+    
     def enter_trade(self, ticker, price, alert_type, timestamp=None):
         """
         Execute a paper trade entry
@@ -262,8 +346,17 @@ class PaperTradingSystem:
         profit_loss = exit_value - self.position_size
         profit_pct = (profit_loss / self.position_size) * 100
         
-        # Calculate holding time
-        holding_time = timestamp - position['entry_timestamp']
+        # Calculate holding time - handle timezone aware/naive datetime differences
+        entry_time = position['entry_timestamp']
+        if timestamp.tzinfo is not None and entry_time.tzinfo is None:
+            # If exit timestamp has timezone but entry doesn't, assume entry is in same timezone
+            entry_time = pytz.timezone('US/Eastern').localize(entry_time)
+        elif timestamp.tzinfo is None and entry_time.tzinfo is not None:
+            # If entry has timezone but exit doesn't, convert exit to entry's timezone
+            if entry_time.tzinfo:
+                timestamp = entry_time.tzinfo.localize(timestamp)
+        
+        holding_time = timestamp - entry_time
         
         # Create completed trade record
         completed_trade = {
@@ -331,8 +424,15 @@ class PaperTradingSystem:
         actions = {
             'entry': None,
             'exit': None,
+            'eod_exits': None,
             'price_update': True
         }
+        
+        # Check for EOD cutoff first - this takes priority over everything
+        eod_exits = self.check_eod_exit({ticker: current_price}, timestamp)
+        if eod_exits:
+            actions['eod_exits'] = eod_exits
+            return actions  # Return immediately if EOD exit occurred
         
         # Check for exit signals on active positions
         if ticker in self.active_positions:
@@ -347,15 +447,22 @@ class PaperTradingSystem:
         
         return actions
     
-    def check_all_positions_for_exits(self, price_data):
+    def check_all_positions_for_exits(self, price_data, current_time=None):
         """
-        Check all active positions for exit signals
+        Check all active positions for exit signals including EOD cutoff
         
         Args:
             price_data (dict): {ticker: current_price}
+            current_time (datetime): Current time for EOD check
         """
         exits_executed = []
         
+        # First check for EOD cutoff - this takes priority
+        eod_exits = self.check_eod_exit(price_data, current_time)
+        if eod_exits:
+            return eod_exits  # Return EOD exits immediately
+        
+        # Regular exit checks for individual positions
         for ticker in list(self.active_positions.keys()):
             if ticker in price_data:
                 current_price = price_data[ticker]
@@ -540,6 +647,28 @@ if __name__ == "__main__":
         # Add some price history for EMA calculation
         for j in range(10):
             paper_trader.update_price_data(scenario["ticker"], scenario["price"] + (j * 0.1))
+    
+    # Test EOD functionality
+    print("\n--- Testing EOD Functionality ---")
+    
+    # Add some positions for testing
+    paper_trader.enter_trade("TEST1", 15.00, "test_alert")
+    paper_trader.enter_trade("TEST2", 25.00, "test_alert")
+    
+    # Simulate 3:46 PM ET
+    et_tz = pytz.timezone('US/Eastern')
+    test_time = et_tz.localize(datetime.now().replace(hour=15, minute=46, second=0, microsecond=0))
+    
+    print(f"Active positions before EOD check: {len(paper_trader.active_positions)}")
+    
+    # Test EOD check
+    eod_exits = paper_trader.check_eod_exit(
+        current_prices={"TEST1": 15.50, "TEST2": 24.00},
+        current_time=test_time
+    )
+    
+    print(f"EOD exits executed: {len(eod_exits)}")
+    print(f"Active positions after EOD check: {len(paper_trader.active_positions)}")
     
     # Generate report
     print(paper_trader.generate_performance_report())

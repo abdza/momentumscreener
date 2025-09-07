@@ -1578,11 +1578,15 @@ class VolumeMomentumTracker:
                 if ticker and price > 0:
                     price_data[ticker] = price
             
-            # Check for exits
-            exits = self.paper_trader.check_all_positions_for_exits(price_data)
+            # Check for exits (including EOD cutoff check)
+            exits = self.paper_trader.check_all_positions_for_exits(price_data, current_time=datetime.now())
             
             for exit_info in exits:
-                logger.info(f"📊 AUTO EXIT: {exit_info['ticker']} - P&L: ${exit_info['profit_loss']:+.2f} ({exit_info['profit_pct']:+.2f}%)")
+                exit_reason = exit_info.get('exit_reason', 'UNKNOWN')
+                if 'EOD_CUTOFF' in exit_reason:
+                    logger.info(f"🚨 EOD AUTO EXIT: {exit_info['ticker']} - P&L: ${exit_info['profit_loss']:+.2f} ({exit_info['profit_pct']:+.2f}%) - FORCED CLOSE AT 3:45PM ET")
+                else:
+                    logger.info(f"📊 AUTO EXIT: {exit_info['ticker']} - P&L: ${exit_info['profit_loss']:+.2f} ({exit_info['profit_pct']:+.2f}%)")
                 
         except Exception as e:
             logger.error(f"❌ Error checking paper trading exits: {e}")
