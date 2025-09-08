@@ -89,7 +89,7 @@ class EndOfDayAnalyzer:
         return f"<a href=\"{tradingview_url}\">{ticker}</a>"
     
     def get_telegram_alerts_for_date(self, target_date):
-        """Get all Telegram alerts sent for a specific date from the log file"""
+        """Get all Telegram alerts sent for a specific NY trading session"""
         telegram_log_file = self.data_dir / "telegram_alerts_sent.jsonl"
         
         if not telegram_log_file.exists():
@@ -97,7 +97,28 @@ class EndOfDayAnalyzer:
             return []
         
         alerts_for_date = []
-        target_date_str = target_date.strftime('%Y-%m-%d')
+        
+        # Define NY trading session boundaries
+        # A trading session includes pre-market, market hours, and after-hours
+        # From 4:00 AM ET (start of pre-market) to 8:00 PM ET (end of after-hours)
+        if YFINANCE_AVAILABLE:  # pytz available
+            ny_tz = pytz.timezone('America/New_York')
+            
+            # Session starts at 4:00 AM ET on target date
+            session_start = ny_tz.localize(datetime.combine(target_date, datetime.min.time().replace(hour=4)))
+            
+            # Session ends at 8:00 PM ET on target date  
+            session_end = ny_tz.localize(datetime.combine(target_date, datetime.min.time().replace(hour=20)))
+            
+            # Convert to UTC for comparison
+            session_start_utc = session_start.astimezone(pytz.UTC)
+            session_end_utc = session_end.astimezone(pytz.UTC)
+            
+            print(f"🕐 NY Trading Session: {session_start.strftime('%Y-%m-%d %H:%M %Z')} to {session_end.strftime('%Y-%m-%d %H:%M %Z')}")
+        else:
+            # Fallback: use simple date string matching (original behavior)
+            target_date_str = target_date.strftime('%Y-%m-%d')
+            print(f"⚠️  pytz not available, using simple date matching for {target_date_str}")
         
         try:
             with open(telegram_log_file, 'r', encoding='utf-8') as f:
@@ -108,11 +129,36 @@ class EndOfDayAnalyzer:
                     
                     try:
                         alert_data = json.loads(line)
-                        alert_timestamp = alert_data.get('timestamp', '')
+                        alert_timestamp_str = alert_data.get('timestamp', '')
                         
-                        # Check if this alert is from the target date
-                        if alert_timestamp.startswith(target_date_str):
-                            alerts_for_date.append(alert_data)
+                        if YFINANCE_AVAILABLE:
+                            # Parse alert timestamp and check if it falls within NY trading session
+                            try:
+                                alert_dt = datetime.fromisoformat(alert_timestamp_str.replace('Z', '+00:00'))
+                                
+                                # If alert timestamp is timezone-naive, assume it's local time
+                                if alert_dt.tzinfo is None:
+                                    # Try to determine if this is likely Malaysian time (UTC+8)
+                                    # Malaysian alerts during NY session would typically be in evening/night local time
+                                    malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
+                                    alert_dt = malaysia_tz.localize(alert_dt)
+                                
+                                # Convert to UTC for comparison
+                                alert_dt_utc = alert_dt.astimezone(pytz.UTC)
+                                
+                                # Check if alert falls within the NY trading session
+                                if session_start_utc <= alert_dt_utc <= session_end_utc:
+                                    alerts_for_date.append(alert_data)
+                                    
+                            except (ValueError, TypeError) as e:
+                                print(f"⚠️  Could not parse timestamp on line {line_num}: {alert_timestamp_str}")
+                                # Fallback to simple date matching
+                                if alert_timestamp_str.startswith(target_date.strftime('%Y-%m-%d')):
+                                    alerts_for_date.append(alert_data)
+                        else:
+                            # Fallback: simple date string matching
+                            if alert_timestamp_str.startswith(target_date_str):
+                                alerts_for_date.append(alert_data)
                     
                     except json.JSONDecodeError as e:
                         print(f"⚠️  Skipping malformed JSON on line {line_num}: {e}")
@@ -122,7 +168,7 @@ class EndOfDayAnalyzer:
             print(f"❌ Error reading Telegram alerts log: {e}")
             return []
         
-        print(f"📱 Found {len(alerts_for_date)} Telegram alerts sent for {target_date}")
+        print(f"📱 Found {len(alerts_for_date)} Telegram alerts sent for {target_date} NY trading session")
         return alerts_for_date
     
     def extract_alerts_from_telegram_log(self, telegram_alerts):
@@ -538,21 +584,21 @@ Regular Price Spikes:   {reg_success}/{len(regular_spike_results)} ({reg_rate:.1
                 report += f"""
 Premarket Alerts:       {pm_success}/{len(premarket_results)} ({pm_rate:.1f}%) | Gain: {pm_avg_gain:+5.1f}% | DD: {pm_avg_dd:4.1f}%"""
 
-        # Top performers
-        top_performers = sorted([r for r in valid_results if r['success']], 
-                              key=lambda x: x['max_gain'], reverse=True)[:5]
+        # All successful alerts
+        all_successful = sorted([r for r in valid_results if r['success']], 
+                              key=lambda x: x['max_gain'], reverse=True)
         
-        if top_performers:
+        if all_successful:
             report += f"""
 
-<b>🏆 TOP PERFORMERS</b>
+<b>🏆 ALL SUCCESSFUL ALERTS ({len(all_successful)} total)</b>
 {'─'*30}"""
-            for i, result in enumerate(top_performers, 1):
+            for i, result in enumerate(all_successful, 1):
                 ticker_link = self.format_ticker_link(result['ticker'])
                 alert_time = result['timestamp'].strftime('%H:%M:%S')
                 win_prob_display = f"{result['win_probability_category']} ({result['estimated_win_probability']:.0f}%)" if result['estimated_win_probability'] > 0 else result['win_probability_category']
                 report += f"""
-{i}. {ticker_link} | {result['max_gain']:+6.1f}% | DD: {result['max_drawdown']:4.1f}% | Alert: {alert_time} | Win Prob: {win_prob_display} | {result['alert_type'].replace('_', ' ').title()}"""
+{i:2d}. {ticker_link} | {result['max_gain']:+6.1f}% | DD: {result['max_drawdown']:4.1f}% | Alert: {alert_time} | Win Prob: {win_prob_display} | {result['alert_type'].replace('_', ' ').title()}"""
 
         # Worst drawdowns
         worst_drawdowns = sorted(valid_results, key=lambda x: x['max_drawdown'], reverse=True)[:5]
