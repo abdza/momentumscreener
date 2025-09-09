@@ -174,5 +174,6 @@ cython_debug/
 .pypirc
 screener.sh
 end_of_day.sh
+paper_trades.sh
 momentum_data/
 paper_trades/
