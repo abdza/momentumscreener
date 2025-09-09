@@ -183,6 +183,12 @@ class EndOfDayAnalyzer:
                     continue
                 
                 timestamp = datetime.fromisoformat(alert_data['timestamp'])
+                
+                # Convert Malaysian timestamp to timezone-aware format
+                # Alert timestamps are in Malaysian time (UTC+8)
+                if timestamp.tzinfo is None:
+                    malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
+                    timestamp = malaysia_tz.localize(timestamp)
                 alert_price = alert_data.get('alert_price', 0)
                 alert_type = alert_data.get('alert_type', 'price_spike')
                 
@@ -300,12 +306,17 @@ class EndOfDayAnalyzer:
         
         # Filter data to after alert time (handle timezone issues)
         try:
-            # Convert alert_time to timezone-aware if needed
-            if price_data.index.tz is not None and alert_time.tzinfo is None:
-                # Assume alert time is in Eastern Time (market time)
+            # Convert alert_time to match price_data timezone
+            if price_data.index.tz is not None and alert_time.tzinfo is not None:
+                # Both are timezone-aware, convert alert_time to price_data timezone
+                alert_time = alert_time.astimezone(price_data.index.tz)
+            elif price_data.index.tz is not None and alert_time.tzinfo is None:
+                # Price data is timezone-aware but alert_time isn't - this shouldn't happen now
+                # since we're making alert_time timezone-aware in extract_alerts_from_telegram_log
                 et_tz = pytz.timezone('America/New_York')
                 alert_time = et_tz.localize(alert_time)
             elif price_data.index.tz is None and alert_time.tzinfo is not None:
+                # Convert timezone-aware alert_time to naive to match price_data
                 alert_time = alert_time.replace(tzinfo=None)
             
             original_len = len(price_data)
