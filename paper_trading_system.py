@@ -201,6 +201,9 @@ class PaperTradingSystem:
         """
         Check if we should force exit all positions due to end of day (3:45 PM ET)
         
+        Only applies during regular trading session (9:30 AM - 4:00 PM ET).
+        After-hours alerts should not trigger immediate EOD exits.
+        
         Args:
             current_time (datetime): Current time (defaults to now)
             
@@ -213,19 +216,35 @@ class PaperTradingSystem:
         # Convert to Eastern Time
         et_tz = pytz.timezone('US/Eastern')
         
-        # If current_time is naive, assume it's already in local time and convert to ET
+        # If current_time is naive, assume it's in local system timezone and convert properly
         if current_time.tzinfo is None:
-            # Assume local time is ET for now - in production, you might want to handle this differently
-            current_time = et_tz.localize(current_time)
+            # Get the system's local timezone and localize the naive datetime
+            local_tz = pytz.timezone('Asia/Kuala_Lumpur')  # Change this to your actual timezone
+            current_time = local_tz.localize(current_time)
+            # Then convert to Eastern Time
+            current_time = current_time.astimezone(et_tz)
         else:
             # Convert to ET if it has timezone info
             current_time = current_time.astimezone(et_tz)
         
-        # Check if it's after 3:45 PM ET on a weekday
-        cutoff_time = current_time.replace(hour=15, minute=45, second=0, microsecond=0)
+        # Only apply EOD logic on weekdays
         is_weekday = current_time.weekday() < 5  # 0-4 are Mon-Fri
+        if not is_weekday:
+            return False
         
-        return is_weekday and current_time >= cutoff_time
+        # Define trading session boundaries
+        market_open = current_time.replace(hour=9, minute=30, second=0, microsecond=0)
+        market_close = current_time.replace(hour=16, minute=0, second=0, microsecond=0)
+        eod_cutoff = current_time.replace(hour=15, minute=45, second=0, microsecond=0)
+        
+        # Only trigger EOD exit if:
+        # 1. We're during regular trading hours (9:30 AM - 4:00 PM ET)
+        # 2. Current time is past the 3:45 PM cutoff
+        # This prevents after-hours alerts from triggering immediate EOD exits
+        is_during_trading_hours = market_open <= current_time <= market_close
+        is_past_eod_cutoff = current_time >= eod_cutoff
+        
+        return is_during_trading_hours and is_past_eod_cutoff
     
     def force_exit_all_positions(self, current_prices=None, timestamp=None, reason="EOD_CUTOFF"):
         """
