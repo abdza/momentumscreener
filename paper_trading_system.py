@@ -3,10 +3,11 @@
 Paper Trading System for Alert-Based Strategy Backtesting
 
 Strategy Rules:
-1. BUY: When alert triggers AND current price > 5min 9 EMA
-2. SELL: When current price < 5min 25 EMA
+1. BUY: When alert triggers AND current price > 1min 9 EMA (or insufficient EMA data)
+2. SELL: When current price < 1min 25 EMA (or 1min 9 EMA as fallback)
 3. Position Size: $100 per trade
-4. Track all trades for profitability analysis
+4. Allow multiple concurrent positions (up to 80% of account)
+5. Track all trades for profitability analysis
 
 This system simulates trades to evaluate the effectiveness of momentum alerts
 without risking real money.
@@ -54,7 +55,7 @@ class PaperTradingSystem:
         
         # Price data storage for EMA calculations
         # {ticker: deque of price data}
-        self.price_history = defaultdict(lambda: deque(maxlen=50))  # Keep 50 5-min candles
+        self.price_history = defaultdict(lambda: deque(maxlen=100))  # Keep 100 1-min candles
         
         # Performance tracking
         self.daily_balances = []
@@ -103,8 +104,8 @@ class PaperTradingSystem:
             'price': price
         })
         
-        # Clean old data (keep only last hour of 5-min data)
-        cutoff_time = timestamp - timedelta(hours=1)
+        # Clean old data (keep only last 2 hours of 1-min data)
+        cutoff_time = timestamp - timedelta(hours=2)
         while (self.price_history[ticker] and 
                self.price_history[ticker][0]['timestamp'] < cutoff_time):
             self.price_history[ticker].popleft()
@@ -145,7 +146,15 @@ class PaperTradingSystem:
         if ticker in self.active_positions:
             return False
         
-        # Don't enter if insufficient funds
+        # Don't enter if insufficient funds (allow multiple concurrent positions)
+        # Calculate maximum possible positions based on account size
+        max_positions = int(self.initial_balance * 0.8 / self.position_size)  # Use 80% of account
+        current_positions = len(self.active_positions)
+        
+        if current_positions >= max_positions:
+            logger.warning(f"Maximum concurrent positions reached: {current_positions}/{max_positions}")
+            return False
+            
         if self.current_balance < self.position_size:
             logger.warning(f"Insufficient balance for new trade: ${self.current_balance:.2f}")
             return False
@@ -153,11 +162,12 @@ class PaperTradingSystem:
         # Calculate EMAs
         ema_9, ema_25 = self.get_current_emas(ticker)
         
+        # NEW LOGIC: If insufficient data for 9 EMA, assume positive movement and enter
         if ema_9 is None:
-            logger.debug(f"Insufficient data for EMA calculation: {ticker}")
-            return False
+            logger.info(f"✅ EARLY ENTRY: {ticker} at ${current_price:.4f} - Insufficient EMA data, assuming positive movement")
+            return True
         
-        # Strategy rule: Enter if price > 9 EMA
+        # Strategy rule: Enter if price > 9 EMA (1-minute timeframe)
         should_enter = current_price > ema_9
         
         if should_enter:
@@ -185,11 +195,20 @@ class PaperTradingSystem:
         # Calculate EMAs
         ema_9, ema_25 = self.get_current_emas(ticker)
         
+        # If insufficient data for 25 EMA, fall back to 9 EMA for exit
         if ema_25 is None:
-            logger.debug(f"Insufficient data for 25 EMA exit calculation: {ticker}")
-            return False
+            if ema_9 is not None:
+                # Use 9 EMA as exit criteria if 25 EMA not available
+                should_exit = current_price < ema_9
+                if should_exit:
+                    logger.info(f"🚨 EXIT SIGNAL (9EMA): {ticker} at ${current_price:.4f} < 9EMA ${ema_9:.4f}")
+                return should_exit
+            else:
+                # If no EMA data at all, don't force exit (let EOD handle it)
+                logger.debug(f"No EMA data for exit calculation: {ticker}")
+                return False
         
-        # Strategy rule: Exit if price < 25 EMA
+        # Strategy rule: Exit if price < 25 EMA (1-minute timeframe)
         should_exit = current_price < ema_25
         
         if should_exit:
@@ -494,6 +513,10 @@ class PaperTradingSystem:
         
         return exits_executed
     
+    def get_max_concurrent_positions(self):
+        """Calculate maximum allowed concurrent positions"""
+        return int(self.initial_balance * 0.8 / self.position_size)
+    
     def get_performance_summary(self):
         """
         Get comprehensive performance statistics
@@ -506,7 +529,17 @@ class PaperTradingSystem:
                 'total_trades': 0,
                 'win_rate': 0,
                 'total_pnl': 0,
-                'average_profit_pct': 0
+                'average_profit_pct': 0,
+                'median_profit_pct': 0,
+                'best_trade': 0,
+                'worst_trade': 0,
+                'average_holding_time_min': 0,
+                'current_balance': self.current_balance,
+                'total_return': 0,
+                'active_positions': len(self.active_positions),
+                'max_concurrent_positions': self.get_max_concurrent_positions(),
+                'winning_trades': 0,
+                'losing_trades': 0
             }
         
         profits = [trade['profit_loss'] for trade in self.trade_history]
@@ -525,6 +558,7 @@ class PaperTradingSystem:
             'current_balance': self.current_balance,
             'total_return': ((self.current_balance / self.initial_balance) - 1) * 100,
             'active_positions': len(self.active_positions),
+            'max_concurrent_positions': self.get_max_concurrent_positions(),
             'winning_trades': self.winning_trades,
             'losing_trades': self.total_trades - self.winning_trades
         }
@@ -626,8 +660,9 @@ class PaperTradingSystem:
    
 🎯 STRATEGY EFFECTIVENESS:
    Position Size: ${self.position_size}
-   Entry: Price > 9 EMA
-   Exit: Price < 25 EMA
+   Entry: Price > 1min 9 EMA (or insufficient data)
+   Exit: Price < 1min 25 EMA (or 9 EMA fallback)
+   Max Concurrent: {int(self.initial_balance * 0.8 / self.position_size)} positions
 """
         
         if self.active_positions:
