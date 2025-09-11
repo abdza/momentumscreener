@@ -3,7 +3,10 @@
 Paper Trading System for Alert-Based Strategy Backtesting
 
 Strategy Rules:
-1. BUY: When alert triggers AND current price > 1min 9 EMA (or insufficient EMA data)
+1. BUY: When alert triggers AND current price > 1min 9 EMA AND 1min 9 EMA is trending UP
+   - If insufficient current day 9 EMA data, use previous trading day's 9 EMA
+   - EMA trend direction determined by slope analysis of recent EMA values
+   - If no EMA data available, check trend using prev day comparison
 2. SELL: When current price < 1min 25 EMA (or 1min 9 EMA as fallback)
 3. Position Size: $100 per trade
 4. Allow multiple concurrent positions (up to 80% of account)
@@ -57,6 +60,14 @@ class PaperTradingSystem:
         # {ticker: deque of price data}
         self.price_history = defaultdict(lambda: deque(maxlen=100))  # Keep 100 1-min candles
         
+        # Previous trading day's EMA storage for fallback
+        # {ticker: {'date': 'YYYY-MM-DD', 'ema_9': value}}
+        self.previous_day_emas = defaultdict(dict)
+        
+        # EMA history for trend direction tracking
+        # {ticker: deque of {'timestamp': datetime, 'ema_9': value}}
+        self.ema_history = defaultdict(lambda: deque(maxlen=10))
+        
         # Performance tracking
         self.daily_balances = []
         self.win_rate = 0.0
@@ -66,6 +77,7 @@ class PaperTradingSystem:
         # Load existing data
         self._load_trade_history()
         self._load_active_positions()
+        self._load_previous_day_emas()
         
     def calculate_ema(self, prices, period):
         """
@@ -109,6 +121,9 @@ class PaperTradingSystem:
         while (self.price_history[ticker] and 
                self.price_history[ticker][0]['timestamp'] < cutoff_time):
             self.price_history[ticker].popleft()
+        
+        # Check if we should store today's 9EMA for tomorrow's use
+        self._check_and_store_daily_ema(ticker, timestamp)
     
     def get_current_emas(self, ticker):
         """
@@ -128,7 +143,201 @@ class PaperTradingSystem:
         ema_9 = self.calculate_ema(prices, 9)
         ema_25 = self.calculate_ema(prices, 25)
         
+        # Update EMA history for trend tracking if we have a valid 9 EMA
+        if ema_9 is not None:
+            current_time = datetime.now()
+            
+            # Avoid adding duplicate EMA values (within 1 second of each other)
+            if (not self.ema_history[ticker] or 
+                (current_time - self.ema_history[ticker][-1]['timestamp']).total_seconds() > 1.0 or
+                abs(ema_9 - self.ema_history[ticker][-1]['ema_9']) > 0.001):
+                
+                self.ema_history[ticker].append({
+                    'timestamp': current_time,
+                    'ema_9': ema_9
+                })
+        
         return ema_9, ema_25
+    
+    def get_previous_trading_day(self, current_date=None):
+        """
+        Get the previous trading day (excludes weekends)
+        
+        Args:
+            current_date (datetime.date): Current date (defaults to today)
+            
+        Returns:
+            str: Previous trading day in 'YYYY-MM-DD' format
+        """
+        if current_date is None:
+            current_date = datetime.now().date()
+        
+        # Go back one day
+        prev_date = current_date - timedelta(days=1)
+        
+        # Skip weekends (Monday is 0, Sunday is 6)
+        while prev_date.weekday() >= 5:  # Saturday (5) or Sunday (6)
+            prev_date -= timedelta(days=1)
+        
+        return prev_date.strftime('%Y-%m-%d')
+    
+    def store_previous_day_ema(self, ticker, date, ema_9):
+        """
+        Store the 9EMA for a ticker on a specific date for future fallback use
+        
+        Args:
+            ticker (str): Stock symbol
+            date (str): Date in 'YYYY-MM-DD' format
+            ema_9 (float): 9EMA value to store
+        """
+        self.previous_day_emas[ticker] = {
+            'date': date,
+            'ema_9': ema_9
+        }
+        self._save_previous_day_emas()
+    
+    def get_previous_day_ema(self, ticker, current_date=None):
+        """
+        Get the previous trading day's 9EMA for a ticker
+        
+        Args:
+            ticker (str): Stock symbol
+            current_date (datetime.date): Current date (defaults to today)
+            
+        Returns:
+            float: Previous day's 9EMA or None if not available
+        """
+        prev_day = self.get_previous_trading_day(current_date)
+        
+        if ticker in self.previous_day_emas:
+            stored_data = self.previous_day_emas[ticker]
+            if stored_data.get('date') == prev_day:
+                return stored_data.get('ema_9')
+        
+        return None
+    
+    def is_ema_trending_up(self, ticker, min_periods=3, current_ema_9=None):
+        """
+        Check if the 9EMA is trending upward based on recent EMA history
+        
+        Args:
+            ticker (str): Stock symbol
+            min_periods (int): Minimum number of periods to check for trend
+            current_ema_9 (float): Current 9EMA value to avoid recalculating
+            
+        Returns:
+            bool: True if 9EMA is trending up, False otherwise
+        """
+        if (ticker not in self.ema_history or 
+            len(self.ema_history[ticker]) < min_periods):
+            # If insufficient EMA history, check if we can use previous day data
+            prev_ema = self.get_previous_day_ema(ticker)
+            
+            # Use provided current_ema_9 (avoid recalculation)
+            if current_ema_9 is not None and prev_ema is not None:
+                # Compare current EMA to previous day's EMA
+                is_up = current_ema_9 > prev_ema
+                logger.debug(f"EMA TREND (prev day comparison): {ticker} Current ${current_ema_9:.4f} vs Prev Day ${prev_ema:.4f} = {'UP' if is_up else 'DOWN'}")
+                return is_up
+            elif current_ema_9 is None and prev_ema is not None:
+                # Only calculate if we absolutely have to
+                temp_ema_9, _ = self.get_current_emas(ticker)
+                if temp_ema_9 is not None:
+                    is_up = temp_ema_9 > prev_ema
+                    logger.debug(f"EMA TREND (prev day comparison): {ticker} Current ${temp_ema_9:.4f} vs Prev Day ${prev_ema:.4f} = {'UP' if is_up else 'DOWN'}")
+                    return is_up
+            
+            # Default to True if no historical data (assume uptrend for early entries)
+            logger.debug(f"EMA TREND (no data): {ticker} - assuming uptrend for early entry")
+            return True
+        
+        # Get recent EMA values (most recent last)
+        recent_emas = list(self.ema_history[ticker])[-min_periods:]
+        ema_values = [entry['ema_9'] for entry in recent_emas]
+        
+        # Check if trend is generally upward
+        # Calculate the slope of the EMA trend using simple linear regression
+        n = len(ema_values)
+        x = list(range(n))  # Time indices
+        
+        # Calculate slope: slope = (n*sum(xy) - sum(x)*sum(y)) / (n*sum(x²) - (sum(x))²)
+        sum_x = sum(x)
+        sum_y = sum(ema_values)
+        sum_xy = sum(x[i] * ema_values[i] for i in range(n))
+        sum_x_squared = sum(xi * xi for xi in x)
+        
+        denominator = n * sum_x_squared - sum_x * sum_x
+        if denominator == 0:
+            # Handle edge case where all x values are the same
+            return ema_values[-1] >= ema_values[0]
+        
+        slope = (n * sum_xy - sum_x * sum_y) / denominator
+        
+        # Also check that the most recent EMA is higher than the first in our window
+        recent_increase = ema_values[-1] > ema_values[0]
+        
+        # EMA is trending up if slope is positive AND recent value is higher
+        is_trending_up = slope > 0 and recent_increase
+        
+        logger.debug(f"EMA TREND: {ticker} slope={slope:.6f}, recent_increase={recent_increase}, trending_up={is_trending_up}")
+        
+        return is_trending_up
+    
+    def _check_and_store_daily_ema(self, ticker, timestamp):
+        """
+        Check if we should store the current day's 9EMA for next day's use
+        This is called during near end-of-day updates
+        
+        Args:
+            ticker (str): Stock symbol
+            timestamp (datetime): Current timestamp
+        """
+        # Convert to Eastern Time for market hours check
+        et_tz = pytz.timezone('US/Eastern')
+        
+        if timestamp.tzinfo is None:
+            # Assume local timezone and convert
+            local_tz = pytz.timezone('Asia/Kuala_Lumpur')  # Adjust to your timezone
+            timestamp = local_tz.localize(timestamp)
+        
+        et_time = timestamp.astimezone(et_tz)
+        
+        # Only store EMA during weekdays and near market close (after 3:30 PM ET)
+        if (et_time.weekday() < 5 and  # Monday-Friday
+            et_time.hour >= 15 and et_time.minute >= 30):  # After 3:30 PM ET
+            
+            # Check if we have sufficient data for 9EMA
+            ema_9, _ = self.get_current_emas(ticker)
+            if ema_9 is not None:
+                today_date = et_time.strftime('%Y-%m-%d')
+                
+                # Only store if we haven't stored for this date yet
+                if (ticker not in self.previous_day_emas or 
+                    self.previous_day_emas[ticker].get('date') != today_date):
+                    
+                    self.store_previous_day_ema(ticker, today_date, ema_9)
+                    logger.info(f"📊 STORED EMA: {ticker} 9EMA ${ema_9:.4f} for date {today_date}")
+    
+    def _save_previous_day_emas(self):
+        """Save previous day EMAs to file"""
+        emas_file = self.data_dir / "previous_day_emas.json"
+        with open(emas_file, 'w') as f:
+            json.dump(dict(self.previous_day_emas), f, indent=2)
+    
+    def _load_previous_day_emas(self):
+        """Load previous day EMAs from file"""
+        emas_file = self.data_dir / "previous_day_emas.json"
+        if emas_file.exists():
+            try:
+                with open(emas_file, 'r') as f:
+                    loaded_emas = json.load(f)
+                
+                for ticker, data in loaded_emas.items():
+                    self.previous_day_emas[ticker] = data
+                
+                logger.info(f"Loaded previous day EMAs for {len(self.previous_day_emas)} tickers")
+            except Exception as e:
+                logger.error(f"Failed to load previous day EMAs: {e}")
     
     def should_enter_trade(self, ticker, current_price, alert_type):
         """
@@ -162,18 +371,48 @@ class PaperTradingSystem:
         # Calculate EMAs
         ema_9, ema_25 = self.get_current_emas(ticker)
         
-        # NEW LOGIC: If insufficient data for 9 EMA, assume positive movement and enter
+        # NEW LOGIC: If insufficient data for 9 EMA, try to use previous trading day's 9EMA
         if ema_9 is None:
-            logger.info(f"✅ EARLY ENTRY: {ticker} at ${current_price:.4f} - Insufficient EMA data, assuming positive movement")
-            return True
+            prev_day_ema = self.get_previous_day_ema(ticker)
+            if prev_day_ema is not None:
+                # Use previous day's 9EMA for comparison AND check trend direction
+                price_above_ema = current_price > prev_day_ema
+                ema_trending_up = self.is_ema_trending_up(ticker, current_ema_9=None)
+                
+                should_enter = price_above_ema and ema_trending_up
+                
+                if should_enter:
+                    logger.info(f"✅ PREV DAY EMA ENTRY: {ticker} at ${current_price:.4f} > Prev Day 9EMA ${prev_day_ema:.4f} & EMA trending UP")
+                    return True
+                else:
+                    if not price_above_ema:
+                        logger.debug(f"❌ NO ENTRY (PREV DAY EMA): {ticker} at ${current_price:.4f} <= Prev Day 9EMA ${prev_day_ema:.4f}")
+                    elif not ema_trending_up:
+                        logger.debug(f"❌ NO ENTRY (EMA TREND): {ticker} 9EMA not trending UP")
+                    return False
+            else:
+                # Fallback: If no previous day EMA available, check if we can determine trend
+                ema_trending_up = self.is_ema_trending_up(ticker, current_ema_9=None)
+                if ema_trending_up:
+                    logger.info(f"✅ EARLY ENTRY: {ticker} at ${current_price:.4f} - No EMA data but trend appears UP")
+                    return True
+                else:
+                    logger.debug(f"❌ NO ENTRY (EARLY TREND): {ticker} - No EMA data and trend not UP")
+                    return False
         
-        # Strategy rule: Enter if price > 9 EMA (1-minute timeframe)
-        should_enter = current_price > ema_9
+        # Strategy rule: Enter if price > 9 EMA AND 9 EMA is trending up
+        price_above_ema = current_price > ema_9
+        ema_trending_up = self.is_ema_trending_up(ticker, current_ema_9=ema_9)
+        
+        should_enter = price_above_ema and ema_trending_up
         
         if should_enter:
-            logger.info(f"✅ ENTRY SIGNAL: {ticker} at ${current_price:.4f} > 9EMA ${ema_9:.4f}")
+            logger.info(f"✅ ENTRY SIGNAL: {ticker} at ${current_price:.4f} > 9EMA ${ema_9:.4f} & EMA trending UP")
         else:
-            logger.debug(f"❌ NO ENTRY: {ticker} at ${current_price:.4f} <= 9EMA ${ema_9:.4f}")
+            if not price_above_ema:
+                logger.debug(f"❌ NO ENTRY: {ticker} at ${current_price:.4f} <= 9EMA ${ema_9:.4f}")
+            elif not ema_trending_up:
+                logger.debug(f"❌ NO ENTRY (EMA TREND): {ticker} at ${current_price:.4f} > 9EMA ${ema_9:.4f} but EMA not trending UP")
         
         return should_enter
     
@@ -660,7 +899,7 @@ class PaperTradingSystem:
    
 🎯 STRATEGY EFFECTIVENESS:
    Position Size: ${self.position_size}
-   Entry: Price > 1min 9 EMA (or insufficient data)
+   Entry: Price > 1min 9 EMA AND 9 EMA trending UP (fallback to prev day 9 EMA)
    Exit: Price < 1min 25 EMA (or 9 EMA fallback)
    Max Concurrent: {int(self.initial_balance * 0.8 / self.position_size)} positions
 """
