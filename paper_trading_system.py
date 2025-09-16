@@ -3,10 +3,11 @@
 Paper Trading System for Alert-Based Strategy Backtesting
 
 Strategy Rules:
-1. BUY: When alert triggers AND current price > 1min 9 EMA AND 1min 9 EMA is trending UP
+1. BUY: When alert triggers AND current price > 1min 9 EMA AND 1min 9 EMA is trending UP AND price has been relatively flat for at least 1 day
    - If insufficient current day 9 EMA data, use previous trading day's 9 EMA
    - EMA trend direction determined by slope analysis of recent EMA values
    - If no EMA data available, check trend using prev day comparison
+   - Flat period: price volatility < 3% over past 24 hours (range and std dev)
 2. SELL: When current price < 1min 25 EMA (or 1min 9 EMA as fallback)
 3. Position Size: $100 per trade
 4. Allow multiple concurrent positions (up to 80% of account)
@@ -216,6 +217,59 @@ class PaperTradingSystem:
         
         return None
     
+    def has_been_relatively_flat(self, ticker, flat_period_hours=24, volatility_threshold=0.03):
+        """
+        Check if price has been relatively flat for at least the specified period
+        
+        Args:
+            ticker (str): Stock symbol
+            flat_period_hours (int): Hours to look back for flat period (default 24 = 1 day)
+            volatility_threshold (float): Maximum allowed volatility (default 3%)
+            
+        Returns:
+            bool: True if price has been relatively flat for the specified period
+        """
+        if ticker not in self.price_history or len(self.price_history[ticker]) < 10:
+            # If insufficient price history, assume not flat (be conservative)
+            logger.debug(f"FLAT CHECK: {ticker} - insufficient price history")
+            return False
+        
+        # Get price data from the specified time period
+        current_time = datetime.now()
+        cutoff_time = current_time - timedelta(hours=flat_period_hours)
+        
+        # Filter prices within the time window
+        relevant_prices = []
+        for entry in self.price_history[ticker]:
+            if entry['timestamp'] >= cutoff_time:
+                relevant_prices.append(entry['price'])
+        
+        # Need at least 10 data points to assess flatness
+        if len(relevant_prices) < 10:
+            logger.debug(f"FLAT CHECK: {ticker} - insufficient recent price data ({len(relevant_prices)} points)")
+            return False
+        
+        # Calculate volatility metrics
+        prices_array = np.array(relevant_prices)
+        price_min = np.min(prices_array)
+        price_max = np.max(prices_array)
+        price_mean = np.mean(prices_array)
+        
+        # Calculate range as percentage of mean price
+        price_range_pct = (price_max - price_min) / price_mean
+        
+        # Calculate standard deviation as percentage of mean
+        price_std_pct = np.std(prices_array) / price_mean
+        
+        # Consider flat if both range and std dev are below threshold
+        is_flat = (price_range_pct <= volatility_threshold and 
+                  price_std_pct <= (volatility_threshold * 0.5))
+        
+        logger.debug(f"FLAT CHECK: {ticker} - Range: {price_range_pct:.3f}, StdDev: {price_std_pct:.3f}, "
+                    f"Threshold: {volatility_threshold:.3f}, Flat: {is_flat}")
+        
+        return is_flat
+
     def is_ema_trending_up(self, ticker, min_periods=3, current_ema_9=None):
         """
         Check if the 9EMA is trending upward based on recent EMA history
@@ -375,44 +429,55 @@ class PaperTradingSystem:
         if ema_9 is None:
             prev_day_ema = self.get_previous_day_ema(ticker)
             if prev_day_ema is not None:
-                # Use previous day's 9EMA for comparison AND check trend direction
+                # Use previous day's 9EMA for comparison AND check trend direction AND flat period
                 price_above_ema = current_price > prev_day_ema
                 ema_trending_up = self.is_ema_trending_up(ticker, current_ema_9=None)
+                has_been_flat = self.has_been_relatively_flat(ticker)
                 
-                should_enter = price_above_ema and ema_trending_up
+                should_enter = price_above_ema and ema_trending_up and has_been_flat
                 
                 if should_enter:
-                    logger.info(f"✅ PREV DAY EMA ENTRY: {ticker} at ${current_price:.4f} > Prev Day 9EMA ${prev_day_ema:.4f} & EMA trending UP")
+                    logger.info(f"✅ PREV DAY EMA ENTRY: {ticker} at ${current_price:.4f} > Prev Day 9EMA ${prev_day_ema:.4f} & EMA trending UP & was relatively flat")
                     return True
                 else:
                     if not price_above_ema:
                         logger.debug(f"❌ NO ENTRY (PREV DAY EMA): {ticker} at ${current_price:.4f} <= Prev Day 9EMA ${prev_day_ema:.4f}")
                     elif not ema_trending_up:
                         logger.debug(f"❌ NO ENTRY (EMA TREND): {ticker} 9EMA not trending UP")
+                    elif not has_been_flat:
+                        logger.debug(f"❌ NO ENTRY (NOT FLAT): {ticker} at ${current_price:.4f} - price has not been relatively flat recently")
                     return False
             else:
-                # Fallback: If no previous day EMA available, check if we can determine trend
+                # Fallback: If no previous day EMA available, check if we can determine trend AND flat period
                 ema_trending_up = self.is_ema_trending_up(ticker, current_ema_9=None)
-                if ema_trending_up:
-                    logger.info(f"✅ EARLY ENTRY: {ticker} at ${current_price:.4f} - No EMA data but trend appears UP")
+                has_been_flat = self.has_been_relatively_flat(ticker)
+                
+                if ema_trending_up and has_been_flat:
+                    logger.info(f"✅ EARLY ENTRY: {ticker} at ${current_price:.4f} - No EMA data but trend appears UP & was relatively flat")
                     return True
                 else:
-                    logger.debug(f"❌ NO ENTRY (EARLY TREND): {ticker} - No EMA data and trend not UP")
+                    if not ema_trending_up:
+                        logger.debug(f"❌ NO ENTRY (EARLY TREND): {ticker} - No EMA data and trend not UP")
+                    elif not has_been_flat:
+                        logger.debug(f"❌ NO ENTRY (NOT FLAT): {ticker} - price has not been relatively flat recently")
                     return False
         
-        # Strategy rule: Enter if price > 9 EMA AND 9 EMA is trending up
+        # Strategy rule: Enter if price > 9 EMA AND 9 EMA is trending up AND price has been relatively flat
         price_above_ema = current_price > ema_9
         ema_trending_up = self.is_ema_trending_up(ticker, current_ema_9=ema_9)
+        has_been_flat = self.has_been_relatively_flat(ticker)
         
-        should_enter = price_above_ema and ema_trending_up
+        should_enter = price_above_ema and ema_trending_up and has_been_flat
         
         if should_enter:
-            logger.info(f"✅ ENTRY SIGNAL: {ticker} at ${current_price:.4f} > 9EMA ${ema_9:.4f} & EMA trending UP")
+            logger.info(f"✅ ENTRY SIGNAL: {ticker} at ${current_price:.4f} > 9EMA ${ema_9:.4f} & EMA trending UP & was relatively flat")
         else:
             if not price_above_ema:
                 logger.debug(f"❌ NO ENTRY: {ticker} at ${current_price:.4f} <= 9EMA ${ema_9:.4f}")
             elif not ema_trending_up:
                 logger.debug(f"❌ NO ENTRY (EMA TREND): {ticker} at ${current_price:.4f} > 9EMA ${ema_9:.4f} but EMA not trending UP")
+            elif not has_been_flat:
+                logger.debug(f"❌ NO ENTRY (NOT FLAT): {ticker} at ${current_price:.4f} - price has not been relatively flat recently")
         
         return should_enter
     
@@ -899,7 +964,7 @@ class PaperTradingSystem:
    
 🎯 STRATEGY EFFECTIVENESS:
    Position Size: ${self.position_size}
-   Entry: Price > 1min 9 EMA AND 9 EMA trending UP (fallback to prev day 9 EMA)
+   Entry: Price > 1min 9 EMA AND 9 EMA trending UP AND price was relatively flat for 1 day
    Exit: Price < 1min 25 EMA (or 9 EMA fallback)
    Max Concurrent: {int(self.initial_balance * 0.8 / self.position_size)} positions
 """
