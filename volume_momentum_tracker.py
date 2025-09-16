@@ -171,8 +171,8 @@ class VolumeMomentumTracker:
         # Flat-to-spike detection
         self.flat_period_history = {}  # Track recent price data for flat detection
         self.flat_period_window = 30 * 60  # 30 minutes for flat period detection
-        self.flat_volatility_threshold = 3.0  # Max % volatility to consider "flat" (increased from 2.0)
-        self.min_flat_duration = 8 * 60  # Minimum 8 minutes of flat behavior (reduced from 10)
+        self.flat_volatility_threshold = 2.5  # Max % volatility to consider "flat" (optimized based on tests)
+        self.min_flat_duration = 6 * 60  # Minimum 6 minutes of flat behavior (optimized for better detection)
 
         # Ticker frequency tracking
         self.ticker_counters = self._load_ticker_counters()
@@ -217,7 +217,7 @@ class VolumeMomentumTracker:
         }
         
         # NEW: Enhanced flat-to-spike threshold
-        self.flat_to_spike_threshold = 12.1  # Lowered from 15% for earlier detection
+        self.flat_to_spike_threshold = 10.0  # Optimized from 12.1% based on test results
 
         # Tracking settings
         self.monitor_interval = 120  # 2 minutes in seconds
