@@ -393,9 +393,9 @@ class PaperTradingSystem:
             except Exception as e:
                 logger.error(f"Failed to load previous day EMAs: {e}")
     
-    def should_enter_trade(self, ticker, current_price, alert_type):
+    def should_enter_trade_with_reason(self, ticker, current_price, alert_type):
         """
-        Determine if we should enter a trade based on strategy rules
+        Determine if we should enter a trade based on strategy rules with detailed reason
         
         Args:
             ticker (str): Stock symbol
@@ -403,11 +403,11 @@ class PaperTradingSystem:
             alert_type (str): Type of alert triggered
             
         Returns:
-            bool: True if we should enter trade
+            tuple: (should_enter: bool, reason: str)
         """
         # Don't enter if we already have a position
         if ticker in self.active_positions:
-            return False
+            return False, f"Already holding position in {ticker}"
         
         # Don't enter if insufficient funds (allow multiple concurrent positions)
         # Calculate maximum possible positions based on account size
@@ -415,12 +415,10 @@ class PaperTradingSystem:
         current_positions = len(self.active_positions)
         
         if current_positions >= max_positions:
-            logger.warning(f"Maximum concurrent positions reached: {current_positions}/{max_positions}")
-            return False
+            return False, f"Maximum concurrent positions reached ({current_positions}/{max_positions})"
             
         if self.current_balance < self.position_size:
-            logger.warning(f"Insufficient balance for new trade: ${self.current_balance:.2f}")
-            return False
+            return False, f"Insufficient balance (${self.current_balance:.2f} < ${self.position_size})"
         
         # Calculate EMAs
         ema_9, ema_25 = self.get_current_emas(ticker)
@@ -438,15 +436,14 @@ class PaperTradingSystem:
                 
                 if should_enter:
                     logger.info(f"✅ PREV DAY EMA ENTRY: {ticker} at ${current_price:.4f} > Prev Day 9EMA ${prev_day_ema:.4f} & EMA trending UP & was relatively flat")
-                    return True
+                    return True, f"Entry: Price ${current_price:.4f} > Prev Day 9EMA ${prev_day_ema:.4f}, EMA trending UP, was relatively flat"
                 else:
                     if not price_above_ema:
-                        logger.debug(f"❌ NO ENTRY (PREV DAY EMA): {ticker} at ${current_price:.4f} <= Prev Day 9EMA ${prev_day_ema:.4f}")
+                        return False, f"Price ${current_price:.4f} <= Prev Day 9EMA ${prev_day_ema:.4f}"
                     elif not ema_trending_up:
-                        logger.debug(f"❌ NO ENTRY (EMA TREND): {ticker} 9EMA not trending UP")
+                        return False, f"9EMA not trending UP (using prev day EMA ${prev_day_ema:.4f})"
                     elif not has_been_flat:
-                        logger.debug(f"❌ NO ENTRY (NOT FLAT): {ticker} at ${current_price:.4f} - price has not been relatively flat recently")
-                    return False
+                        return False, f"Price has not been relatively flat recently (volatility too high)"
             else:
                 # Fallback: If no previous day EMA available, check if we can determine trend AND flat period
                 ema_trending_up = self.is_ema_trending_up(ticker, current_ema_9=None)
@@ -454,13 +451,12 @@ class PaperTradingSystem:
                 
                 if ema_trending_up and has_been_flat:
                     logger.info(f"✅ EARLY ENTRY: {ticker} at ${current_price:.4f} - No EMA data but trend appears UP & was relatively flat")
-                    return True
+                    return True, f"Early entry: No EMA data but trend appears UP and was relatively flat"
                 else:
                     if not ema_trending_up:
-                        logger.debug(f"❌ NO ENTRY (EARLY TREND): {ticker} - No EMA data and trend not UP")
+                        return False, f"No EMA data and trend not UP"
                     elif not has_been_flat:
-                        logger.debug(f"❌ NO ENTRY (NOT FLAT): {ticker} - price has not been relatively flat recently")
-                    return False
+                        return False, f"Price has not been relatively flat recently (volatility too high)"
         
         # Strategy rule: Enter if price > 9 EMA AND 9 EMA is trending up AND price has been relatively flat
         price_above_ema = current_price > ema_9
@@ -471,14 +467,30 @@ class PaperTradingSystem:
         
         if should_enter:
             logger.info(f"✅ ENTRY SIGNAL: {ticker} at ${current_price:.4f} > 9EMA ${ema_9:.4f} & EMA trending UP & was relatively flat")
+            return True, f"Entry: Price ${current_price:.4f} > 9EMA ${ema_9:.4f}, EMA trending UP, was relatively flat"
         else:
             if not price_above_ema:
-                logger.debug(f"❌ NO ENTRY: {ticker} at ${current_price:.4f} <= 9EMA ${ema_9:.4f}")
+                return False, f"Price ${current_price:.4f} <= 9EMA ${ema_9:.4f}"
             elif not ema_trending_up:
-                logger.debug(f"❌ NO ENTRY (EMA TREND): {ticker} at ${current_price:.4f} > 9EMA ${ema_9:.4f} but EMA not trending UP")
+                return False, f"9EMA not trending UP (current ${ema_9:.4f})"
             elif not has_been_flat:
-                logger.debug(f"❌ NO ENTRY (NOT FLAT): {ticker} at ${current_price:.4f} - price has not been relatively flat recently")
+                return False, f"Price has not been relatively flat recently (volatility too high)"
         
+        return False, "Unknown reason"
+
+    def should_enter_trade(self, ticker, current_price, alert_type):
+        """
+        Determine if we should enter a trade based on strategy rules
+        
+        Args:
+            ticker (str): Stock symbol
+            current_price (float): Current stock price
+            alert_type (str): Type of alert triggered
+            
+        Returns:
+            bool: True if we should enter trade
+        """
+        should_enter, _ = self.should_enter_trade_with_reason(ticker, current_price, alert_type)
         return should_enter
     
     def should_exit_trade(self, ticker, current_price):
@@ -767,7 +779,8 @@ class PaperTradingSystem:
             'entry': None,
             'exit': None,
             'eod_exits': None,
-            'price_update': True
+            'price_update': True,
+            'trade_decision_reason': None
         }
         
         # Check for EOD cutoff first - this takes priority over everything
@@ -783,9 +796,16 @@ class PaperTradingSystem:
         
         # Check for entry signals (only if not currently holding)
         if ticker not in self.active_positions:
-            entry_result = self.enter_trade(ticker, current_price, alert_type, timestamp)
-            if entry_result:
-                actions['entry'] = entry_result
+            should_enter, reason = self.should_enter_trade_with_reason(ticker, current_price, alert_type)
+            actions['trade_decision_reason'] = reason
+            
+            if should_enter:
+                entry_result = self.enter_trade(ticker, current_price, alert_type, timestamp)
+                if entry_result:
+                    actions['entry'] = entry_result
+        else:
+            # Already holding position
+            actions['trade_decision_reason'] = f"Already holding position in {ticker}"
         
         return actions
     

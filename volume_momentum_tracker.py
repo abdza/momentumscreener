@@ -1601,7 +1601,7 @@ class VolumeMomentumTracker:
         except Exception as e:
             return f"Error generating paper trading report: {e}"
     
-    def _log_telegram_alert_sent(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, pattern_analysis=None, disregarded=False):
+    def _log_telegram_alert_sent(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, pattern_analysis=None, disregarded=False, paper_trade_info=None):
         """Log the details of a successfully sent Telegram alert for end-of-day analysis"""
         try:
             alert_log_entry = {
@@ -1616,7 +1616,8 @@ class VolumeMomentumTracker:
                 'alert_count': alert_count,
                 'is_immediate_spike': is_immediate_spike,
                 'alert_type': 'immediate_spike' if is_immediate_spike else alert_types[0] if alert_types else 'price_spike',
-                'disregarded': disregarded
+                'disregarded': disregarded,
+                'paper_trade_info': paper_trade_info
             }
             
             # Include pattern analysis data if provided
@@ -1656,7 +1657,7 @@ class VolumeMomentumTracker:
         if ticker in self.disregarded_tickers:
             logger.info(f"📵 Alert disregarded for {ticker} ({change_pct:+.1f}%, {alert_count} alerts) - user disabled alerts for this ticker")
             # Log the disregarded alert for end-of-day analysis
-            self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, None, disregarded=True)
+            self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, None, disregarded=True, paper_trade_info=None)
             return
 
         # NEW: Apply enhanced filtering with momentum scoring and cooldowns
@@ -1677,6 +1678,7 @@ class VolumeMomentumTracker:
                 self.update_ticker_cooldown(ticker)
 
         # NEW: Paper Trading Integration - Process alert for trading simulation
+        paper_trade_info = ""
         if self.enable_paper_trading and self.paper_trader:
             try:
                 trade_action = self.paper_trader.process_alert(
@@ -1685,14 +1687,22 @@ class VolumeMomentumTracker:
                     alert_type=alert_types[0] if alert_types else "price_spike"
                 )
                 
+                # Determine paper trade result for telegram message
                 if trade_action['entry']:
                     logger.info(f"📊 PAPER TRADE ENTRY: {ticker} at ${current_price:.4f}")
+                    paper_trade_info = f"✅ Paper Trade: BOUGHT at ${current_price:.4f}"
+                elif trade_action['trade_decision_reason']:
+                    logger.info(f"📊 PAPER TRADE REJECTED: {ticker} - {trade_action['trade_decision_reason']}")
+                    paper_trade_info = f"❌ Paper Trade: NOT BOUGHT - {trade_action['trade_decision_reason']}"
+                
                 if trade_action['exit']:
                     exit_info = trade_action['exit']
                     logger.info(f"📊 PAPER TRADE EXIT: {ticker} - P&L: ${exit_info['profit_loss']:+.2f} ({exit_info['profit_pct']:+.2f}%)")
+                    paper_trade_info += f"\n📊 Previous Position: SOLD - P&L: ${exit_info['profit_loss']:+.2f} ({exit_info['profit_pct']:+.2f}%)"
                     
             except Exception as e:
                 logger.error(f"❌ Paper trading error for {ticker}: {e}")
+                paper_trade_info = f"❌ Paper Trade: ERROR - {str(e)}"
 
         try:
             import asyncio
@@ -1763,6 +1773,10 @@ class VolumeMomentumTracker:
                     f"🎯 Alert Types: {alert_types_str}\n\n"
                     f"📊 View Chart: {tradingview_link}"
                 )
+                
+                # Add paper trading information to immediate spike message
+                if paper_trade_info:
+                    message += f"\n\n💰 {paper_trade_info}"
             else:
                 message = (
                     f"🔥 HIGH FREQUENCY MOMENTUM ALERT 🔥\n\n"
@@ -1786,6 +1800,10 @@ class VolumeMomentumTracker:
                     f"🎯 Alert Types: {alert_types_str}\n\n"
                     f"📊 View Chart: {tradingview_link}"
                 )
+            
+            # Add paper trading information if available
+            if paper_trade_info:
+                message += f"\n\n💰 {paper_trade_info}"
 
             # Add recent news headlines if available with timestamps
             if recent_news:
@@ -1831,7 +1849,7 @@ class VolumeMomentumTracker:
             logger.info(f"📱 Telegram {alert_type} alert sent for {ticker} ({change_pct:+.1f}%, {alert_count} alerts, {self.session_alert_count[ticker]} session alerts) with {len(recent_news)} news headlines")
             
             # Log the successful Telegram alert for end-of-day analysis
-            self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, pattern_analysis)
+            self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, pattern_analysis, paper_trade_info=paper_trade_info)
 
         except Exception as e:
             logger.error(f"❌ Failed to send Telegram alert for {ticker}: {e}")
@@ -1908,7 +1926,7 @@ class VolumeMomentumTracker:
                 logger.info(f"📱 Sent simplified Telegram {alert_type} alert for {ticker}")
                 
                 # Log the successful Telegram alert for end-of-day analysis
-                self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, pattern_analysis)
+                self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, pattern_analysis, paper_trade_info=paper_trade_info)
 
             except Exception as e2:
                 logger.error(f"❌ Failed to send even simplified alert: {e2}")
