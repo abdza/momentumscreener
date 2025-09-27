@@ -2584,7 +2584,36 @@ class VolumeMomentumTracker:
 
         return premarket_volume_alerts, premarket_price_alerts
 
-    def save_alerts(self, volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts, timestamp):
+    def analyze_sustained_positive(self, current_data):
+        """Analyze tickers maintaining >10% gain from opening price (sustained positive momentum)"""
+        sustained_positive_alerts = []
+
+        for record in current_data:
+            ticker = record.get('name')
+            change_from_open = record.get('change_from_open', 0)
+
+            # Check if ticker is maintaining >10% gain from opening price
+            if change_from_open > 10:
+                sustained_positive_alerts.append({
+                    'ticker': ticker,
+                    'change_from_open': change_from_open,
+                    'current_price': record.get('close', 0),
+                    'change_pct': record.get('change|5', 0),
+                    'volume': record.get('volume', 0),
+                    'relative_volume': record.get('relative_volume_10d_calc', 0),
+                    'sector': record.get('sector', 'Unknown'),
+                    'alert_type': 'sustained_positive'
+                })
+
+        # Sort by biggest sustained gains
+        sustained_positive_alerts.sort(key=lambda x: x['change_from_open'], reverse=True)
+
+        # Add counters and re-sort by frequency
+        sustained_positive_alerts = self._add_counter_to_alerts(sustained_positive_alerts, 'sustained_positive')
+
+        return sustained_positive_alerts
+
+    def save_alerts(self, volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts, sustained_positive_alerts, timestamp):
         """Save movement alerts to files"""
         alerts_data = {
             'timestamp': timestamp.isoformat(),
@@ -2593,12 +2622,14 @@ class VolumeMomentumTracker:
             'price_spikes': price_spikes[:10],  # Top 10
             'premarket_volume_alerts': premarket_volume_alerts[:10],  # Top 10
             'premarket_price_alerts': premarket_price_alerts[:10],  # Top 10
+            'sustained_positive_alerts': sustained_positive_alerts[:10],  # Top 10
             'summary': {
                 'total_volume_climbers': len(volume_climbers),
                 'total_newcomers': len(volume_newcomers),
                 'total_price_spikes': len(price_spikes),
                 'total_premarket_volume_alerts': len(premarket_volume_alerts),
-                'total_premarket_price_alerts': len(premarket_price_alerts)
+                'total_premarket_price_alerts': len(premarket_price_alerts),
+                'total_sustained_positive_alerts': len(sustained_positive_alerts)
             }
         }
 
@@ -2615,7 +2646,7 @@ class VolumeMomentumTracker:
         logger.info(f"Alerts saved: {alerts_file}")
         return alerts_data
 
-    def print_alerts(self, volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts):
+    def print_alerts(self, volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts, sustained_positive_alerts):
         """Print movement alerts to console"""
         print("\n" + "="*80)
         print(f"🚨 MOMENTUM ALERTS - {datetime.now().strftime('%H:%M:%S')}")
@@ -2738,7 +2769,24 @@ class VolumeMomentumTracker:
                 except Exception as e:
                     logger.error(f"Error printing premarket price alert {alert.get('ticker', 'Unknown')}: {e}")
 
-        if not any([volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts]):
+        if sustained_positive_alerts:
+            print(f"\n💪 SUSTAINED POSITIVE ({len(sustained_positive_alerts)} found) - Sorted by Frequency:")
+            print("-" * 70)
+            for alert in sustained_positive_alerts[:5]:  # Top 5
+                try:
+                    count = alert.get('appearance_count', 1)
+                    rel_vol = alert.get('relative_volume', 0)
+                    rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
+                    change_from_open = alert.get('change_from_open', 0)
+                    change_pct = alert.get('change_pct', 0)
+                    spike_marker = " 🔥" if change_from_open >= 25 else ""
+                    print(f"  {alert['ticker']:6} [{count:2d}x] | From Open: +{change_from_open:5.1f}%{spike_marker} | "
+                          f"5min: {change_pct:+5.1f}% | RelVol: {rel_vol_str} | "
+                          f"${alert.get('current_price', 0):6.2f} | Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
+                except Exception as e:
+                    logger.error(f"Error printing sustained positive alert {alert.get('ticker', 'Unknown')}: {e}")
+
+        if not any([volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts, sustained_positive_alerts]):
             print("\n😴 No significant momentum detected this cycle.")
 
         print("="*80)
@@ -2804,20 +2852,26 @@ class VolumeMomentumTracker:
                 logger.error(f"Error analyzing premarket activity: {e}")
                 premarket_volume_alerts, premarket_price_alerts = [], []
 
+            try:
+                sustained_positive_alerts = self.analyze_sustained_positive(current_data)
+            except Exception as e:
+                logger.error(f"Error analyzing sustained positive: {e}")
+                sustained_positive_alerts = []
+
             # Print alerts with error handling
             try:
-                self.print_alerts(volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts)
+                self.print_alerts(volume_climbers, volume_newcomers, price_spikes, premarket_volume_alerts, premarket_price_alerts, sustained_positive_alerts)
             except Exception as e:
                 logger.error(f"Error printing alerts: {e}")
                 print(f"⚠️  Error displaying alerts: {e}")
                 print(f"Found: {len(volume_climbers)} climbers, {len(volume_newcomers)} newcomers, "
                       f"{len(price_spikes)} price spikes, {len(premarket_volume_alerts)} PM volume, "
-                      f"{len(premarket_price_alerts)} PM price alerts")
+                      f"{len(premarket_price_alerts)} PM price alerts, {len(sustained_positive_alerts)} sustained positive")
 
             # Save alerts
             try:
                 alerts_data = self.save_alerts(volume_climbers, volume_newcomers, price_spikes,
-                                             premarket_volume_alerts, premarket_price_alerts, timestamp)
+                                             premarket_volume_alerts, premarket_price_alerts, sustained_positive_alerts, timestamp)
             except Exception as e:
                 logger.error(f"Error saving alerts: {e}")
 
@@ -2842,7 +2896,8 @@ class VolumeMomentumTracker:
 
             logger.info(f"Scan cycle completed. Found: {len(volume_climbers)} climbers, "
                        f"{len(volume_newcomers)} newcomers, {len(price_spikes)} price spikes, "
-                       f"{len(premarket_volume_alerts)} PM volume alerts, {len(premarket_price_alerts)} PM price alerts")
+                       f"{len(premarket_volume_alerts)} PM volume alerts, {len(premarket_price_alerts)} PM price alerts, "
+                       f"{len(sustained_positive_alerts)} sustained positive alerts")
 
         except Exception as e:
             logger.error(f"Critical error in scan cycle: {e}")
