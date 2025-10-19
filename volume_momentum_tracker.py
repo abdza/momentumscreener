@@ -137,9 +137,13 @@ class VolumeMomentumTracker:
         # News cache to avoid repeated API calls
         self.news_cache = {}
         self.news_cache_duration = 15 * 60  # Cache news for 15 minutes
-        
+
         # Company name cache for better news filtering
         self.company_name_cache = {}
+
+        # VIX cache to avoid repeated API calls
+        self.vix_cache = {}
+        self.vix_cache_duration = 5 * 60  # Cache VIX for 5 minutes
 
         if telegram_bot_token and telegram_chat_id:
             try:
@@ -515,7 +519,84 @@ class VolumeMomentumTracker:
                     return datetime.now() - timedelta(days=value * 30)
         
         return None
-    
+
+    def _get_vix_data(self):
+        """
+        Get current VIX value and past week trend using yfinance
+        Caches result for 5 minutes to avoid excessive API calls
+
+        Returns:
+            dict: {
+                'current': float,  # Current VIX value
+                'week_change': float,  # % change from 1 week ago
+                'week_trend': str,  # 'rising' or 'falling'
+                'level': str  # 'low', 'moderate', 'elevated', 'high'
+            }
+        """
+        import yfinance as yf
+        from datetime import datetime, timedelta
+
+        # Check cache first
+        current_time = datetime.now()
+        if 'vix_data' in self.vix_cache and 'timestamp' in self.vix_cache:
+            cache_age = (current_time - self.vix_cache['timestamp']).total_seconds()
+            if cache_age < self.vix_cache_duration:
+                logger.debug(f"Using cached VIX data (age: {cache_age:.0f}s)")
+                return self.vix_cache['vix_data']
+
+        try:
+            # Fetch VIX data
+            vix = yf.Ticker("^VIX")
+
+            # Get 1 week of data
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=7)
+            hist = vix.history(start=start_date, end=end_date)
+
+            if hist.empty:
+                logger.warning("No VIX data available")
+                return None
+
+            # Get current value (most recent close)
+            current_vix = float(hist['Close'].iloc[-1])
+
+            # Get value from 1 week ago (or closest available)
+            week_ago_vix = float(hist['Close'].iloc[0])
+
+            # Calculate week change
+            week_change = ((current_vix - week_ago_vix) / week_ago_vix) * 100
+            week_trend = 'rising' if week_change > 0 else 'falling'
+
+            # Determine VIX level category
+            if current_vix < 15:
+                level = 'low'
+            elif current_vix < 20:
+                level = 'moderate'
+            elif current_vix < 30:
+                level = 'elevated'
+            else:
+                level = 'high'
+
+            vix_data = {
+                'current': current_vix,
+                'week_change': week_change,
+                'week_trend': week_trend,
+                'level': level
+            }
+
+            # Cache the result
+            self.vix_cache = {
+                'vix_data': vix_data,
+                'timestamp': current_time
+            }
+
+            logger.info(f"VIX: {current_vix:.2f} ({week_trend} {week_change:+.1f}% this week, {level} volatility)")
+            return vix_data
+
+        except Exception as e:
+            logger.error(f"Failed to fetch VIX data: {e}")
+            return None
+
     def _get_recent_news(self, ticker, max_headlines=3):
         """
         Get recent news headlines for a ticker (within last 3 days)
@@ -1717,6 +1798,10 @@ class VolumeMomentumTracker:
             logger.info(f"Fetching recent news for {ticker}...")
             recent_news = self._get_recent_news(ticker, max_headlines=3)
 
+            # Get VIX data for market context
+            logger.info(f"Fetching VIX data...")
+            vix_data = self._get_vix_data()
+
             tradingview_link = self._get_tradingview_link(ticker)
             alert_types_str = ', '.join(alert_types[:3])  # First 3 alert types
             if len(alert_types) > 3:
@@ -1749,6 +1834,26 @@ class VolumeMomentumTracker:
             # Get current session alert count (before increment)
             current_session_count = self.session_alert_count.get(ticker, 0)
 
+            # Format VIX information string
+            vix_str = ""
+            if vix_data:
+                # VIX emoji based on level
+                vix_emoji = {
+                    'low': '🟢',
+                    'moderate': '🟡',
+                    'elevated': '🟠',
+                    'high': '🔴'
+                }.get(vix_data['level'], '⚪')
+
+                # Trend emoji
+                trend_emoji = '📈' if vix_data['week_trend'] == 'rising' else '📉'
+
+                vix_str = (f"\n📊 VIX: {vix_emoji} {vix_data['current']:.2f} "
+                          f"({trend_emoji} {vix_data['week_trend']} {vix_data['week_change']:+.1f}% this week, "
+                          f"{vix_data['level']} volatility)")
+            else:
+                vix_str = "\n📊 VIX: N/A"
+
             # Different message for immediate spikes vs regular high frequency
             if is_immediate_spike:
                 message = (
@@ -1766,7 +1871,7 @@ class VolumeMomentumTracker:
                     f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
                     f"🎯 TARGET PRICE: {target_str}\n"
                     f"💰 POSITION SIZE: {position_sizing['recommendation']}\n"
-                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']})\n\n"
+                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']}){vix_str}\n\n"
                     f"🔥 This ticker just spiked {change_pct:+.1f}% - immediate alert triggered!\n"
                     f"📈 Previous alerts: {alert_count}\n"
                     f"📱 Session alerts: {current_session_count + 1} (this session)\n"
@@ -1794,7 +1899,7 @@ class VolumeMomentumTracker:
                     f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
                     f"🎯 TARGET PRICE: {target_str}\n"
                     f"💰 POSITION SIZE: {position_sizing['recommendation']}\n"
-                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']})\n\n"
+                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']}){vix_str}\n\n"
                     f"📋 This ticker has triggered {alert_count} momentum alerts, "
                     f"indicating sustained bullish activity!\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
