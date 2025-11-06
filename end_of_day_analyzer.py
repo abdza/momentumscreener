@@ -183,7 +183,7 @@ class EndOfDayAnalyzer:
                     continue
                 
                 timestamp = datetime.fromisoformat(alert_data['timestamp'])
-                
+
                 # Convert Malaysian timestamp to timezone-aware format
                 # Alert timestamps are in Malaysian time (UTC+8)
                 if timestamp.tzinfo is None:
@@ -191,6 +191,19 @@ class EndOfDayAnalyzer:
                     timestamp = malaysia_tz.localize(timestamp)
                 alert_price = alert_data.get('alert_price', 0)
                 alert_type = alert_data.get('alert_type', 'price_spike')
+
+                # FIX: Correct alert_price for premarket alerts that were logged incorrectly
+                # Old bug: premarket alerts logged previous day's close instead of current premarket price
+                # If this is a premarket alert and we have premarket_change data, recalculate the correct price
+                premarket_alert_types = ['premarket_acceleration', 'new_premarket_move', 'premarket_volume_surge',
+                                        'significant_premarket_move', 'high_premarket_volume']
+                if alert_type in premarket_alert_types:
+                    premarket_change = alert_data.get('change_pct', alert_data.get('premarket_change', 0))
+                    if premarket_change != 0:
+                        # Recalculate: alert_price is actually previous close, need to add the premarket change
+                        corrected_price = alert_price * (1 + premarket_change / 100)
+                        print(f"  ⚠️  Correcting premarket alert price for {ticker}: ${alert_price:.4f} → ${corrected_price:.4f} (using {premarket_change:+.1f}% change)")
+                        alert_price = corrected_price
                 
                 # For Telegram alerts, we only keep the first one per ticker
                 # since these are the actual alerts the user received

@@ -2596,10 +2596,14 @@ class VolumeMomentumTracker:
 
                 # Alert on significant POSITIVE pre-market price changes only (long trades)
                 if premarket_change > 5:  # ONLY positive moves > 5%
+                    # Calculate actual current premarket price (not previous day's close)
+                    close_price = record.get('close', 0)
+                    current_premarket_price = close_price * (1 + premarket_change / 100)
+
                     premarket_price_alerts.append({
                         'ticker': ticker,
                         'premarket_change': premarket_change,
-                        'current_price': record.get('close', 0),
+                        'current_price': current_premarket_price,
                         'volume': record.get('volume', 0),
                         'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
@@ -2609,10 +2613,14 @@ class VolumeMomentumTracker:
 
                 # Alert on high pre-market volume (if available)
                 if premarket_volume > 100000:  # > 100k pre-market volume
+                    # Calculate actual current premarket price (not previous day's close)
+                    close_price = record.get('close', 0)
+                    current_premarket_price = close_price * (1 + premarket_change / 100)
+
                     premarket_volume_alerts.append({
                         'ticker': ticker,
                         'premarket_volume': premarket_volume,
-                        'current_price': record.get('close', 0),
+                        'current_price': current_premarket_price,
                         'premarket_change': premarket_change,
                         'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
@@ -2638,11 +2646,15 @@ class VolumeMomentumTracker:
                 # Pre-market price acceleration - ONLY POSITIVE moves (long trades)
                 pm_change_acceleration = current_pm_change - previous_pm_change
                 if pm_change_acceleration > 3 and current_pm_change > 0:  # Must be positive and accelerating up
+                    # Calculate actual current premarket price (not previous day's close)
+                    close_price = current_record.get('close', 0)
+                    current_premarket_price = close_price * (1 + current_pm_change / 100)
+
                     premarket_price_alerts.append({
                         'ticker': ticker,
                         'premarket_change': current_pm_change,
                         'premarket_change_acceleration': pm_change_acceleration,
-                        'current_price': current_record.get('close', 0),
+                        'current_price': current_premarket_price,
                         'volume': current_record.get('volume', 0),
                         'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                         'sector': current_record.get('sector', 'Unknown'),
@@ -2654,11 +2666,15 @@ class VolumeMomentumTracker:
                 if previous_pm_volume > 0:
                     pm_volume_change = ((current_pm_volume - previous_pm_volume) / previous_pm_volume) * 100
                     if pm_volume_change > 50:  # 50%+ increase in pre-market volume
+                        # Calculate actual current premarket price (not previous day's close)
+                        close_price = current_record.get('close', 0)
+                        current_premarket_price = close_price * (1 + current_pm_change / 100)
+
                         premarket_volume_alerts.append({
                             'ticker': ticker,
                             'premarket_volume': current_pm_volume,
                             'premarket_volume_change': pm_volume_change,
-                            'current_price': current_record.get('close', 0),
+                            'current_price': current_premarket_price,
                             'premarket_change': current_pm_change,
                             'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                             'sector': current_record.get('sector', 'Unknown'),
@@ -2668,10 +2684,14 @@ class VolumeMomentumTracker:
             else:
                 # New pre-market activity - ONLY POSITIVE moves (long trades)
                 if current_pm_change > 3:  # New significant POSITIVE pre-market move
+                    # Calculate actual current premarket price (not previous day's close)
+                    close_price = current_record.get('close', 0)
+                    current_premarket_price = close_price * (1 + current_pm_change / 100)
+
                     premarket_price_alerts.append({
                         'ticker': ticker,
                         'premarket_change': current_pm_change,
-                        'current_price': current_record.get('close', 0),
+                        'current_price': current_premarket_price,
                         'volume': current_record.get('volume', 0),
                         'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                         'sector': current_record.get('sector', 'Unknown'),
