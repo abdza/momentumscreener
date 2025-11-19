@@ -3172,7 +3172,7 @@ class VolumeMomentumTracker:
                     # Send initial status message
                     await self.telegram_bot.send_message(
                         chat_id=self.telegram_chat_id,
-                        text="🔄 Fetching stocks in play (2x+ volume) by intraday movement...",
+                        text="🔄 Fetching stocks in play (1x+ volume) by intraday movement...",
                         disable_web_page_preview=True
                     )
 
@@ -3243,18 +3243,18 @@ class VolumeMomentumTracker:
 
                         logger.info(f"✅ Processed {len(tickers_with_data)} tickers with historical data")
 
-                        # Filter by volume: must be >= 2x previous day volume (for early detection)
+                        # Filter by volume: must be >= 1x previous day volume (for early detection)
                         filtered_tickers = []
                         for item in tickers_with_data:
                             ticker = item['ticker']
                             volume_ratio = item.get('volume_ratio', 0)
 
-                            # Check if current volume is at least 2x previous volume
-                            if volume_ratio >= 2:
+                            # Check if current volume is at least 1x previous volume
+                            if volume_ratio >= 1:
                                 filtered_tickers.append(item)
                                 logger.info(f"✅ {ticker}: Gap={item['flatness']:.2f}%, Intraday={item['intraday_movement']:+.2f}%, Vol={volume_ratio:.1f}x")
                             else:
-                                logger.debug(f"⚠️ {ticker}: Vol only {volume_ratio:.1f}x (needs 2x)")
+                                logger.debug(f"⚠️ {ticker}: Vol only {volume_ratio:.1f}x (needs 1x)")
 
                         # Sort by intraday movement (descending - highest movement first)
                         filtered_tickers.sort(key=lambda x: x['intraday_movement'], reverse=True)
@@ -3270,12 +3270,12 @@ class VolumeMomentumTracker:
 
                         # Build response
                         if len(top_20) == 0:
-                            response = f"📊 Stocks in Play (2x+ Volume)\n"
+                            response = f"📊 Stocks in Play (1x+ Volume)\n"
                             response += f"📈 VIX: {vix_str}\n\n"
                             response += "❌ No stocks found matching criteria:\n"
-                            response += "• Volume ≥ 2x previous day volume"
+                            response += "• Volume ≥ 1x previous day volume"
                         else:
-                            response = f"📊 Top {len(top_20)} Stocks in Play (2x+ Vol)\n"
+                            response = f"📊 Top {len(top_20)} Stocks in Play (1x+ Vol)\n"
                             response += f"📈 VIX: {vix_str}\n"
                             response += f"Sorted by highest intraday movement\n\n"
 
@@ -3324,7 +3324,7 @@ class VolumeMomentumTracker:
                     "📱 Volume Momentum Tracker Commands:\n\n"
                     "• /disregard TICKER - Disable alerts for a ticker this session\n"
                     "• /list_disregarded - Show currently disregarded tickers\n"
-                    "• /list_flat - Show stocks in play (2x+ volume)\n"
+                    "• /list_flat - Show stocks in play (1x+ volume)\n"
                     "  (Sorted by highest intraday movement, for early detection)\n"
                     "• /help - Show this help message\n\n"
                     "Example: /disregard AAPL"
