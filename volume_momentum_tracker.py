@@ -134,6 +134,10 @@ class VolumeMomentumTracker:
         self.telegram_alerts_log = self.output_dir / "telegram_alerts_sent.jsonl"
         self.telegram_notification_interval = 30 * 60  # 30 minutes between notifications for same ticker
 
+        # Hourly list_flat notifications log file
+        self.hourly_notifications_log = self.output_dir / "hourly_notifications.jsonl"
+        self.last_hourly_list_flat = None  # Track last hourly notification time
+
         # News cache to avoid repeated API calls
         self.news_cache = {}
         self.news_cache_duration = 15 * 60  # Cache news for 15 minutes
@@ -1719,6 +1723,197 @@ class VolumeMomentumTracker:
         except Exception as e:
             logger.error(f"❌ Failed to log Telegram alert for {ticker}: {e}")
 
+    def _log_hourly_notification(self, notification_type, tickers_data, message_content):
+        """Log hourly notification for later performance analysis"""
+        try:
+            log_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'notification_type': notification_type,
+                'tickers_count': len(tickers_data) if tickers_data else 0,
+                'tickers': [
+                    {
+                        'ticker': item.get('ticker', 'N/A'),
+                        'price': item.get('price', 0),
+                        'intraday_movement': item.get('intraday_movement', 0),
+                        'flatness': item.get('flatness', 0),
+                        'volume_ratio': item.get('volume_ratio', 0),
+                        'float': item.get('float', 0)
+                    }
+                    for item in (tickers_data or [])
+                ],
+                'message_length': len(message_content) if message_content else 0
+            }
+
+            # Append to JSONL file
+            with open(self.hourly_notifications_log, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(log_entry) + '\n')
+
+            logger.info(f"📝 Logged hourly {notification_type} notification with {len(tickers_data) if tickers_data else 0} tickers")
+
+        except Exception as e:
+            logger.error(f"❌ Failed to log hourly notification: {e}")
+
+    def _generate_list_flat_content(self):
+        """Generate the list_flat content for reuse in command handler and hourly notifications"""
+        try:
+            import yfinance as yf
+
+            # Get latest screener data
+            screener_data = self.get_volume_screener_data()
+
+            if not screener_data:
+                return None, "❌ No screener data available.", []
+
+            # Calculate ACTUAL flatness and intraday movement using historical data
+            logger.info("📊 Calculating flatness and intraday movement with historical data...")
+            tickers_with_data = []
+
+            for record in screener_data:
+                ticker = record.get('name', 'N/A')
+                current_price = record.get('close', 0)
+                current_volume = record.get('volume', 0)
+                float_shares = record.get('float_shares_outstanding', 0)
+
+                try:
+                    # Fetch historical data to get actual open and previous close
+                    stock = yf.Ticker(ticker)
+                    end_date = datetime.now()
+                    start_date = end_date - timedelta(days=5)
+                    hist = stock.history(start=start_date, end=end_date)
+
+                    if len(hist) >= 2:
+                        # Get actual prices
+                        prev_close = hist['Close'].iloc[-2]
+                        today_open = hist['Open'].iloc[-1]
+                        today_close = hist['Close'].iloc[-1]
+                        prev_volume = hist['Volume'].iloc[-2]
+
+                        # Calculate ACTUAL gap from previous close (flatness)
+                        gap_amount = abs(today_open - prev_close)
+                        gap_pct = (gap_amount / prev_close) * 100 if prev_close > 0 else float('inf')
+
+                        # Calculate intraday movement
+                        intraday_change = today_close - today_open
+                        intraday_pct = (intraday_change / today_open) * 100 if today_open > 0 else 0
+
+                        # Volume ratio
+                        volume_ratio = current_volume / prev_volume if prev_volume > 0 else 0
+
+                        tickers_with_data.append({
+                            'ticker': ticker,
+                            'flatness': gap_pct,
+                            'intraday_movement': intraday_pct,
+                            'price': current_price,
+                            'volume': current_volume,
+                            'float': float_shares,
+                            'prev_volume': prev_volume,
+                            'volume_ratio': volume_ratio,
+                            'today_open': today_open,
+                            'prev_close': prev_close
+                        })
+
+                        logger.debug(f"{ticker}: Gap={gap_pct:.2f}%, Intraday={intraday_pct:+.2f}%, Vol ratio={volume_ratio:.1f}x")
+
+                except Exception as e:
+                    logger.debug(f"⚠️ {ticker}: Error fetching historical data: {e}")
+                    continue
+
+            logger.info(f"✅ Processed {len(tickers_with_data)} tickers with historical data")
+
+            # Filter by volume: must be >= 1x previous day volume
+            filtered_tickers = []
+            for item in tickers_with_data:
+                ticker = item['ticker']
+                volume_ratio = item.get('volume_ratio', 0)
+
+                if volume_ratio >= 1:
+                    filtered_tickers.append(item)
+                    logger.debug(f"✅ {ticker}: Gap={item['flatness']:.2f}%, Intraday={item['intraday_movement']:+.2f}%, Vol={volume_ratio:.1f}x")
+
+            # Sort by intraday movement (descending)
+            filtered_tickers.sort(key=lambda x: x['intraday_movement'], reverse=True)
+
+            # Get top 20
+            top_20 = filtered_tickers[:20]
+
+            # Get VIX data
+            vix_data = self._get_vix_data()
+            vix_str = "N/A"
+            if vix_data:
+                vix_str = f"{vix_data['current']:.2f} ({vix_data['level']}, {vix_data['week_trend']} {vix_data['week_change']:+.1f}%)"
+
+            # Build response
+            if len(top_20) == 0:
+                response = f"📊 Stocks in Play (1x+ Volume)\n"
+                response += f"📈 VIX: {vix_str}\n\n"
+                response += "❌ No stocks found matching criteria:\n"
+                response += "• Volume ≥ 1x previous day volume"
+            else:
+                response = f"📊 Top {len(top_20)} Stocks in Play (1x+ Vol)\n"
+                response += f"📈 VIX: {vix_str}\n"
+                response += f"Sorted by highest intraday movement\n\n"
+
+                for i, item in enumerate(top_20, 1):
+                    ticker = item['ticker']
+                    price = item['price']
+                    volume = item['volume']
+                    float_shares = item['float']
+                    flatness = item['flatness']
+                    volume_ratio = item.get('volume_ratio', 0)
+                    intraday_movement = item.get('intraday_movement', 0)
+
+                    # Format float shares in millions
+                    float_m = float_shares / 1_000_000 if float_shares else 0
+
+                    # Format volume in millions
+                    vol_m = volume / 1_000_000 if volume else 0
+
+                    # Get TradingView link
+                    tv_link = self._get_tradingview_link(ticker)
+
+                    response += f"{i}. [{ticker}]({tv_link}) - Intraday: {intraday_movement:+.1f}% | Gap: {flatness:.2f}%\n"
+                    response += f"   💰 ${price:.2f} | 📊 Float: {float_m:.1f}M | 📈 Vol: {vol_m:.1f}M ({volume_ratio:.0f}x)\n\n"
+
+                logger.info(f"📋 Generated list of {len(top_20)} stocks sorted by intraday movement")
+
+            return response, None, top_20
+
+        except Exception as e:
+            logger.error(f"❌ Error generating list_flat content: {e}")
+            return None, f"❌ Error generating flat stocks list: {str(e)}", []
+
+    async def _send_hourly_list_flat(self, context):
+        """Send hourly list_flat notification (job callback for scheduled task)"""
+        try:
+            logger.info("⏰ Sending hourly list_flat notification...")
+
+            # Generate the list_flat content
+            response, error, tickers_data = self._generate_list_flat_content()
+
+            if error:
+                message = f"⏰ Hourly Update\n\n{error}"
+            else:
+                # Add hourly indicator to the response
+                current_time = datetime.now().strftime("%H:%M")
+                message = f"⏰ Hourly Update ({current_time})\n\n{response}"
+
+            # Send the message
+            await context.bot.send_message(
+                chat_id=self.telegram_chat_id,
+                text=message,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+
+            # Log the notification
+            self._log_hourly_notification('list_flat', tickers_data, message)
+            self.last_hourly_list_flat = datetime.now()
+
+            logger.info(f"✅ Hourly list_flat notification sent successfully")
+
+        except Exception as e:
+            logger.error(f"❌ Failed to send hourly list_flat notification: {e}")
+
     def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=None, float_shares=None):
         """Send Telegram alert for high-frequency ticker or immediate big spike with rate limiting and news headlines with timestamps"""
         if not self.telegram_bot or not self.telegram_chat_id:
@@ -3053,8 +3248,10 @@ class VolumeMomentumTracker:
             logger.info(f"📱 Alert threshold: 3+ alerts per ticker")
             logger.info(f"🚨 Immediate alerts: ≥{self.immediate_spike_threshold:.0f}% price spikes (no waiting!)")
             logger.info(f"📱 Rate limiting: {self.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
+            logger.info("⏰ Hourly list_flat notifications: ✅ ENABLED")
             logger.info("📰 Recent headlines (last 3 days) with timestamps will be included in alerts")
             logger.info("📊 Relative volume information included in alerts")
+            logger.info(f"📝 Notifications logged to: {self.hourly_notifications_log}")
         else:
             logger.info("📱 Telegram notifications: ❌ DISABLED")
             logger.info("📰 News headlines: ❌ DISABLED (requires Telegram)")
@@ -3176,131 +3373,13 @@ class VolumeMomentumTracker:
                         disable_web_page_preview=True
                     )
 
-                    # Get latest screener data
-                    screener_data = self.get_volume_screener_data()
+                    # Use the reusable method to generate content
+                    response, error, tickers_data = self._generate_list_flat_content()
 
-                    if not screener_data:
-                        response = "❌ No screener data available. Please try again later."
+                    if error:
+                        response = error
                     else:
-                        import yfinance as yf
-                        from datetime import datetime, timedelta
-
-                        # Calculate ACTUAL flatness and intraday movement using historical data
-                        # Flatness = |today's_open - yesterday's_close|
-                        # Intraday movement = (today_close - today_open) / today_open * 100
-                        logger.info("📊 Calculating flatness and intraday movement with historical data...")
-                        tickers_with_data = []
-
-                        for record in screener_data:
-                            ticker = record.get('name', 'N/A')
-                            current_price = record.get('close', 0)
-                            current_volume = record.get('volume', 0)
-                            float_shares = record.get('float_shares_outstanding', 0)
-
-                            try:
-                                # Fetch historical data to get actual open and previous close
-                                stock = yf.Ticker(ticker)
-                                end_date = datetime.now()
-                                start_date = end_date - timedelta(days=5)
-                                hist = stock.history(start=start_date, end=end_date)
-
-                                if len(hist) >= 2:
-                                    # Get actual prices
-                                    prev_close = hist['Close'].iloc[-2]
-                                    today_open = hist['Open'].iloc[-1]
-                                    today_close = hist['Close'].iloc[-1]
-                                    prev_volume = hist['Volume'].iloc[-2]
-
-                                    # Calculate ACTUAL gap from previous close (flatness)
-                                    gap_amount = abs(today_open - prev_close)
-                                    gap_pct = (gap_amount / prev_close) * 100 if prev_close > 0 else float('inf')
-
-                                    # Calculate intraday movement
-                                    intraday_change = today_close - today_open
-                                    intraday_pct = (intraday_change / today_open) * 100 if today_open > 0 else 0
-
-                                    # Volume ratio
-                                    volume_ratio = current_volume / prev_volume if prev_volume > 0 else 0
-
-                                    tickers_with_data.append({
-                                        'ticker': ticker,
-                                        'flatness': gap_pct,  # Gap from prev close
-                                        'intraday_movement': intraday_pct,  # Intraday % change
-                                        'price': current_price,
-                                        'volume': current_volume,
-                                        'float': float_shares,
-                                        'prev_volume': prev_volume,
-                                        'volume_ratio': volume_ratio,
-                                        'today_open': today_open,
-                                        'prev_close': prev_close
-                                    })
-
-                                    logger.debug(f"{ticker}: Gap={gap_pct:.2f}%, Intraday={intraday_pct:+.2f}%, Vol ratio={volume_ratio:.1f}x")
-
-                            except Exception as e:
-                                logger.debug(f"⚠️ {ticker}: Error fetching historical data: {e}")
-                                continue
-
-                        logger.info(f"✅ Processed {len(tickers_with_data)} tickers with historical data")
-
-                        # Filter by volume: must be >= 1x previous day volume (for early detection)
-                        filtered_tickers = []
-                        for item in tickers_with_data:
-                            ticker = item['ticker']
-                            volume_ratio = item.get('volume_ratio', 0)
-
-                            # Check if current volume is at least 1x previous volume
-                            if volume_ratio >= 1:
-                                filtered_tickers.append(item)
-                                logger.info(f"✅ {ticker}: Gap={item['flatness']:.2f}%, Intraday={item['intraday_movement']:+.2f}%, Vol={volume_ratio:.1f}x")
-                            else:
-                                logger.debug(f"⚠️ {ticker}: Vol only {volume_ratio:.1f}x (needs 1x)")
-
-                        # Sort by intraday movement (descending - highest movement first)
-                        filtered_tickers.sort(key=lambda x: x['intraday_movement'], reverse=True)
-
-                        # Get top 20 (or however many passed the filter)
-                        top_20 = filtered_tickers[:20]
-
-                        # Get VIX data
-                        vix_data = self._get_vix_data()
-                        vix_str = "N/A"
-                        if vix_data:
-                            vix_str = f"{vix_data['current']:.2f} ({vix_data['level']}, {vix_data['week_trend']} {vix_data['week_change']:+.1f}%)"
-
-                        # Build response
-                        if len(top_20) == 0:
-                            response = f"📊 Stocks in Play (1x+ Volume)\n"
-                            response += f"📈 VIX: {vix_str}\n\n"
-                            response += "❌ No stocks found matching criteria:\n"
-                            response += "• Volume ≥ 1x previous day volume"
-                        else:
-                            response = f"📊 Top {len(top_20)} Stocks in Play (1x+ Vol)\n"
-                            response += f"📈 VIX: {vix_str}\n"
-                            response += f"Sorted by highest intraday movement\n\n"
-
-                            for i, item in enumerate(top_20, 1):
-                                ticker = item['ticker']
-                                price = item['price']
-                                volume = item['volume']
-                                float_shares = item['float']
-                                flatness = item['flatness']
-                                volume_ratio = item.get('volume_ratio', 0)
-                                intraday_movement = item.get('intraday_movement', 0)
-
-                                # Format float shares in millions
-                                float_m = float_shares / 1_000_000 if float_shares else 0
-
-                                # Format volume in millions
-                                vol_m = volume / 1_000_000 if volume else 0
-
-                                # Get TradingView link
-                                tv_link = self._get_tradingview_link(ticker)
-
-                                response += f"{i}. [{ticker}]({tv_link}) - Intraday: {intraday_movement:+.1f}% | Gap: {flatness:.2f}%\n"
-                                response += f"   💰 ${price:.2f} | 📊 Float: {float_m:.1f}M | 📈 Vol: {vol_m:.1f}M ({volume_ratio:.0f}x)\n\n"
-
-                            logger.info(f"📋 Sent list of {len(top_20)} stocks sorted by intraday movement to user")
+                        logger.info(f"📋 Sent list of {len(tickers_data)} stocks sorted by intraday movement to user")
 
                     # Send the list
                     await self.telegram_bot.send_message(
@@ -3369,14 +3448,28 @@ class VolumeMomentumTracker:
             
             # Add a general message handler to catch all other messages
             app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-            
+
+            # Add hourly job for list_flat notification
+            job_queue = app.job_queue
+            if job_queue:
+                # Schedule hourly list_flat notification (runs every hour)
+                job_queue.run_repeating(
+                    self._send_hourly_list_flat,
+                    interval=3600,  # 1 hour in seconds
+                    first=60,  # Start first job after 1 minute
+                    name='hourly_list_flat'
+                )
+                logger.info("⏰ Scheduled hourly list_flat notifications")
+            else:
+                logger.warning("⚠️ Job queue not available - hourly notifications disabled")
+
             # Start polling in a separate thread
             def run_bot():
                 try:
                     import asyncio
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                    
+
                     # Disable signal handling to avoid thread issues
                     app.run_polling(allowed_updates=["message"], stop_signals=None)
                 except Exception as e:
