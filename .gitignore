@@ -173,6 +173,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 screener.sh
+premarket_screener.sh
 end_of_day.sh
 paper_trades.sh
 momentum_data/
