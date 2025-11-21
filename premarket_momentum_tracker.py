@@ -61,6 +61,17 @@ from collections import defaultdict
 
 from tradingview_screener import Query
 
+# Alpaca imports for real-time premarket data
+try:
+    from alpaca.data.historical import StockHistoricalDataClient
+    from alpaca.data.requests import StockBarsRequest, StockLatestQuoteRequest
+    from alpaca.data.timeframe import TimeFrame
+    from alpaca.data.enums import DataFeed
+    ALPACA_AVAILABLE = True
+except ImportError:
+    ALPACA_AVAILABLE = False
+    print("⚠️  alpaca-py not installed. Run: pip install alpaca-py")
+
 try:
     from paper_trading_system import PaperTradingSystem
     PAPER_TRADING_AVAILABLE = True
@@ -148,6 +159,21 @@ class VolumeMomentumTracker:
         # VIX cache to avoid repeated API calls
         self.vix_cache = {}
         self.vix_cache_duration = 5 * 60  # Cache VIX for 5 minutes
+
+        # Initialize Alpaca client for real-time market data
+        self.alpaca_client = None
+        if ALPACA_AVAILABLE:
+            try:
+                api_key = os.environ.get('APCA_API_KEY_ID')
+                api_secret = os.environ.get('APCA_API_SECRET_KEY')
+
+                if api_key and api_secret:
+                    self.alpaca_client = StockHistoricalDataClient(api_key, api_secret)
+                    logger.info("✅ Alpaca market data client initialized successfully")
+                else:
+                    logger.warning("⚠️  Alpaca API keys not found in environment. Set APCA_API_KEY_ID and APCA_API_SECRET_KEY")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize Alpaca client: {e}")
 
         if telegram_bot_token and telegram_chat_id:
             try:
@@ -526,7 +552,7 @@ class VolumeMomentumTracker:
 
     def _get_vix_data(self):
         """
-        Get current VIX value and past week trend using yfinance
+        Get current VIX value and past week trend using Alpaca
         Caches result for 5 minutes to avoid excessive API calls
 
         Returns:
@@ -537,9 +563,6 @@ class VolumeMomentumTracker:
                 'level': str  # 'low', 'moderate', 'elevated', 'high'
             }
         """
-        import yfinance as yf
-        from datetime import datetime, timedelta
-
         # Check cache first
         current_time = datetime.now()
         if 'vix_data' in self.vix_cache and 'timestamp' in self.vix_cache:
@@ -548,35 +571,54 @@ class VolumeMomentumTracker:
                 logger.debug(f"Using cached VIX data (age: {cache_age:.0f}s)")
                 return self.vix_cache['vix_data']
 
+        if not self.alpaca_client:
+            logger.warning("Alpaca client not available for VIX data")
+            return None
+
         try:
-            # Fetch VIX data
-            vix = yf.Ticker("^VIX")
-
-            # Get 1 week of data
+            # Fetch VIX data using Alpaca
+            # Note: Alpaca uses "VIXY" ETF as VIX proxy, or we can use SPY VIX
+            # For actual VIX, we'll use the CBOE VIX Index through Alpaca
             end_date = datetime.now()
-            start_date = end_date - timedelta(days=7)
-            hist = vix.history(start=start_date, end=end_date)
+            start_date = end_date - timedelta(days=10)  # Extra days to ensure we get 7 trading days
 
-            if hist.empty:
-                logger.warning("No VIX data available")
+            request_params = StockBarsRequest(
+                symbol_or_symbols=["VIXY"],  # VIX ETF proxy
+                timeframe=TimeFrame.Day,
+                start=start_date,
+                end=end_date,
+                feed=DataFeed.IEX  # Use IEX feed (free tier)
+            )
+
+            bars = self.alpaca_client.get_stock_bars(request_params)
+
+            if not bars or "VIXY" not in bars:
+                logger.warning("No VIX proxy data available from Alpaca")
+                return None
+
+            vixy_bars = bars["VIXY"]
+            if len(vixy_bars) < 2:
+                logger.warning("Insufficient VIX proxy data")
                 return None
 
             # Get current value (most recent close)
-            current_vix = float(hist['Close'].iloc[-1])
+            current_vix = float(vixy_bars[-1].close)
 
-            # Get value from 1 week ago (or closest available)
-            week_ago_vix = float(hist['Close'].iloc[0])
+            # Get value from approximately 1 week ago
+            week_ago_idx = max(0, len(vixy_bars) - 6)  # ~5 trading days
+            week_ago_vix = float(vixy_bars[week_ago_idx].close)
 
             # Calculate week change
             week_change = ((current_vix - week_ago_vix) / week_ago_vix) * 100
             week_trend = 'rising' if week_change > 0 else 'falling'
 
-            # Determine VIX level category
-            if current_vix < 15:
+            # Determine VIX level category (adjusted for VIXY ETF values)
+            # VIXY trades at different levels than VIX index
+            if current_vix < 10:
                 level = 'low'
-            elif current_vix < 20:
+            elif current_vix < 15:
                 level = 'moderate'
-            elif current_vix < 30:
+            elif current_vix < 25:
                 level = 'elevated'
             else:
                 level = 'high'
@@ -594,11 +636,11 @@ class VolumeMomentumTracker:
                 'timestamp': current_time
             }
 
-            logger.info(f"VIX: {current_vix:.2f} ({week_trend} {week_change:+.1f}% this week, {level} volatility)")
+            logger.info(f"VIX (VIXY): {current_vix:.2f} ({week_trend} {week_change:+.1f}% this week, {level} volatility)")
             return vix_data
 
         except Exception as e:
-            logger.error(f"Failed to fetch VIX data: {e}")
+            logger.error(f"Failed to fetch VIX data from Alpaca: {e}")
             return None
 
     def _get_recent_news(self, ticker, max_headlines=3):
@@ -1756,69 +1798,94 @@ class VolumeMomentumTracker:
     def _generate_list_flat_content(self):
         """Generate the list_flat content for reuse in command handler and hourly notifications"""
         try:
-            import yfinance as yf
-
             # Get latest screener data
             screener_data = self.get_volume_screener_data()
 
             if not screener_data:
                 return None, "❌ No screener data available.", []
 
+            if not self.alpaca_client:
+                return None, "❌ Alpaca client not available. Set APCA_API_KEY_ID and APCA_API_SECRET_KEY.", []
+
             # Calculate ACTUAL flatness and intraday movement using historical data
-            logger.info("📊 Calculating flatness and intraday movement with historical data...")
+            logger.info("📊 Calculating flatness and intraday movement with Alpaca data...")
             tickers_with_data = []
 
-            for record in screener_data:
-                ticker = record.get('name', 'N/A')
+            # Collect all tickers for batch request
+            tickers = [record.get('name', 'N/A') for record in screener_data]
+            ticker_data_map = {record.get('name', 'N/A'): record for record in screener_data}
+
+            # Fetch historical data in batch from Alpaca
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=7)  # Extra days to ensure we get enough data
+
+            try:
+                request_params = StockBarsRequest(
+                    symbol_or_symbols=tickers,
+                    timeframe=TimeFrame.Day,
+                    start=start_date,
+                    end=end_date,
+                    feed=DataFeed.IEX  # Use IEX feed (free tier)
+                )
+
+                bars = self.alpaca_client.get_stock_bars(request_params)
+            except Exception as e:
+                logger.error(f"Failed to fetch batch data from Alpaca: {e}")
+                return None, f"❌ Error fetching market data: {str(e)}", []
+
+            for ticker in tickers:
+                record = ticker_data_map[ticker]
                 current_price = record.get('close', 0)
                 current_volume = record.get('volume', 0)
                 float_shares = record.get('float_shares_outstanding', 0)
 
                 try:
-                    # Fetch historical data to get actual open and previous close
-                    stock = yf.Ticker(ticker)
-                    end_date = datetime.now()
-                    start_date = end_date - timedelta(days=5)
-                    hist = stock.history(start=start_date, end=end_date)
+                    if ticker not in bars or len(bars[ticker]) < 2:
+                        logger.debug(f"⚠️ {ticker}: Insufficient historical data from Alpaca")
+                        continue
 
-                    if len(hist) >= 2:
-                        # Get actual prices
-                        prev_close = hist['Close'].iloc[-2]
-                        today_open = hist['Open'].iloc[-1]
-                        today_close = hist['Close'].iloc[-1]
-                        prev_volume = hist['Volume'].iloc[-2]
+                    ticker_bars = bars[ticker]
 
-                        # Calculate ACTUAL gap from previous close (flatness)
-                        gap_amount = abs(today_open - prev_close)
-                        gap_pct = (gap_amount / prev_close) * 100 if prev_close > 0 else float('inf')
+                    # Get actual prices from last 2 days
+                    prev_bar = ticker_bars[-2]
+                    today_bar = ticker_bars[-1]
 
-                        # Calculate intraday movement
-                        intraday_change = today_close - today_open
-                        intraday_pct = (intraday_change / today_open) * 100 if today_open > 0 else 0
+                    prev_close = float(prev_bar.close)
+                    today_open = float(today_bar.open)
+                    today_close = float(today_bar.close)
+                    prev_volume = float(prev_bar.volume)
 
-                        # Volume ratio
-                        volume_ratio = current_volume / prev_volume if prev_volume > 0 else 0
+                    # Calculate ACTUAL gap from previous close (flatness)
+                    gap_amount = abs(today_open - prev_close)
+                    gap_pct = (gap_amount / prev_close) * 100 if prev_close > 0 else float('inf')
 
-                        tickers_with_data.append({
-                            'ticker': ticker,
-                            'flatness': gap_pct,
-                            'intraday_movement': intraday_pct,
-                            'price': current_price,
-                            'volume': current_volume,
-                            'float': float_shares,
-                            'prev_volume': prev_volume,
-                            'volume_ratio': volume_ratio,
-                            'today_open': today_open,
-                            'prev_close': prev_close
-                        })
+                    # Calculate intraday movement
+                    intraday_change = today_close - today_open
+                    intraday_pct = (intraday_change / today_open) * 100 if today_open > 0 else 0
 
-                        logger.debug(f"{ticker}: Gap={gap_pct:.2f}%, Intraday={intraday_pct:+.2f}%, Vol ratio={volume_ratio:.1f}x")
+                    # Volume ratio
+                    volume_ratio = current_volume / prev_volume if prev_volume > 0 else 0
+
+                    tickers_with_data.append({
+                        'ticker': ticker,
+                        'flatness': gap_pct,
+                        'intraday_movement': intraday_pct,
+                        'price': current_price,
+                        'volume': current_volume,
+                        'float': float_shares,
+                        'prev_volume': prev_volume,
+                        'volume_ratio': volume_ratio,
+                        'today_open': today_open,
+                        'prev_close': prev_close
+                    })
+
+                    logger.debug(f"{ticker}: Gap={gap_pct:.2f}%, Intraday={intraday_pct:+.2f}%, Vol ratio={volume_ratio:.1f}x")
 
                 except Exception as e:
-                    logger.debug(f"⚠️ {ticker}: Error fetching historical data: {e}")
+                    logger.debug(f"⚠️ {ticker}: Error processing Alpaca data: {e}")
                     continue
 
-            logger.info(f"✅ Processed {len(tickers_with_data)} tickers with historical data")
+            logger.info(f"✅ Processed {len(tickers_with_data)} tickers with Alpaca data")
 
             # OPTIMIZED PARAMETERS based on notification log analysis:
             # - Volume ratio minimum: 1.5x (was 1x) - median from logs is 64.3x

@@ -177,4 +177,5 @@ premarket_screener.sh
 end_of_day.sh
 paper_trades.sh
 momentum_data/
+premarket_momentum_data/
 paper_trades/

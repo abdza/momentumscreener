@@ -6,3 +6,4 @@ python-telegram-bot
 pyTelegramBotAPI
 ib-insync
 matplotlib
+alpaca-py
