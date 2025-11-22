@@ -64,7 +64,7 @@ from tradingview_screener import Query
 # Alpaca imports for real-time premarket data
 try:
     from alpaca.data.historical import StockHistoricalDataClient
-    from alpaca.data.requests import StockBarsRequest, StockLatestQuoteRequest
+    from alpaca.data.requests import StockBarsRequest, StockLatestQuoteRequest, StockLatestTradeRequest
     from alpaca.data.timeframe import TimeFrame
     from alpaca.data.enums import DataFeed
     ALPACA_AVAILABLE = True
@@ -159,6 +159,10 @@ class VolumeMomentumTracker:
         # VIX cache to avoid repeated API calls
         self.vix_cache = {}
         self.vix_cache_duration = 5 * 60  # Cache VIX for 5 minutes
+
+        # Alpaca price cache to avoid excessive API calls
+        self.alpaca_price_cache = {}  # {symbol: {'price': float, 'volume': int, 'timestamp': datetime}}
+        self.alpaca_price_cache_duration = 60  # Cache prices for 1 minute
 
         # Initialize Alpaca client for real-time market data
         self.alpaca_client = None
@@ -642,6 +646,110 @@ class VolumeMomentumTracker:
         except Exception as e:
             logger.error(f"Failed to fetch VIX data from Alpaca: {e}")
             return None
+
+    def _update_prices_with_alpaca(self, records):
+        """
+        Update close price and volume in records using Alpaca latest trade data.
+        This ensures we get real-time prices regardless of market hours.
+        Uses caching to reduce API calls.
+
+        Args:
+            records: List of dicts from TradingView screener
+
+        Returns:
+            Updated list of records with current prices from Alpaca
+        """
+        if not self.alpaca_client:
+            logger.warning("Alpaca client not available - using TradingView prices only")
+            return records
+
+        if not records:
+            return records
+
+        try:
+            current_time = datetime.now()
+
+            # Extract all symbols and check which need updating
+            all_symbols = [record['name'] for record in records]
+            symbols_to_fetch = []
+            cached_count = 0
+
+            for symbol in all_symbols:
+                if symbol in self.alpaca_price_cache:
+                    cache_entry = self.alpaca_price_cache[symbol]
+                    cache_age = (current_time - cache_entry['timestamp']).total_seconds()
+                    if cache_age < self.alpaca_price_cache_duration:
+                        cached_count += 1
+                        continue
+                symbols_to_fetch.append(symbol)
+
+            logger.info(f"Updating prices: {len(symbols_to_fetch)} to fetch, {cached_count} from cache")
+
+            # Fetch from Alpaca only for symbols that need updating
+            if symbols_to_fetch:
+                # Fetch latest trades for symbols in batch
+                request_params = StockLatestTradeRequest(symbol_or_symbols=symbols_to_fetch)
+                latest_trades = self.alpaca_client.get_stock_latest_trade(request_params)
+
+                # Also fetch recent bars to get volume data
+                end_time = datetime.now()
+                start_time = end_time - timedelta(days=1)
+
+                bars_request = StockBarsRequest(
+                    symbol_or_symbols=symbols_to_fetch,
+                    timeframe=TimeFrame.Day,
+                    start=start_time,
+                    end=end_time,
+                    feed=DataFeed.IEX
+                )
+                bars_data = self.alpaca_client.get_stock_bars(bars_request)
+
+                # Update cache with new data
+                for symbol in symbols_to_fetch:
+                    cache_entry = {'timestamp': current_time, 'price': None, 'volume': None}
+
+                    if symbol in latest_trades:
+                        cache_entry['price'] = float(latest_trades[symbol].price)
+
+                    if bars_data and symbol in bars_data:
+                        symbol_bars = bars_data[symbol]
+                        if symbol_bars:
+                            cache_entry['volume'] = int(symbol_bars[-1].volume)
+
+                    self.alpaca_price_cache[symbol] = cache_entry
+
+            # Update records with cached/fresh Alpaca data
+            updated_count = 0
+            for record in records:
+                symbol = record['name']
+
+                if symbol in self.alpaca_price_cache:
+                    cache_entry = self.alpaca_price_cache[symbol]
+
+                    # Update close price
+                    if cache_entry['price'] is not None:
+                        old_close = record.get('close', 0)
+                        record['close'] = cache_entry['price']
+
+                        # Log significant price differences
+                        if old_close > 0:
+                            price_diff_pct = ((record['close'] - old_close) / old_close) * 100
+                            if abs(price_diff_pct) > 1:
+                                logger.debug(f"{symbol}: Updated close {old_close:.2f} -> {record['close']:.2f} ({price_diff_pct:+.1f}%)")
+
+                        updated_count += 1
+
+                    # Update volume
+                    if cache_entry['volume'] is not None:
+                        record['volume'] = cache_entry['volume']
+
+            logger.info(f"✅ Updated {updated_count}/{len(records)} symbols with Alpaca prices")
+            return records
+
+        except Exception as e:
+            logger.error(f"Failed to update prices with Alpaca: {e}")
+            # Return original records if update fails
+            return records
 
     def _get_recent_news(self, ticker, max_headlines=3):
         """
@@ -1903,14 +2011,14 @@ class VolumeMomentumTracker:
                 intraday_movement = abs(item.get('intraday_movement', 0))
 
                 # Apply optimized filters
-                if volume_ratio >= MIN_VOLUME_RATIO and intraday_movement >= MIN_INTRADAY_MOVEMENT:
-                    filtered_tickers.append(item)
-                    logger.debug(f"✅ {ticker}: Gap={item['flatness']:.2f}%, Intraday={item['intraday_movement']:+.2f}%, Vol={volume_ratio:.1f}x")
-                else:
-                    if volume_ratio < MIN_VOLUME_RATIO:
-                        logger.debug(f"⚠️ {ticker}: Vol only {volume_ratio:.1f}x (needs {MIN_VOLUME_RATIO}x)")
-                    elif intraday_movement < MIN_INTRADAY_MOVEMENT:
-                        logger.debug(f"⚠️ {ticker}: Intraday only {intraday_movement:.1f}% (needs {MIN_INTRADAY_MOVEMENT}%)")
+                # if volume_ratio >= MIN_VOLUME_RATIO and intraday_movement >= MIN_INTRADAY_MOVEMENT:
+                #     filtered_tickers.append(item)
+                #     logger.debug(f"✅ {ticker}: Gap={item['flatness']:.2f}%, Intraday={item['intraday_movement']:+.2f}%, Vol={volume_ratio:.1f}x")
+                # else:
+                     #if volume_ratio < MIN_VOLUME_RATIO:
+                     #   logger.debug(f"⚠️ {ticker}: Vol only {volume_ratio:.1f}x (needs {MIN_VOLUME_RATIO}x)")
+                    # elif intraday_movement < MIN_INTRADAY_MOVEMENT:
+                        # logger.debug(f"⚠️ {ticker}: Intraday only {intraday_movement:.1f}% (needs {MIN_INTRADAY_MOVEMENT}%)")
 
             # Sort by intraday movement (descending)
             filtered_tickers.sort(key=lambda x: x['intraday_movement'], reverse=True)
@@ -2581,6 +2689,8 @@ class VolumeMomentumTracker:
                             break
 
                     logger.info(f"After filtering (price < $20, no OTC): {len(filtered_records)} records")
+                    # Update prices with Alpaca for real-time data
+                    filtered_records = self._update_prices_with_alpaca(filtered_records)
                     return filtered_records
                 else:
                     logger.error(f"Unexpected data format: {type(df_data)}")
@@ -2620,6 +2730,8 @@ class VolumeMomentumTracker:
                                 break
 
                         logger.info(f"Simplified query filtered results: {len(filtered_records)} records")
+                        # Update prices with Alpaca for real-time data
+                        filtered_records = self._update_prices_with_alpaca(filtered_records)
                         return filtered_records
 
             except Exception as e2:
