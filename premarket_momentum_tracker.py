@@ -205,12 +205,17 @@ class VolumeMomentumTracker:
         self.previous_rankings = {}
         self.price_history = {}
         self.premarket_history = {}  # Track pre-market data
-        
+
         # Flat-to-spike detection
         self.flat_period_history = {}  # Track recent price data for flat detection
         self.flat_period_window = 30 * 60  # 30 minutes for flat period detection
         self.flat_volatility_threshold = 2.5  # Max % volatility to consider "flat" (optimized based on tests)
         self.min_flat_duration = 6 * 60  # Minimum 6 minutes of flat behavior (optimized for better detection)
+
+        # After-hours to premarket spike detection
+        self.afterhours_history = {}  # Track after-hours data from previous day
+        self.afterhours_volatility_threshold = 3.0  # Max % volatility to consider "flat" in after-hours
+        self.min_afterhours_duration = 15 * 60  # Minimum 15 minutes of after-hours data
 
         # Ticker frequency tracking
         self.ticker_counters = self._load_ticker_counters()
@@ -647,6 +652,253 @@ class VolumeMomentumTracker:
             logger.error(f"Failed to fetch VIX data from Alpaca: {e}")
             return None
 
+    def _calculate_premarket_relative_volume(self, symbols):
+        """
+        Calculate premarket relative volume for symbols by comparing current premarket volume
+        to average premarket volume over the past 10 trading days.
+
+        Args:
+            symbols: List of stock symbols to calculate for
+
+        Returns:
+            Dict mapping symbol to premarket relative volume
+        """
+        if not self.alpaca_client or not symbols:
+            return {}
+
+        try:
+            # Fetch 15 calendar days of minute bars to get ~10 trading days
+            end_time = datetime.now()
+            start_time = end_time - timedelta(days=15)
+
+            # Request minute bars with extended hours to get premarket data
+            bars_request = StockBarsRequest(
+                symbol_or_symbols=symbols,
+                timeframe=TimeFrame.Minute,
+                start=start_time,
+                end=end_time,
+                feed=DataFeed.IEX
+            )
+
+            logger.info(f"Fetching premarket historical data for {len(symbols)} symbols...")
+            bars_data = self.alpaca_client.get_stock_bars(bars_request)
+
+            premarket_rel_vol = {}
+
+            for symbol in symbols:
+                if symbol not in bars_data:
+                    continue
+
+                symbol_bars = bars_data[symbol]
+                if not symbol_bars:
+                    continue
+
+                # Group bars by date and calculate premarket volume for each day
+                daily_premarket_volumes = {}
+                today_premarket_volume = 0
+                today = end_time.date()
+
+                for bar in symbol_bars:
+                    bar_time = bar.timestamp
+                    bar_date = bar_time.date()
+                    bar_hour = bar_time.hour
+                    bar_minute = bar_time.minute
+
+                    # Premarket is 4:00 AM - 9:30 AM ET
+                    # Note: Alpaca returns times in UTC, so we need to account for timezone
+                    # For EST/EDT: premarket is roughly 9:00-14:30 UTC (EST) or 8:00-13:30 UTC (EDT)
+                    # Simplified: check if it's before market open (typically before 14:30 UTC)
+                    is_premarket = (bar_hour < 14) or (bar_hour == 14 and bar_minute < 30)
+
+                    if is_premarket:
+                        if bar_date == today:
+                            today_premarket_volume += bar.volume
+                        else:
+                            if bar_date not in daily_premarket_volumes:
+                                daily_premarket_volumes[bar_date] = 0
+                            daily_premarket_volumes[bar_date] += bar.volume
+
+                # Calculate average premarket volume (excluding today)
+                if daily_premarket_volumes:
+                    avg_premarket_volume = sum(daily_premarket_volumes.values()) / len(daily_premarket_volumes)
+
+                    # Calculate relative volume
+                    if avg_premarket_volume > 0 and today_premarket_volume > 0:
+                        rel_vol = today_premarket_volume / avg_premarket_volume
+                        premarket_rel_vol[symbol] = rel_vol
+                        logger.debug(f"{symbol}: PM Vol {today_premarket_volume:,} / Avg {avg_premarket_volume:,.0f} = {rel_vol:.1f}x")
+
+            logger.info(f"Calculated premarket relative volume for {len(premarket_rel_vol)} symbols")
+            return premarket_rel_vol
+
+        except Exception as e:
+            logger.error(f"Failed to calculate premarket relative volume: {e}")
+            return {}
+
+    def _detect_afterhours_flat_period(self, ticker):
+        """
+        Detect if a ticker was in a flat period during after-hours the previous day,
+        then spiked in premarket.
+
+        Args:
+            ticker: Stock symbol to analyze
+
+        Returns:
+            dict with keys:
+                'was_flat_afterhours': bool,
+                'afterhours_volatility': float,
+                'afterhours_duration_minutes': int,
+                'afterhours_avg_price': float,
+                'afterhours_price_range': tuple,
+                'premarket_spike_from_ah': float (percentage spike from after-hours avg)
+        """
+        if not self.alpaca_client:
+            return {
+                'was_flat_afterhours': False,
+                'afterhours_volatility': 0,
+                'afterhours_duration_minutes': 0,
+                'afterhours_avg_price': 0,
+                'afterhours_price_range': (0, 0),
+                'premarket_spike_from_ah': 0,
+                'reason': 'no_alpaca_client'
+            }
+
+        try:
+            # Fetch minute bars from yesterday and today with extended hours
+            end_time = datetime.now()
+            start_time = end_time - timedelta(days=2)  # Get 2 days to ensure we have yesterday
+
+            bars_request = StockBarsRequest(
+                symbol_or_symbols=[ticker],
+                timeframe=TimeFrame.Minute,
+                start=start_time,
+                end=end_time,
+                feed=DataFeed.IEX
+            )
+
+            bars_data = self.alpaca_client.get_stock_bars(bars_request)
+
+            if ticker not in bars_data:
+                return {
+                    'was_flat_afterhours': False,
+                    'afterhours_volatility': 0,
+                    'afterhours_duration_minutes': 0,
+                    'afterhours_avg_price': 0,
+                    'afterhours_price_range': (0, 0),
+                    'premarket_spike_from_ah': 0,
+                    'reason': 'no_data'
+                }
+
+            symbol_bars = bars_data[ticker]
+            if not symbol_bars:
+                return {
+                    'was_flat_afterhours': False,
+                    'afterhours_volatility': 0,
+                    'afterhours_duration_minutes': 0,
+                    'afterhours_avg_price': 0,
+                    'afterhours_price_range': (0, 0),
+                    'premarket_spike_from_ah': 0,
+                    'reason': 'no_bars'
+                }
+
+            # Separate after-hours (previous day) and premarket (today) data
+            today = end_time.date()
+            yesterday = today - timedelta(days=1)
+
+            afterhours_prices = []
+            premarket_prices = []
+
+            for bar in symbol_bars:
+                bar_time = bar.timestamp
+                bar_date = bar_time.date()
+                bar_hour = bar_time.hour
+                bar_minute = bar_time.minute
+
+                # After-hours is 4:00 PM - 8:00 PM ET (20:00-00:00 UTC for EST, 19:00-23:00 for EDT)
+                # Market close: 4:00 PM ET = 21:00 UTC (EST) or 20:00 UTC (EDT)
+                # After-hours end: 8:00 PM ET = 01:00 UTC next day (EST) or 00:00 UTC (EDT)
+                is_afterhours = (bar_hour >= 20 or bar_hour == 0) and bar_date >= yesterday - timedelta(days=1)
+
+                # Premarket is 4:00 AM - 9:30 AM ET (9:00-14:30 UTC for EST, 8:00-13:30 for EDT)
+                is_premarket = (bar_hour < 14) or (bar_hour == 14 and bar_minute < 30)
+
+                if is_afterhours and bar_date >= yesterday and bar_date < today:
+                    afterhours_prices.append(float(bar.close))
+                elif is_premarket and bar_date == today:
+                    premarket_prices.append(float(bar.close))
+
+            # Need sufficient after-hours data
+            if len(afterhours_prices) < 5:  # At least 5 minutes of data
+                return {
+                    'was_flat_afterhours': False,
+                    'afterhours_volatility': 0,
+                    'afterhours_duration_minutes': 0,
+                    'afterhours_avg_price': 0,
+                    'afterhours_price_range': (0, 0),
+                    'premarket_spike_from_ah': 0,
+                    'reason': f'insufficient_ah_data_{len(afterhours_prices)}_bars'
+                }
+
+            # Calculate after-hours statistics
+            ah_avg_price = sum(afterhours_prices) / len(afterhours_prices)
+            ah_min_price = min(afterhours_prices)
+            ah_max_price = max(afterhours_prices)
+            ah_price_range = ah_max_price - ah_min_price
+
+            # Calculate volatility as percentage of average price
+            if ah_avg_price > 0:
+                ah_volatility = (ah_price_range / ah_avg_price) * 100
+            else:
+                ah_volatility = 0
+
+            # Duration in minutes
+            ah_duration_minutes = len(afterhours_prices)
+
+            # Determine if after-hours was "flat"
+            was_flat_afterhours = (
+                ah_volatility <= self.afterhours_volatility_threshold and
+                ah_duration_minutes >= (self.min_afterhours_duration / 60)
+            )
+
+            # Calculate premarket spike from after-hours average
+            premarket_spike_from_ah = 0
+            if premarket_prices and ah_avg_price > 0:
+                current_pm_price = premarket_prices[-1]  # Most recent premarket price
+                premarket_spike_from_ah = ((current_pm_price - ah_avg_price) / ah_avg_price) * 100
+
+            result = {
+                'was_flat_afterhours': was_flat_afterhours,
+                'afterhours_volatility': ah_volatility,
+                'afterhours_duration_minutes': ah_duration_minutes,
+                'afterhours_avg_price': ah_avg_price,
+                'afterhours_price_range': (ah_min_price, ah_max_price),
+                'premarket_spike_from_ah': premarket_spike_from_ah,
+                'reason': 'flat_detected' if was_flat_afterhours else f'volatility_{ah_volatility:.1f}%'
+            }
+
+            # Cache the result for this ticker (valid for current day only)
+            cache_key = f"{ticker}_{today}"
+            self.afterhours_history[cache_key] = {
+                'data': result,
+                'timestamp': datetime.now()
+            }
+
+            logger.debug(f"{ticker} AH Analysis: Flat={was_flat_afterhours}, Vol={ah_volatility:.1f}%, PM Spike={premarket_spike_from_ah:+.1f}%")
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to detect after-hours flat period for {ticker}: {e}")
+            return {
+                'was_flat_afterhours': False,
+                'afterhours_volatility': 0,
+                'afterhours_duration_minutes': 0,
+                'afterhours_avg_price': 0,
+                'afterhours_price_range': (0, 0),
+                'premarket_spike_from_ah': 0,
+                'reason': f'error_{str(e)}'
+            }
+
     def _update_prices_with_alpaca(self, records):
         """
         Update close price and volume in records using Alpaca latest trade data.
@@ -691,9 +943,9 @@ class VolumeMomentumTracker:
                 request_params = StockLatestTradeRequest(symbol_or_symbols=symbols_to_fetch)
                 latest_trades = self.alpaca_client.get_stock_latest_trade(request_params)
 
-                # Also fetch recent bars to get volume data
+                # Also fetch recent bars to get volume data and previous close
                 end_time = datetime.now()
-                start_time = end_time - timedelta(days=1)
+                start_time = end_time - timedelta(days=5)  # Get 5 days to ensure we have at least 2 trading days
 
                 bars_request = StockBarsRequest(
                     symbol_or_symbols=symbols_to_fetch,
@@ -706,7 +958,7 @@ class VolumeMomentumTracker:
 
                 # Update cache with new data
                 for symbol in symbols_to_fetch:
-                    cache_entry = {'timestamp': current_time, 'price': None, 'volume': None}
+                    cache_entry = {'timestamp': current_time, 'price': None, 'volume': None, 'previous_close': None}
 
                     if symbol in latest_trades:
                         cache_entry['price'] = float(latest_trades[symbol].price)
@@ -715,6 +967,12 @@ class VolumeMomentumTracker:
                         symbol_bars = bars_data[symbol]
                         if symbol_bars:
                             cache_entry['volume'] = int(symbol_bars[-1].volume)
+                            # Get previous day's close (includes after-market)
+                            if len(symbol_bars) >= 2:
+                                cache_entry['previous_close'] = float(symbol_bars[-2].close)
+                            elif len(symbol_bars) == 1:
+                                # If only one bar, use it as previous close
+                                cache_entry['previous_close'] = float(symbol_bars[-1].close)
 
                     self.alpaca_price_cache[symbol] = cache_entry
 
@@ -743,7 +1001,25 @@ class VolumeMomentumTracker:
                     if cache_entry['volume'] is not None:
                         record['volume'] = cache_entry['volume']
 
+                    # Update previous close and calculate change from previous close
+                    if cache_entry['previous_close'] is not None:
+                        record['previous_close'] = cache_entry['previous_close']
+                        # Calculate change from previous close (includes after-market)
+                        if cache_entry['price'] is not None and cache_entry['previous_close'] > 0:
+                            change_from_prev = ((cache_entry['price'] - cache_entry['previous_close']) / cache_entry['previous_close']) * 100
+                            record['change_from_prev_close'] = change_from_prev
+
             logger.info(f"✅ Updated {updated_count}/{len(records)} symbols with Alpaca prices")
+
+            # Calculate premarket relative volume for all symbols
+            premarket_rel_vol = self._calculate_premarket_relative_volume(all_symbols)
+
+            # Add premarket relative volume to records
+            for record in records:
+                symbol = record['name']
+                if symbol in premarket_rel_vol:
+                    record['premarket_relative_volume'] = premarket_rel_vol[symbol]
+
             return records
 
         except Exception as e:
@@ -1473,10 +1749,18 @@ class VolumeMomentumTracker:
         # - Recent market shift: Average volume for successes increased from 156x to 676x in last week
         # - Market more selective: Requires higher volume thresholds for success
         
-        if alert_type == "flat_to_spike":
+        if alert_type == "afterhours_flat_to_premarket_spike":
+            flags.append("🌙 AH-FLAT→PM-SPIKE")
+            score += 50  # High value pattern - stock was quiet after-hours, then spiked in premarket
+
+            # Extra bonus for larger after-hours to premarket spikes
+            if change_pct >= 75:
+                flags.append("🚀 BIG AH→PM SPIKE")
+                score += 45  # Significant bonus for large spikes
+        elif alert_type == "flat_to_spike":
             flags.append("🎯 FLAT-TO-SPIKE")
             score += 40  # Reduced from 60 - data shows regular spikes with high volume outperform
-            
+
             # Extra bonus for larger flat-to-spike patterns
             if change_pct >= 75:
                 flags.append("🚀 BIG FLAT-TO-SPIKE")
@@ -1682,9 +1966,11 @@ class VolumeMomentumTracker:
             )
             
             # Bonus for flat-to-spike patterns
-            if alert_type == "flat_to_spike":
+            if alert_type == "afterhours_flat_to_premarket_spike":
+                score *= 1.3  # 30% bonus for after-hours flat to premarket spike
+            elif alert_type == "flat_to_spike":
                 score *= 1.2  # 20% bonus for flat-to-spike
-            
+
             return round(score, 2)
         except:
             return 0.0
@@ -2636,6 +2922,8 @@ class VolumeMomentumTracker:
                 alerts.sort(key=lambda x: (x.get('appearance_count', 0), abs(x.get('change_pct', x.get('premarket_change', 0)))), reverse=True)
             elif default_alert_type == 'premarket_volume':
                 alerts.sort(key=lambda x: (x.get('appearance_count', 0), x.get('premarket_volume', 0)), reverse=True)
+            elif default_alert_type == 'sustained_positive':
+                alerts.sort(key=lambda x: (x.get('appearance_count', 0), x.get('change_from_prev_close', 0)), reverse=True)
         except Exception as e:
             logger.error(f"Error sorting alerts for {default_alert_type}: {e}")
             # Fall back to simple sort by appearance count only
@@ -2990,15 +3278,24 @@ class VolumeMomentumTracker:
                     close_price = record.get('close', 0)
                     current_premarket_price = close_price * (1 + premarket_change / 100)
 
+                    # Check for after-hours flat to premarket spike pattern
+                    ah_analysis = self._detect_afterhours_flat_period(ticker)
+                    alert_type = 'significant_premarket_move'
+
+                    # If after-hours was flat and we have a significant premarket spike, mark as special pattern
+                    if ah_analysis['was_flat_afterhours'] and premarket_change > 10:
+                        alert_type = 'afterhours_flat_to_premarket_spike'
+
                     premarket_price_alerts.append({
                         'ticker': ticker,
                         'premarket_change': premarket_change,
                         'current_price': current_premarket_price,
                         'volume': record.get('volume', 0),
-                        'relative_volume': record.get('relative_volume_10d_calc', 0),
+                        'premarket_relative_volume': record.get('premarket_relative_volume', 0),
                         'sector': record.get('sector', 'Unknown'),
-                        'alert_type': 'significant_premarket_move',
-                        'change_from_open': record.get('change_from_open', 0)
+                        'alert_type': alert_type,
+                        'change_from_open': record.get('change_from_open', 0),
+                        'afterhours_analysis': ah_analysis
                     })
 
                 # Alert on high pre-market volume (if available)
@@ -3012,7 +3309,7 @@ class VolumeMomentumTracker:
                         'premarket_volume': premarket_volume,
                         'current_price': current_premarket_price,
                         'premarket_change': premarket_change,
-                        'relative_volume': record.get('relative_volume_10d_calc', 0),
+                        'premarket_relative_volume': record.get('premarket_relative_volume', 0),
                         'sector': record.get('sector', 'Unknown'),
                         'alert_type': 'high_premarket_volume',
                         'change_from_open': record.get('change_from_open', 0)
@@ -3046,7 +3343,7 @@ class VolumeMomentumTracker:
                         'premarket_change_acceleration': pm_change_acceleration,
                         'current_price': current_premarket_price,
                         'volume': current_record.get('volume', 0),
-                        'relative_volume': current_record.get('relative_volume_10d_calc', 0),
+                        'premarket_relative_volume': current_record.get('premarket_relative_volume', 0),
                         'sector': current_record.get('sector', 'Unknown'),
                         'alert_type': 'premarket_acceleration',
                         'change_from_open': current_record.get('change_from_open', 0)
@@ -3066,7 +3363,7 @@ class VolumeMomentumTracker:
                             'premarket_volume_change': pm_volume_change,
                             'current_price': current_premarket_price,
                             'premarket_change': current_pm_change,
-                            'relative_volume': current_record.get('relative_volume_10d_calc', 0),
+                            'premarket_relative_volume': current_record.get('premarket_relative_volume', 0),
                             'sector': current_record.get('sector', 'Unknown'),
                             'alert_type': 'premarket_volume_surge',
                             'change_from_open': current_record.get('change_from_open', 0)
@@ -3078,15 +3375,24 @@ class VolumeMomentumTracker:
                     close_price = current_record.get('close', 0)
                     current_premarket_price = close_price * (1 + current_pm_change / 100)
 
+                    # Check for after-hours flat to premarket spike pattern
+                    ah_analysis = self._detect_afterhours_flat_period(ticker)
+                    alert_type = 'new_premarket_move'
+
+                    # If after-hours was flat and we have a significant premarket spike, mark as special pattern
+                    if ah_analysis['was_flat_afterhours'] and current_pm_change > 10:
+                        alert_type = 'afterhours_flat_to_premarket_spike'
+
                     premarket_price_alerts.append({
                         'ticker': ticker,
                         'premarket_change': current_pm_change,
                         'current_price': current_premarket_price,
                         'volume': current_record.get('volume', 0),
-                        'relative_volume': current_record.get('relative_volume_10d_calc', 0),
+                        'premarket_relative_volume': current_record.get('premarket_relative_volume', 0),
                         'sector': current_record.get('sector', 'Unknown'),
-                        'alert_type': 'new_premarket_move',
-                        'change_from_open': current_record.get('change_from_open', 0)
+                        'alert_type': alert_type,
+                        'change_from_open': current_record.get('change_from_open', 0),
+                        'afterhours_analysis': ah_analysis
                     })
 
         # Sort alerts - price alerts by biggest POSITIVE moves
@@ -3100,19 +3406,21 @@ class VolumeMomentumTracker:
         return premarket_volume_alerts, premarket_price_alerts
 
     def analyze_sustained_positive(self, current_data):
-        """Analyze tickers maintaining >10% gain from opening price (sustained positive momentum)"""
+        """Analyze tickers maintaining >10% gain from previous day's close (sustained positive momentum)"""
         sustained_positive_alerts = []
 
         for record in current_data:
             ticker = record.get('name')
-            change_from_open = record.get('change_from_open', 0)
+            # Use change from previous close (includes after-market) instead of change from open
+            change_from_prev_close = record.get('change_from_prev_close', 0)
 
-            # Check if ticker is maintaining >10% gain from opening price
-            if change_from_open > 10:
+            # Check if ticker is maintaining >10% gain from previous day's close
+            if change_from_prev_close > 10:
                 sustained_positive_alerts.append({
                     'ticker': ticker,
-                    'change_from_open': change_from_open,
+                    'change_from_prev_close': change_from_prev_close,
                     'current_price': record.get('close', 0),
+                    'previous_close': record.get('previous_close', 0),
                     'change_pct': record.get('change|5', 0),
                     'volume': record.get('volume', 0),
                     'relative_volume': record.get('relative_volume_10d_calc', 0),
@@ -3121,7 +3429,7 @@ class VolumeMomentumTracker:
                 })
 
         # Sort by biggest sustained gains
-        sustained_positive_alerts.sort(key=lambda x: x['change_from_open'], reverse=True)
+        sustained_positive_alerts.sort(key=lambda x: x['change_from_prev_close'], reverse=True)
 
         # Add counters and re-sort by frequency
         sustained_positive_alerts = self._add_counter_to_alerts(sustained_positive_alerts, 'sustained_positive')
@@ -3244,19 +3552,19 @@ class VolumeMomentumTracker:
             for alert in premarket_volume_alerts[:5]:  # Top 5
                 try:
                     count = alert.get('appearance_count', 1)
-                    rel_vol = alert.get('relative_volume', 0)
+                    rel_vol = alert.get('premarket_relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
                     pm_change = alert.get('premarket_change', 0)
-                    
+
                     # Mark immediate spikes
                     spike_marker = " 🚨" if pm_change >= self.immediate_spike_threshold else ""
-                    
+
                     if alert.get('alert_type') == 'premarket_volume_surge':
                         print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} "
-                              f"(+{alert.get('premarket_volume_change', 0):5.1f}%) RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} "
+                              f"(+{alert.get('premarket_volume_change', 0):5.1f}%) PM RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} "
                               f"PM: {pm_change:+5.1f}%{spike_marker} | {alert.get('sector', 'Unknown')}")
                     else:
-                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} RelVol: {rel_vol_str} | "
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM Vol: {alert.get('premarket_volume', 0):>8,} PM RelVol: {rel_vol_str} | "
                               f"${alert.get('current_price', 0):6.2f} PM: {pm_change:+5.1f}%{spike_marker} | {alert.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing premarket volume alert {alert.get('ticker', 'Unknown')}: {e}")
@@ -3267,19 +3575,19 @@ class VolumeMomentumTracker:
             for alert in premarket_price_alerts[:5]:  # Top 5
                 try:
                     count = alert.get('appearance_count', 1)
-                    rel_vol = alert.get('relative_volume', 0)
+                    rel_vol = alert.get('premarket_relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
                     pm_change = alert.get('premarket_change', 0)
-                    
+
                     # Mark immediate spikes
                     spike_marker = " 🚨" if pm_change >= self.immediate_spike_threshold else ""
-                    
+
                     if alert.get('alert_type') == 'premarket_acceleration':
                         print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {pm_change:+6.1f}% "
-                              f"(Δ{alert.get('premarket_change_acceleration', 0):+5.1f}%{spike_marker}) RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} | "
+                              f"(Δ{alert.get('premarket_change_acceleration', 0):+5.1f}%{spike_marker}) PM RelVol: {rel_vol_str} | ${alert.get('current_price', 0):6.2f} | "
                               f"Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
                     else:
-                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {pm_change:+6.1f}%{spike_marker} RelVol: {rel_vol_str} | "
+                        print(f"  {alert['ticker']:6} [{count:2d}x] | PM: {pm_change:+6.1f}%{spike_marker} PM RelVol: {rel_vol_str} | "
                               f"${alert.get('current_price', 0):6.2f} | Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
                 except Exception as e:
                     logger.error(f"Error printing premarket price alert {alert.get('ticker', 'Unknown')}: {e}")
@@ -3292,10 +3600,10 @@ class VolumeMomentumTracker:
                     count = alert.get('appearance_count', 1)
                     rel_vol = alert.get('relative_volume', 0)
                     rel_vol_str = f"{rel_vol:.1f}x" if rel_vol > 0 else "N/A"
-                    change_from_open = alert.get('change_from_open', 0)
+                    change_from_prev_close = alert.get('change_from_prev_close', 0)
                     change_pct = alert.get('change_pct', 0)
-                    spike_marker = " 🔥" if change_from_open >= 25 else ""
-                    print(f"  {alert['ticker']:6} [{count:2d}x] | From Open: +{change_from_open:5.1f}%{spike_marker} | "
+                    spike_marker = " 🔥" if change_from_prev_close >= 25 else ""
+                    print(f"  {alert['ticker']:6} [{count:2d}x] | From Prev Close: +{change_from_prev_close:5.1f}%{spike_marker} | "
                           f"5min: {change_pct:+5.1f}% | RelVol: {rel_vol_str} | "
                           f"${alert.get('current_price', 0):6.2f} | Vol: {alert.get('volume', 0):>8,} | {alert.get('sector', 'Unknown')}")
                 except Exception as e:
