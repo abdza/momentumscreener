@@ -963,8 +963,9 @@ class VolumeMomentumTracker:
                     if symbol in latest_trades:
                         cache_entry['price'] = float(latest_trades[symbol].price)
 
-                    if bars_data and symbol in bars_data:
-                        symbol_bars = bars_data[symbol]
+                    # Access bars via .data attribute of BarSet
+                    if bars_data and hasattr(bars_data, 'data') and symbol in bars_data.data:
+                        symbol_bars = bars_data.data[symbol]
                         if symbol_bars:
                             cache_entry['volume'] = int(symbol_bars[-1].volume)
                             # Get previous day's close (includes after-market)
@@ -984,27 +985,27 @@ class VolumeMomentumTracker:
                 if symbol in self.alpaca_price_cache:
                     cache_entry = self.alpaca_price_cache[symbol]
 
-                    # Update close price
+                    # Save Alpaca price as a separate field (preserve TradingView close)
                     if cache_entry['price'] is not None:
-                        old_close = record.get('close', 0)
-                        record['close'] = cache_entry['price']
+                        tradingview_close = record.get('close', 0)
+                        record['alpaca_price'] = cache_entry['price']
 
-                        # Log significant price differences
-                        if old_close > 0:
-                            price_diff_pct = ((record['close'] - old_close) / old_close) * 100
+                        # Log significant price differences between TradingView and Alpaca
+                        if tradingview_close > 0:
+                            price_diff_pct = ((record['alpaca_price'] - tradingview_close) / tradingview_close) * 100
                             if abs(price_diff_pct) > 1:
-                                logger.debug(f"{symbol}: Updated close {old_close:.2f} -> {record['close']:.2f} ({price_diff_pct:+.1f}%)")
+                                logger.debug(f"{symbol}: TradingView {tradingview_close:.2f} vs Alpaca {record['alpaca_price']:.2f} ({price_diff_pct:+.1f}%)")
 
                         updated_count += 1
 
-                    # Update volume
+                    # Save Alpaca volume as a separate field
                     if cache_entry['volume'] is not None:
-                        record['volume'] = cache_entry['volume']
+                        record['alpaca_volume'] = cache_entry['volume']
 
-                    # Update previous close and calculate change from previous close
+                    # Save Alpaca previous close as a separate field and calculate change
                     if cache_entry['previous_close'] is not None:
-                        record['previous_close'] = cache_entry['previous_close']
-                        # Calculate change from previous close (includes after-market)
+                        record['alpaca_previous_close'] = cache_entry['previous_close']
+                        # Calculate change from previous close using Alpaca data
                         if cache_entry['price'] is not None and cache_entry['previous_close'] > 0:
                             change_from_prev = ((cache_entry['price'] - cache_entry['previous_close']) / cache_entry['previous_close']) * 100
                             record['change_from_prev_close'] = change_from_prev
