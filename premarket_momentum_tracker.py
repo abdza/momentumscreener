@@ -2096,7 +2096,8 @@ class VolumeMomentumTracker:
             price_data = {}
             for record in current_data:
                 ticker = record.get('name')
-                price = record.get('close', 0)
+                # Use Alpaca real-time price for paper trading if available
+                price = record.get('alpaca_price', record.get('close', 0))
                 if ticker and price > 0:
                     price_data[ticker] = price
             
@@ -2230,8 +2231,9 @@ class VolumeMomentumTracker:
 
             for ticker in tickers:
                 record = ticker_data_map[ticker]
-                current_price = record.get('close', 0)
-                current_volume = record.get('volume', 0)
+                # Use Alpaca real-time price if available
+                current_price = record.get('alpaca_price', record.get('close', 0))
+                current_volume = record.get('alpaca_volume', record.get('volume', 0))
                 float_shares = record.get('float_shares_outstanding', 0)
 
                 try:
@@ -3048,7 +3050,8 @@ class VolumeMomentumTracker:
                     # Get current data for this ticker
                     current_ticker_data = next((r for r in current_data if r['name'] == ticker), None)
                     if current_ticker_data:
-                        change_pct = current_ticker_data.get('change|5', 0)
+                        # Prefer Alpaca real-time change % over TradingView (which is stale during premarket/afterhours)
+                        change_pct = current_ticker_data.get('change_from_prev_close', current_ticker_data.get('change|5', 0))
 
                         # ONLY ALERT IF PRICE IS ALSO GOING UP (long trades only)
                         if change_pct > 0:  # Must have positive price movement
@@ -3057,8 +3060,8 @@ class VolumeMomentumTracker:
                                 'rank_change': rank_change,
                                 'current_rank': current_rank + 1,  # 1-based ranking
                                 'previous_rank': previous_rank + 1,
-                                'volume': current_ticker_data.get('volume', 0),
-                                'price': current_ticker_data.get('close', 0),
+                                'volume': current_ticker_data.get('alpaca_volume', current_ticker_data.get('volume', 0)),
+                                'price': current_ticker_data.get('alpaca_price', current_ticker_data.get('close', 0)),
                                 'change_pct': change_pct,
                                 'relative_volume': current_ticker_data.get('relative_volume_10d_calc', 0),
                                 'sector': current_ticker_data.get('sector', 'Unknown'),
@@ -3069,15 +3072,16 @@ class VolumeMomentumTracker:
                 if current_rank < 50:  # Only care about top 50 newcomers
                     current_ticker_data = next((r for r in current_data if r['name'] == ticker), None)
                     if current_ticker_data:
-                        change_pct = current_ticker_data.get('change|5', 0)
+                        # Prefer Alpaca real-time change % over TradingView (which is stale during premarket/afterhours)
+                        change_pct = current_ticker_data.get('change_from_prev_close', current_ticker_data.get('change|5', 0))
 
                         # ONLY ALERT IF PRICE IS ALSO GOING UP (long trades only)
                         if change_pct > 0:  # Must have positive price movement
                             volume_newcomers.append({
                                 'ticker': ticker,
                                 'current_rank': current_rank + 1,
-                                'volume': current_ticker_data.get('volume', 0),
-                                'price': current_ticker_data.get('close', 0),
+                                'volume': current_ticker_data.get('alpaca_volume', current_ticker_data.get('volume', 0)),
+                                'price': current_ticker_data.get('alpaca_price', current_ticker_data.get('close', 0)),
                                 'change_pct': change_pct,
                                 'relative_volume': current_ticker_data.get('relative_volume_10d_calc', 0),
                                 'sector': current_ticker_data.get('sector', 'Unknown'),
@@ -3183,8 +3187,10 @@ class VolumeMomentumTracker:
 
         for record in current_data:
             ticker = record.get('name')
-            current_price = record.get('close', 0)
-            change_pct = record.get('change|5', 0)
+            # Prefer Alpaca real-time price over TradingView (which is stale during premarket/afterhours)
+            current_price = record.get('alpaca_price', record.get('close', 0))
+            # Prefer Alpaca real-time change % over TradingView (which is stale during premarket/afterhours)
+            change_pct = record.get('change_from_prev_close', record.get('change|5', 0))
 
             # ONLY ALERT ON POSITIVE PRICE MOVEMENTS (for long trades)
             if ticker and current_price > 0 and change_pct > 0:  # Must be positive change
@@ -3224,7 +3230,7 @@ class VolumeMomentumTracker:
                             'current_price': current_price,
                             'change_pct': change_pct,
                             'price_change_window': price_change,
-                            'volume': record.get('volume', 0),
+                            'volume': record.get('alpaca_volume', record.get('volume', 0)),
                             'relative_volume': record.get('relative_volume_10d_calc', 0),
                             'sector': record.get('sector', 'Unknown'),
                             'time_window': time_window_minutes,
@@ -3232,9 +3238,9 @@ class VolumeMomentumTracker:
                             'flat_analysis': flat_analysis,
                             'change_from_open': record.get('change_from_open', 0)
                         }
-                        
+
                         price_spikes.append(spike_data)
-                        
+
                 elif change_pct > 10:  # First time seeing this ticker but significant positive move
                     # For new tickers, we can't determine flat period, so mark as regular spike
                     spike_data = {
@@ -3242,7 +3248,7 @@ class VolumeMomentumTracker:
                         'current_price': current_price,
                         'change_pct': change_pct,
                         'price_change_window': change_pct,
-                        'volume': record.get('volume', 0),
+                        'volume': record.get('alpaca_volume', record.get('volume', 0)),
                         'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
                         'time_window': time_window_minutes,
@@ -3270,14 +3276,21 @@ class VolumeMomentumTracker:
             # For first scan, just identify significant POSITIVE pre-market activity
             for record in current_data:
                 ticker = record.get('name')
-                premarket_change = record.get('premarket_change', 0)
+                # Use Alpaca real-time change if available, otherwise TradingView premarket_change
+                if 'change_from_prev_close' in record:
+                    premarket_change = record.get('change_from_prev_close', 0)
+                else:
+                    premarket_change = record.get('premarket_change', 0)
                 premarket_volume = record.get('premarket_volume', 0)
 
                 # Alert on significant POSITIVE pre-market price changes only (long trades)
                 if premarket_change > 5:  # ONLY positive moves > 5%
-                    # Calculate actual current premarket price (not previous day's close)
-                    close_price = record.get('close', 0)
-                    current_premarket_price = close_price * (1 + premarket_change / 100)
+                    # Use Alpaca real-time price if available, otherwise calculate from TradingView close
+                    if 'alpaca_price' in record:
+                        current_premarket_price = record.get('alpaca_price', 0)
+                    else:
+                        close_price = record.get('close', 0)
+                        current_premarket_price = close_price * (1 + premarket_change / 100)
 
                     # Check for after-hours flat to premarket spike pattern
                     ah_analysis = self._detect_afterhours_flat_period(ticker)
@@ -3301,9 +3314,12 @@ class VolumeMomentumTracker:
 
                 # Alert on high pre-market volume (if available)
                 if premarket_volume > 100000:  # > 100k pre-market volume
-                    # Calculate actual current premarket price (not previous day's close)
-                    close_price = record.get('close', 0)
-                    current_premarket_price = close_price * (1 + premarket_change / 100)
+                    # Use Alpaca real-time price if available, otherwise calculate from TradingView close
+                    if 'alpaca_price' in record:
+                        current_premarket_price = record.get('alpaca_price', 0)
+                    else:
+                        close_price = record.get('close', 0)
+                        current_premarket_price = close_price * (1 + premarket_change / 100)
 
                     premarket_volume_alerts.append({
                         'ticker': ticker,
@@ -3323,20 +3339,31 @@ class VolumeMomentumTracker:
         previous_premarket = {record['name']: record for record in previous_data}
 
         for ticker, current_record in current_premarket.items():
-            current_pm_change = current_record.get('premarket_change', 0)
+            # Use Alpaca real-time change if available, otherwise TradingView premarket_change
+            if 'change_from_prev_close' in current_record:
+                current_pm_change = current_record.get('change_from_prev_close', 0)
+            else:
+                current_pm_change = current_record.get('premarket_change', 0)
             current_pm_volume = current_record.get('premarket_volume', 0)
 
             if ticker in previous_premarket:
                 previous_record = previous_premarket[ticker]
-                previous_pm_change = previous_record.get('premarket_change', 0)
+                # Use Alpaca real-time change if available for previous data too
+                if 'change_from_prev_close' in previous_record:
+                    previous_pm_change = previous_record.get('change_from_prev_close', 0)
+                else:
+                    previous_pm_change = previous_record.get('premarket_change', 0)
                 previous_pm_volume = previous_record.get('premarket_volume', 0)
 
                 # Pre-market price acceleration - ONLY POSITIVE moves (long trades)
                 pm_change_acceleration = current_pm_change - previous_pm_change
                 if pm_change_acceleration > 3 and current_pm_change > 0:  # Must be positive and accelerating up
-                    # Calculate actual current premarket price (not previous day's close)
-                    close_price = current_record.get('close', 0)
-                    current_premarket_price = close_price * (1 + current_pm_change / 100)
+                    # Use Alpaca real-time price if available, otherwise calculate from TradingView close
+                    if 'alpaca_price' in current_record:
+                        current_premarket_price = current_record.get('alpaca_price', 0)
+                    else:
+                        close_price = current_record.get('close', 0)
+                        current_premarket_price = close_price * (1 + current_pm_change / 100)
 
                     premarket_price_alerts.append({
                         'ticker': ticker,
@@ -3354,9 +3381,12 @@ class VolumeMomentumTracker:
                 if previous_pm_volume > 0:
                     pm_volume_change = ((current_pm_volume - previous_pm_volume) / previous_pm_volume) * 100
                     if pm_volume_change > 50:  # 50%+ increase in pre-market volume
-                        # Calculate actual current premarket price (not previous day's close)
-                        close_price = current_record.get('close', 0)
-                        current_premarket_price = close_price * (1 + current_pm_change / 100)
+                        # Use Alpaca real-time price if available, otherwise calculate from TradingView close
+                        if 'alpaca_price' in current_record:
+                            current_premarket_price = current_record.get('alpaca_price', 0)
+                        else:
+                            close_price = current_record.get('close', 0)
+                            current_premarket_price = close_price * (1 + current_pm_change / 100)
 
                         premarket_volume_alerts.append({
                             'ticker': ticker,
@@ -3420,10 +3450,10 @@ class VolumeMomentumTracker:
                 sustained_positive_alerts.append({
                     'ticker': ticker,
                     'change_from_prev_close': change_from_prev_close,
-                    'current_price': record.get('close', 0),
-                    'previous_close': record.get('previous_close', 0),
-                    'change_pct': record.get('change|5', 0),
-                    'volume': record.get('volume', 0),
+                    'current_price': record.get('alpaca_price', record.get('close', 0)),
+                    'previous_close': record.get('alpaca_previous_close', record.get('previous_close', 0)),
+                    'change_pct': record.get('change_from_prev_close', record.get('change|5', 0)),
+                    'volume': record.get('alpaca_volume', record.get('volume', 0)),
                     'relative_volume': record.get('relative_volume_10d_calc', 0),
                     'sector': record.get('sector', 'Unknown'),
                     'alert_type': 'sustained_positive'
