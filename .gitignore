@@ -176,6 +176,9 @@ screener.sh
 premarket_screener.sh
 end_of_day.sh
 paper_trades.sh
+pretop20.sh
+premarket_top20_positions.json
 momentum_data/
 premarket_momentum_data/
 paper_trades/
+pretop20/
