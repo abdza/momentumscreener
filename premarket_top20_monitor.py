@@ -428,12 +428,30 @@ Examples:
         telegram_chat_id=args.chat_id
     )
 
-    # Run based on mode
-    if args.continuous:
-        monitor.run_continuous()
-    else:
-        # Default to single scan
-        monitor.run_single_scan()
+    # Write PID to file for easy process management
+    pid_file = '/tmp/premarket_top20.pid'
+    try:
+        with open(pid_file, 'w') as f:
+            f.write(str(os.getpid()))
+        logger.info(f"📝 PID {os.getpid()} written to {pid_file}")
+    except Exception as e:
+        logger.warning(f"⚠️  Could not write PID file: {e}")
+
+    try:
+        # Run based on mode
+        if args.continuous:
+            monitor.run_continuous()
+        else:
+            # Default to single scan
+            monitor.run_single_scan()
+    finally:
+        # Clean up PID file on exit
+        try:
+            if os.path.exists(pid_file):
+                os.remove(pid_file)
+                logger.info(f"🗑️  Removed PID file {pid_file}")
+        except Exception as e:
+            logger.warning(f"⚠️  Could not remove PID file: {e}")
 
 if __name__ == "__main__":
     main()
