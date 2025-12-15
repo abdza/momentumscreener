@@ -272,8 +272,20 @@ class PremarketTop20Monitor:
             else:
                 emoji = "⚪"
 
+            # Determine position change arrow
+            position_arrow = ""
+            if self.previous_positions and symbol in self.previous_positions:
+                prev_pos = self.previous_positions[symbol]
+                if idx < prev_pos:
+                    position_arrow = " ⬆️"  # Moved up (to a better/smaller position number)
+                elif idx > prev_pos:
+                    position_arrow = " ⬇️"  # Moved down (to a worse/larger position number)
+                # If same position, no arrow
+            elif self.previous_positions and symbol not in self.previous_positions:
+                position_arrow = " 🆕"  # New entry to top 20
+
             # Format line with clickable link (Markdown format)
-            message += f"{idx}. {emoji} [{symbol}]({tv_link})\n"
+            message += f"{idx}. {emoji} [{symbol}]({tv_link}){position_arrow}\n"
             message += f"   📊 Volume: {volume_str}\n"
             message += f"   📈 Change: {change_str}\n\n"
 
