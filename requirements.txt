@@ -7,3 +7,4 @@ pyTelegramBotAPI
 ib-insync
 matplotlib
 alpaca-py
+yfinance
