@@ -260,8 +260,8 @@ class PremarketTop20Monitor:
             # Create TradingView link
             tv_link = self._get_tradingview_link(symbol)
 
-            # Add emoji based on change - use green square for >50% changes
-            if pm_change and pm_change > 50:
+            # Add emoji based on change - use green square for >40% changes
+            if pm_change and pm_change > 40:
                 emoji = "🟩"  # Green square for high gainers
                 # Make the change text bold for emphasis
                 change_str = f"*{change_str}*"
