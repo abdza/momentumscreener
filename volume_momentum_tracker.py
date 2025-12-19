@@ -149,6 +149,10 @@ class VolumeMomentumTracker:
         self.vix_cache = {}
         self.vix_cache_duration = 5 * 60  # Cache VIX for 5 minutes
 
+        # Previous close price cache to check for flat-before-spike condition
+        self.prev_close_cache = {}
+        self.prev_close_cache_duration = 60 * 60  # Cache prev close for 1 hour
+
         if telegram_bot_token and telegram_chat_id:
             try:
                 import telegram
@@ -600,6 +604,139 @@ class VolumeMomentumTracker:
         except Exception as e:
             logger.error(f"Failed to fetch VIX data: {e}")
             return None
+
+    def _get_prev_close_price(self, ticker):
+        """
+        Get previous trading day's closing price for a ticker with caching.
+
+        Args:
+            ticker (str): Stock ticker symbol
+
+        Returns:
+            float: Previous day's closing price, or None if unavailable
+        """
+        import yfinance as yf
+        from datetime import datetime, timedelta
+
+        current_time = datetime.now()
+
+        # Check cache first
+        if ticker in self.prev_close_cache:
+            cache_entry = self.prev_close_cache[ticker]
+            cache_age = (current_time - cache_entry['timestamp']).total_seconds()
+            if cache_age < self.prev_close_cache_duration:
+                logger.debug(f"Using cached prev close for {ticker}: ${cache_entry['prev_close']:.2f} (age: {cache_age:.0f}s)")
+                return cache_entry['prev_close']
+
+        try:
+            stock = yf.Ticker(ticker)
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=5)
+            hist = stock.history(start=start_date, end=end_date)
+
+            if len(hist) >= 2:
+                prev_close = float(hist['Close'].iloc[-2])
+
+                # Cache the result
+                self.prev_close_cache[ticker] = {
+                    'prev_close': prev_close,
+                    'timestamp': current_time
+                }
+
+                logger.debug(f"Fetched prev close for {ticker}: ${prev_close:.2f}")
+                return prev_close
+            else:
+                logger.warning(f"Not enough historical data for {ticker} to get prev close")
+                return None
+
+        except Exception as e:
+            logger.error(f"Failed to fetch prev close for {ticker}: {e}")
+            return None
+
+    def _get_price_minutes_ago(self, ticker, minutes=15):
+        """
+        Get the price of a ticker from X minutes ago using price_history.
+
+        Args:
+            ticker (str): Stock ticker symbol
+            minutes (int): Number of minutes ago to look for price
+
+        Returns:
+            float: Price from X minutes ago, or None if not available
+        """
+        from datetime import datetime, timedelta
+
+        if ticker not in self.price_history or not self.price_history[ticker]:
+            logger.debug(f"No price history available for {ticker}")
+            return None
+
+        current_time = datetime.now()
+        target_time = current_time - timedelta(minutes=minutes)
+
+        # Find the price entry closest to the target time
+        closest_entry = None
+        closest_time_diff = float('inf')
+
+        for entry in self.price_history[ticker]:
+            entry_time = entry['timestamp']
+            time_diff = abs((entry_time - target_time).total_seconds())
+
+            # Only consider entries that are at least 'minutes' old (within 2 minute tolerance)
+            if entry_time <= target_time + timedelta(minutes=2) and time_diff < closest_time_diff:
+                closest_entry = entry
+                closest_time_diff = time_diff
+
+        if closest_entry and closest_time_diff < 5 * 60:  # Within 5 minutes of target
+            logger.debug(f"Found price for {ticker} from {minutes} min ago: ${closest_entry['price']:.2f} (diff: {closest_time_diff:.0f}s)")
+            return closest_entry['price']
+        else:
+            logger.debug(f"No price found for {ticker} from {minutes} minutes ago")
+            return None
+
+    def _was_flat_before_spike(self, ticker, minutes=15, threshold_pct=1.0):
+        """
+        Check if the price X minutes ago was within threshold_pct of previous day's close.
+        This indicates the stock was "flat" before the current spike.
+
+        Args:
+            ticker (str): Stock ticker symbol
+            minutes (int): How many minutes ago to check (default: 15)
+            threshold_pct (float): Maximum percentage difference from prev close to be considered "flat" (default: 1.0%)
+
+        Returns:
+            tuple: (was_flat: bool, details: dict)
+                - was_flat: True if price X minutes ago was within threshold of prev close
+                - details: Dictionary with prev_close, price_ago, diff_pct for logging
+        """
+        prev_close = self._get_prev_close_price(ticker)
+        if prev_close is None:
+            logger.debug(f"Cannot check flat condition for {ticker}: no prev close available")
+            return True, {'reason': 'no_prev_close'}  # Allow alert if we can't verify
+
+        price_ago = self._get_price_minutes_ago(ticker, minutes)
+        if price_ago is None:
+            logger.debug(f"Cannot check flat condition for {ticker}: no price history from {minutes} min ago")
+            return True, {'reason': 'no_price_history'}  # Allow alert if we can't verify
+
+        # Calculate the percentage difference
+        diff_pct = abs((price_ago - prev_close) / prev_close) * 100
+        was_flat = diff_pct < threshold_pct
+
+        details = {
+            'prev_close': prev_close,
+            'price_ago': price_ago,
+            'diff_pct': diff_pct,
+            'threshold_pct': threshold_pct,
+            'minutes': minutes,
+            'was_flat': was_flat
+        }
+
+        if was_flat:
+            logger.info(f"✅ {ticker} was flat {minutes} min ago: ${price_ago:.2f} vs prev close ${prev_close:.2f} (diff: {diff_pct:.2f}% < {threshold_pct}%)")
+        else:
+            logger.info(f"❌ {ticker} was NOT flat {minutes} min ago: ${price_ago:.2f} vs prev close ${prev_close:.2f} (diff: {diff_pct:.2f}% >= {threshold_pct}%)")
+
+        return was_flat, details
 
     def _get_recent_news(self, ticker, max_headlines=3):
         """
@@ -1952,6 +2089,10 @@ class VolumeMomentumTracker:
             self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike, None, disregarded=True, paper_trade_info=None)
             return
 
+        # Check if price 15 minutes ago was flat (within 1% of previous day's close)
+        # This info will be included in the notification message
+        was_flat, flat_details = self._was_flat_before_spike(ticker, minutes=15, threshold_pct=1.0)
+
         # NEW: Apply enhanced filtering with momentum scoring and cooldowns
         if not is_immediate_spike:  # Skip for immediate spikes (they override everything)
             change_from_open = gap_pct if gap_pct is not None else 0  # Use gap_pct as proxy for change_from_open
@@ -2065,6 +2206,16 @@ class VolumeMomentumTracker:
             else:
                 vix_str = "\n📊 VIX: N/A"
 
+            # Format flat-before-spike indicator
+            if was_flat:
+                flat_str = "🟢 YES - was flat before spike"
+            else:
+                if 'reason' in flat_details:
+                    flat_str = f"⚪ N/A - {flat_details['reason']}"
+                else:
+                    diff_pct = flat_details.get('diff_pct', 0)
+                    flat_str = f"🔴 NO - was {diff_pct:.1f}% from prev close"
+
             # Different message for immediate spikes vs regular high frequency
             if is_immediate_spike:
                 message = (
@@ -2082,7 +2233,8 @@ class VolumeMomentumTracker:
                     f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
                     f"🎯 TARGET PRICE: {target_str}\n"
                     f"💰 POSITION SIZE: {position_sizing['recommendation']}\n"
-                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']}){vix_str}\n\n"
+                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']}){vix_str}\n"
+                    f"📉 FLAT 15 MIN AGO: {flat_str}\n\n"
                     f"🔥 This ticker just spiked {change_pct:+.1f}% - immediate alert triggered!\n"
                     f"📈 Previous alerts: {alert_count}\n"
                     f"📱 Session alerts: {current_session_count + 1} (this session)\n"
@@ -2110,7 +2262,8 @@ class VolumeMomentumTracker:
                     f"🛑 RECOMMENDED STOP: {stop_loss_str}\n"
                     f"🎯 TARGET PRICE: {target_str}\n"
                     f"💰 POSITION SIZE: {position_sizing['recommendation']}\n"
-                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']}){vix_str}\n\n"
+                    f"📊 MARKET CONDITIONS: {position_sizing['score']}/100 ({position_sizing['category']}){vix_str}\n"
+                    f"📉 FLAT 15 MIN AGO: {flat_str}\n\n"
                     f"📋 This ticker has triggered {alert_count} momentum alerts, "
                     f"indicating sustained bullish activity!\n"
                     f"🎯 Alert Types: {alert_types_str}\n\n"
