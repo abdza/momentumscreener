@@ -693,7 +693,7 @@ class VolumeMomentumTracker:
             logger.debug(f"No price found for {ticker} from {minutes} minutes ago")
             return None
 
-    def _was_flat_before_spike(self, ticker, minutes=15, threshold_pct=1.0):
+    def _was_flat_before_spike(self, ticker, minutes=15, threshold_pct=1.0, gap_pct=None):
         """
         Check if the price X minutes ago was within threshold_pct of previous day's close.
         This indicates the stock was "flat" before the current spike.
@@ -702,6 +702,7 @@ class VolumeMomentumTracker:
             ticker (str): Stock ticker symbol
             minutes (int): How many minutes ago to check (default: 15)
             threshold_pct (float): Maximum percentage difference from prev close to be considered "flat" (default: 1.0%)
+            gap_pct (float): Gap percentage from previous close - used as fallback when no price history
 
         Returns:
             tuple: (was_flat: bool, details: dict)
@@ -715,6 +716,10 @@ class VolumeMomentumTracker:
 
         price_ago = self._get_price_minutes_ago(ticker, minutes)
         if price_ago is None:
+            # Use gap_pct as fallback - if stock has gapped significantly, it's NOT flat
+            if gap_pct is not None and abs(gap_pct) >= threshold_pct:
+                logger.info(f"❌ {ticker} was NOT flat (no price history, using gap_pct={gap_pct:.2f}% >= {threshold_pct}%)")
+                return False, {'reason': 'gap_pct_fallback', 'gap_pct': gap_pct, 'threshold_pct': threshold_pct}
             logger.debug(f"Cannot check flat condition for {ticker}: no price history from {minutes} min ago")
             return True, {'reason': 'no_price_history'}  # Allow alert if we can't verify
 
@@ -2091,7 +2096,7 @@ class VolumeMomentumTracker:
 
         # Check if price 15 minutes ago was flat (within 1% of previous day's close)
         # This info will be included in the notification message
-        was_flat, flat_details = self._was_flat_before_spike(ticker, minutes=15, threshold_pct=1.0)
+        was_flat, flat_details = self._was_flat_before_spike(ticker, minutes=15, threshold_pct=1.0, gap_pct=gap_pct)
 
         # NEW: Apply enhanced filtering with momentum scoring and cooldowns
         if not is_immediate_spike:  # Skip for immediate spikes (they override everything)
@@ -2859,7 +2864,7 @@ class VolumeMomentumTracker:
             'reason': 'flat_detected' if is_flat else f'volatility_{volatility:.1f}%_duration_{duration_minutes:.1f}min'
         }
 
-    def analyze_price_spikes(self, current_data, time_window_minutes=10):
+    def analyze_price_spikes(self, current_data, time_window_minutes=20):
         """Analyze which tickers have the biggest POSITIVE price increases (long trades only)"""
         price_spikes = []
 
