@@ -211,12 +211,15 @@ class PremarketTop20Monitor:
         Detect if any ticker positions have changed
         Returns (has_changed, current_positions_dict)
         """
-        # Create position dictionary from current data
+        # Create position dictionary from current data (includes position and premarket_change)
         current_positions = {}
         for idx, record in enumerate(current_top20, 1):
             symbol = record.get('name')
             if symbol:
-                current_positions[symbol] = idx
+                current_positions[symbol] = {
+                    'position': idx,
+                    'premarket_change': record.get('premarket_change', 0)
+                }
 
         # If this is the first run, consider it a change
         if not self.previous_positions:
@@ -226,9 +229,14 @@ class PremarketTop20Monitor:
         # Check if any positions changed
         has_changed = False
 
-        # Check if order changed
-        prev_list = sorted(self.previous_positions.items(), key=lambda x: x[1])
-        curr_list = sorted(current_positions.items(), key=lambda x: x[1])
+        # Check if order changed - handle both old format (int) and new format (dict)
+        def get_position(val):
+            if isinstance(val, dict):
+                return val.get('position', 0)
+            return val  # old format was just an integer
+
+        prev_list = sorted(self.previous_positions.items(), key=lambda x: get_position(x[1]))
+        curr_list = sorted(current_positions.items(), key=lambda x: get_position(x[1]))
 
         if [x[0] for x in prev_list] != [x[0] for x in curr_list]:
             has_changed = True
@@ -272,22 +280,46 @@ class PremarketTop20Monitor:
             else:
                 emoji = "⚪"
 
-            # Determine position change arrow
+            # Determine position change arrow and premarket change delta
             position_arrow = ""
+            pm_change_delta_str = ""
+
+            # Helper to get position from old or new format
+            def get_prev_position(val):
+                if isinstance(val, dict):
+                    return val.get('position', 0)
+                return val  # old format was just an integer
+
+            # Helper to get previous premarket change
+            def get_prev_pm_change(val):
+                if isinstance(val, dict):
+                    return val.get('premarket_change', None)
+                return None  # old format didn't store premarket_change
+
             if self.previous_positions and symbol in self.previous_positions:
-                prev_pos = self.previous_positions[symbol]
+                prev_data = self.previous_positions[symbol]
+                prev_pos = get_prev_position(prev_data)
+                prev_pm_change = get_prev_pm_change(prev_data)
+
                 if idx < prev_pos:
                     position_arrow = " ⬆️"  # Moved up (to a better/smaller position number)
                 elif idx > prev_pos:
                     position_arrow = " ⬇️"  # Moved down (to a worse/larger position number)
                 # If same position, no arrow
+
+                # Calculate premarket change delta
+                if prev_pm_change is not None and pm_change is not None:
+                    delta = pm_change - prev_pm_change
+                    if abs(delta) >= 0.01:  # Only show if change is at least 0.01%
+                        delta_emoji = "📈" if delta > 0 else "📉"
+                        pm_change_delta_str = f" ({delta_emoji} {delta:+.2f}%)"
             elif self.previous_positions and symbol not in self.previous_positions:
                 position_arrow = " 🆕"  # New entry to top 20
 
             # Format line with clickable link (Markdown format)
             message += f"{idx}. {emoji} [{symbol}]({tv_link}){position_arrow}\n"
             message += f"   📊 Volume: {volume_str}\n"
-            message += f"   📈 Change: {change_str}\n\n"
+            message += f"   📈 Change: {change_str}{pm_change_delta_str}\n\n"
 
         message += f"{'='*40}\n"
         message += f"💡 Positions tracked every 2 minutes"
