@@ -60,6 +60,14 @@ class PremarketTop20Monitor:
         # Load previous positions
         self.previous_positions = self._load_positions()
 
+        # Top 10 "new ticker" tracking for notifications
+        # Tickers that have ever been in top 10 this session (won't show number emoji again if they return)
+        self.top10_ever_seen = set()
+        # Consecutive appearances in top 10 (resets when ticker drops out, but ticker still remembered in ever_seen)
+        self.top10_consecutive_count = {}
+        # Maximum notifications to show the number emoji (1️⃣ through 5️⃣)
+        self.top10_new_threshold = 5
+
     def _get_tradingview_cookies(self):
         """Get TradingView cookies for API access"""
         try:
@@ -105,6 +113,68 @@ class PremarketTop20Monitor:
             logger.debug(f"💾 Saved {len(positions)} ticker positions")
         except Exception as e:
             logger.error(f"❌ Error saving positions: {e}")
+
+    def _get_new_ticker_emoji(self, symbol, position):
+        """
+        Get the 'new ticker' emoji for tickers that are new to the top 10.
+
+        Returns:
+            str: Number emoji (1️⃣-5️⃣) if ticker is new to top 10 and within threshold,
+                 empty string otherwise
+        """
+        # Only track top 10 positions
+        if position > 10:
+            return ""
+
+        # If ticker has been seen before in top 10 but dropped out, no emoji
+        if symbol in self.top10_ever_seen and symbol not in self.top10_consecutive_count:
+            return ""
+
+        # Get consecutive count (0 if first time)
+        count = self.top10_consecutive_count.get(symbol, 0)
+
+        # If count exceeds threshold, no longer "new"
+        if count >= self.top10_new_threshold:
+            return ""
+
+        # Map count to number emoji (count is 0-indexed, emoji is 1-indexed)
+        number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
+        return f" {number_emojis[count]}"
+
+    def _update_top10_tracking(self, top20_data):
+        """
+        Update the top 10 tracking after a notification is sent.
+
+        - Adds new tickers to ever_seen set
+        - Increments consecutive count for tickers in top 10
+        - Removes tickers from consecutive_count if they dropped out of top 10
+        """
+        # Get current top 10 symbols
+        current_top10 = set()
+        for idx, record in enumerate(top20_data[:10], 1):
+            symbol = record.get('name')
+            if symbol:
+                current_top10.add(symbol)
+
+        # Remove tickers from consecutive_count if they dropped out of top 10
+        dropped_tickers = set(self.top10_consecutive_count.keys()) - current_top10
+        for symbol in dropped_tickers:
+            del self.top10_consecutive_count[symbol]
+            logger.debug(f"📉 {symbol} dropped out of top 10, resetting consecutive count")
+
+        # Update tracking for current top 10
+        for symbol in current_top10:
+            if symbol not in self.top10_ever_seen:
+                # First time ever in top 10
+                self.top10_ever_seen.add(symbol)
+                self.top10_consecutive_count[symbol] = 1
+                logger.debug(f"🆕 {symbol} is NEW to top 10 (count: 1)")
+            elif symbol in self.top10_consecutive_count:
+                # Was in top 10 last time, increment count
+                self.top10_consecutive_count[symbol] += 1
+                logger.debug(f"📊 {symbol} consecutive top 10 count: {self.top10_consecutive_count[symbol]}")
+            # If in ever_seen but not in consecutive_count, ticker returned after dropping out
+            # Don't restart counting - they're no longer "new"
 
     def _get_tradingview_link(self, symbol):
         """Generate TradingView chart link for the symbol"""
@@ -316,8 +386,11 @@ class PremarketTop20Monitor:
             elif self.previous_positions and symbol not in self.previous_positions:
                 position_arrow = " 🆕"  # New entry to top 20
 
+            # Get "new to top 10" emoji (1️⃣-5️⃣) for tickers newly entering top 10
+            new_ticker_emoji = self._get_new_ticker_emoji(symbol, idx)
+
             # Format line with clickable link (Markdown format)
-            message += f"{idx}. {emoji} [{symbol}]({tv_link}){position_arrow}\n"
+            message += f"{idx}. {emoji} [{symbol}]({tv_link}){position_arrow}{new_ticker_emoji}\n"
             message += f"   📊 Volume: {volume_str}\n"
             message += f"   📈 Change: {change_str}{pm_change_delta_str}\n\n"
 
@@ -408,6 +481,9 @@ class PremarketTop20Monitor:
             if self.telegram_bot:
                 loop = asyncio.get_event_loop()
                 loop.run_until_complete(self._send_telegram_message(message))
+
+            # Update top 10 "new ticker" tracking after notification is sent
+            self._update_top10_tracking(top20_data)
 
             # Save current positions
             self._save_positions(current_positions)
