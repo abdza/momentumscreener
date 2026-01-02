@@ -67,6 +67,9 @@ class PremarketTop20Monitor:
         self.top10_consecutive_count = {}
         # Maximum notifications to show the number emoji (1️⃣ through 5️⃣)
         self.top10_new_threshold = 5
+        # Tickers that "exploded" into top 10 (appeared without being in top 20 first)
+        # These keep the explosion emoji for all 5 appearances
+        self.top10_exploded = set()
 
     def _get_tradingview_cookies(self):
         """Get TradingView cookies for API access"""
@@ -120,6 +123,7 @@ class PremarketTop20Monitor:
 
         Returns:
             str: Number emoji (1️⃣-5️⃣) if ticker is new to top 10 and within threshold,
+                 with optional 💥 explosion emoji if ticker suddenly appeared (wasn't in top 20 before),
                  empty string otherwise
         """
         # Only track top 10 positions
@@ -139,7 +143,19 @@ class PremarketTop20Monitor:
 
         # Map count to number emoji (count is 0-indexed, emoji is 1-indexed)
         number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
-        return f" {number_emojis[count]}"
+        base_emoji = number_emojis[count]
+
+        # Check if ticker suddenly appeared in top 10 (wasn't in top 20 before)
+        # Show explosion emoji for all appearances if ticker "exploded" into top 10
+        explosion_emoji = ""
+        if symbol in self.top10_exploded:
+            # Ticker previously exploded into top 10, keep showing explosion
+            explosion_emoji = "💥"
+        elif count == 0 and symbol not in self.previous_positions:
+            # Ticker just jumped straight into top 10 without being in top 20 first
+            explosion_emoji = "💥"
+
+        return f" {explosion_emoji}{base_emoji}"
 
     def _update_top10_tracking(self, top20_data):
         """
@@ -148,6 +164,7 @@ class PremarketTop20Monitor:
         - Adds new tickers to ever_seen set
         - Increments consecutive count for tickers in top 10
         - Removes tickers from consecutive_count if they dropped out of top 10
+        - Tracks tickers that "exploded" into top 10 (appeared without being in top 20 first)
         """
         # Get current top 10 symbols
         current_top10 = set()
@@ -168,7 +185,12 @@ class PremarketTop20Monitor:
                 # First time ever in top 10
                 self.top10_ever_seen.add(symbol)
                 self.top10_consecutive_count[symbol] = 1
-                logger.debug(f"🆕 {symbol} is NEW to top 10 (count: 1)")
+                # Check if ticker "exploded" into top 10 (wasn't in top 20 before)
+                if symbol not in self.previous_positions:
+                    self.top10_exploded.add(symbol)
+                    logger.debug(f"💥 {symbol} EXPLODED into top 10 (wasn't in top 20 before)")
+                else:
+                    logger.debug(f"🆕 {symbol} is NEW to top 10 (was in top 20 before)")
             elif symbol in self.top10_consecutive_count:
                 # Was in top 10 last time, increment count
                 self.top10_consecutive_count[symbol] += 1
