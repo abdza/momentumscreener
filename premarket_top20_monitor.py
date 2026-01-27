@@ -71,6 +71,12 @@ class PremarketTop20Monitor:
         # These keep the explosion emoji for all 5 appearances
         self.top10_exploded = set()
 
+        # High gainer (>40%) tracking
+        # Count of notifications sent while ticker is above 40%
+        self.high_gainer_notification_count = {}
+        # Peak premarket_change seen while ticker is above 40%
+        self.high_gainer_peak = {}
+
     def _get_tradingview_cookies(self):
         """Get TradingView cookies for API access"""
         try:
@@ -156,6 +162,73 @@ class PremarketTop20Monitor:
             explosion_emoji = "💥"
 
         return f" {explosion_emoji}{base_emoji}"
+
+    def _get_high_gainer_info(self, symbol, pm_change):
+        """
+        Get tracking info for tickers above 40% change.
+
+        Returns:
+            str: Info string showing notification count and peak status,
+                 empty string if ticker is not above 40%
+        """
+        if pm_change is None or pm_change <= 40:
+            return ""
+
+        # Get notification count (will be incremented after this notification is sent)
+        # So current display is count + 1 (this is the Nth notification)
+        count = self.high_gainer_notification_count.get(symbol, 0) + 1
+
+        # Get peak value
+        peak = self.high_gainer_peak.get(symbol, pm_change)
+
+        # Check if this is a new peak or if it has already peaked
+        if pm_change >= peak:
+            # New peak or same as peak - no peak indicator
+            return f" [#{count}]"
+        else:
+            # Has peaked - show peak indicator with the peak value
+            return f" [#{count} 🔻{peak:.1f}%]"
+
+    def _update_high_gainer_tracking(self, top20_data):
+        """
+        Update high gainer tracking after a notification is sent.
+
+        - Increments notification count for tickers above 40%
+        - Updates peak value if current change is higher
+        - Removes tracking for tickers that dropped below 40%
+        """
+        current_high_gainers = {}
+
+        for record in top20_data:
+            symbol = record.get('name')
+            pm_change = record.get('premarket_change', 0)
+
+            if symbol and pm_change and pm_change > 40:
+                current_high_gainers[symbol] = pm_change
+
+        # Update tracking for current high gainers
+        for symbol, pm_change in current_high_gainers.items():
+            # Increment notification count
+            self.high_gainer_notification_count[symbol] = \
+                self.high_gainer_notification_count.get(symbol, 0) + 1
+
+            # Update peak if current is higher
+            current_peak = self.high_gainer_peak.get(symbol, 0)
+            if pm_change > current_peak:
+                self.high_gainer_peak[symbol] = pm_change
+                logger.debug(f"📈 {symbol} new peak: {pm_change:.2f}%")
+
+        # Remove tracking for tickers that dropped below 40%
+        symbols_to_remove = []
+        for symbol in self.high_gainer_notification_count:
+            if symbol not in current_high_gainers:
+                symbols_to_remove.append(symbol)
+
+        for symbol in symbols_to_remove:
+            del self.high_gainer_notification_count[symbol]
+            if symbol in self.high_gainer_peak:
+                del self.high_gainer_peak[symbol]
+            logger.debug(f"📉 {symbol} dropped below 40%, reset tracking")
 
     def _update_top10_tracking(self, top20_data):
         """
@@ -360,11 +433,14 @@ class PremarketTop20Monitor:
             # Create TradingView link
             tv_link = self._get_tradingview_link(symbol)
 
+            # Get high gainer tracking info (notification count and peak status)
+            high_gainer_info = self._get_high_gainer_info(symbol, pm_change)
+
             # Add emoji based on change - use green square for >40% changes
             if pm_change and pm_change > 40:
                 emoji = "🟩"  # Green square for high gainers
                 # Make the change text bold for emphasis
-                change_str = f"*{change_str}*"
+                change_str = f"*{change_str}*{high_gainer_info}"
             elif pm_change and pm_change > 0:
                 emoji = "🟢"
             elif pm_change and pm_change < 0:
@@ -506,6 +582,9 @@ class PremarketTop20Monitor:
 
             # Update top 10 "new ticker" tracking after notification is sent
             self._update_top10_tracking(top20_data)
+
+            # Update high gainer (>40%) tracking after notification is sent
+            self._update_high_gainer_tracking(top20_data)
 
             # Save current positions
             self._save_positions(current_positions)
