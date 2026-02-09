@@ -71,6 +71,9 @@ class PremarketTop20Monitor:
         # These keep the explosion emoji for all 5 appearances
         self.top10_exploded = set()
 
+        # Previous volumes for calculating total volume % (volume delta share)
+        self.previous_volumes = {}
+
         # High gainer (>40%) tracking
         # Count of notifications sent while ticker is above 40%
         self.high_gainer_notification_count = {}
@@ -411,9 +414,44 @@ class PremarketTop20Monitor:
 
         return has_changed, current_positions
 
+    def _calculate_total_volume_pct(self, top20_data):
+        """
+        Calculate each ticker's share of total volume change across all top 20 tickers.
+
+        For the first notification (no previous volumes), uses raw volume / total volume.
+        For subsequent notifications, uses volume delta / total volume delta.
+
+        Returns:
+            dict: mapping symbol -> total volume % (float)
+        """
+        volume_changes = {}
+        for record in top20_data:
+            symbol = record.get('name')
+            pm_volume = record.get('premarket_volume', 0) or 0
+            if symbol:
+                if self.previous_volumes:
+                    # Calculate delta from previous volume (0 if ticker is new)
+                    prev_vol = self.previous_volumes.get(symbol, 0)
+                    volume_changes[symbol] = pm_volume - prev_vol
+                else:
+                    # First notification - use raw volume
+                    volume_changes[symbol] = pm_volume
+
+        total_change = sum(volume_changes.values())
+        result = {}
+        for symbol, change in volume_changes.items():
+            if total_change > 0:
+                result[symbol] = (change / total_change) * 100
+            else:
+                result[symbol] = 0.0
+        return result
+
     def _format_telegram_message(self, top20_data):
         """Format the top 20 list as a Telegram message"""
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Calculate total volume % for each ticker
+        total_volume_pct = self._calculate_total_volume_pct(top20_data)
 
         message = f"🌅 PREMARKET TOP 20 BY VOLUME\n"
         message += f"📅 {timestamp}\n"
@@ -487,10 +525,15 @@ class PremarketTop20Monitor:
             # Get "new to top 10" emoji (1️⃣-5️⃣) for tickers newly entering top 10
             new_ticker_emoji = self._get_new_ticker_emoji(symbol, idx)
 
+            # Get total volume % for this ticker
+            tvol_pct = total_volume_pct.get(symbol, 0.0)
+            tvol_str = f"{tvol_pct:.1f}%"
+
             # Format line with clickable link (Markdown format)
             message += f"{idx}. {emoji} [{symbol}]({tv_link}){position_arrow}{new_ticker_emoji}\n"
             message += f"   📊 Volume: {volume_str}\n"
-            message += f"   📈 Change: {change_str}{pm_change_delta_str}\n\n"
+            message += f"   📈 Change: {change_str}{pm_change_delta_str}\n"
+            message += f"   🔄 Total Vol: {tvol_str}\n\n"
 
         message += f"{'='*40}\n"
         message += f"💡 Positions tracked every 2 minutes"
@@ -585,6 +628,14 @@ class PremarketTop20Monitor:
 
             # Update high gainer (>40%) tracking after notification is sent
             self._update_high_gainer_tracking(top20_data)
+
+            # Update previous volumes for total volume % calculation
+            self.previous_volumes = {}
+            for record in top20_data:
+                symbol = record.get('name')
+                pm_volume = record.get('premarket_volume', 0) or 0
+                if symbol:
+                    self.previous_volumes[symbol] = pm_volume
 
             # Save current positions
             self._save_positions(current_positions)
