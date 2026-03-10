@@ -353,8 +353,8 @@ function buildDatasets(topN) {
       borderColor: color,
       backgroundColor: color + '18',
       borderWidth: 1.8,
-      pointRadius: 1.5,
-      pointHoverRadius: 5,
+      pointRadius: 2,
+      pointHoverRadius: 7,
       tension: 0.25,
       spanGaps: false,
       hidden: hidden.has(t.name)
@@ -411,28 +411,43 @@ function rebuild() {
       responsive: true,
       maintainAspectRatio: false,
       animation: { duration: 250 },
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'nearest', intersect: true },
       plugins: {
         legend: { display: false },
         tooltip: {
           backgroundColor: '#161b22',
           borderColor: '#30363d',
           borderWidth: 1,
-          titleColor: '#e6edf3',
+          titleColor: '#58a6ff',
           bodyColor: '#c9d1d9',
-          padding: 10,
+          padding: 12,
+          displayColors: false,
           callbacks: {
             title: items => {
               if (!items.length) return '';
-              return new Date(items[0].raw.x).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const item = items[0];
+              const ticker = item.dataset.label;
+              const time = new Date(item.raw.x).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              return `${ticker}  ·  ${time}`;
             },
             label: item => {
-              const v = item.raw.y;
-              if (v === null || v === undefined) return null;
-              const label = item.dataset.label;
-              if (mode === 'volume') return ` ${label}: ${fmtVol(v)} (${v.toLocaleString()})`;
-              if (mode === 'volpct') return ` ${label}: ${v.toFixed(2)}%`;
-              return ` ${label}: #${v}`;
+              const snap = snapshots[item.dataIndex];
+              if (!snap) return [];
+              const ticker = item.dataset.label;
+              const entry = snap.data.find(d => d.name === ticker);
+              if (!entry) return [];
+              const rank = snap.data.indexOf(entry) + 1;
+              const totalVol = snap.data.reduce((s, d) => s + d.premarket_volume, 0);
+              const pct = totalVol > 0 ? (entry.premarket_volume / totalVol * 100).toFixed(2) : '—';
+              const chg = entry.premarket_change;
+              const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+              return [
+                ` Volume : ${fmtVol(entry.premarket_volume)} (${entry.premarket_volume.toLocaleString()})`,
+                ` Vol %  : ${pct}% of total`,
+                ` Change : ${chgStr}`,
+                ` Rank   : #${rank}`,
+                ` Sector : ${entry.sector || '—'}`,
+              ];
             }
           }
         }
