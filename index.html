@@ -217,7 +217,7 @@ canvas { width: 100% !important; }
     <label>Top</label>
     <input type="number" id="topN" value="10" min="1" max="20" onchange="rebuild()">
     <label>tickers</label>
-    <select id="dateSelect" onchange="onDateChange()"></select>
+    <input type="date" id="dateSelect" onchange="onDateChange()">
   </div>
 </div>
 
@@ -549,7 +549,7 @@ function setMode(m) {
 }
 
 async function onDateChange() {
-  currentDate = document.getElementById('dateSelect').value;
+  currentDate = document.getElementById('dateSelect').value.replace(/-/g, '');
   hidden.clear();
   const data = await apiFetch(`/pretop20/api/data?date=${currentDate}`);
   snapshots = data;
@@ -569,15 +569,14 @@ async function init() {
   const today = todayStr();
   const sel = document.getElementById('dateSelect');
 
-  dates.forEach(d => {
-    const opt = document.createElement('option');
-    opt.value = d;
-    opt.textContent = fmtDate(d);
-    sel.appendChild(opt);
-  });
+  // Set min/max so the calendar only allows dates that have data
+  if (dates.length) {
+    sel.min = fmtDate(dates[dates.length - 1]); // oldest
+    sel.max = fmtDate(dates[0]);                 // newest
+  }
 
   currentDate = dates.includes(today) ? today : (dates[0] || today);
-  sel.value = currentDate;
+  sel.value = fmtDate(currentDate);
 
   const data = await apiFetch(`/pretop20/api/data?date=${currentDate}`);
   snapshots = data;
