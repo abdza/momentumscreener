@@ -514,10 +514,10 @@ function startPolling() {
   pollTimer = setInterval(async () => {
     const today = todayStr();
     if (currentDate !== today) return;
-    const res = await apiFetch(`/api/latest?date=${today}`);
+    const res = await apiFetch(`/pretop20/api/latest?date=${today}`);
     if (res.count > lastCount) {
       lastCount = res.count;
-      const data = await apiFetch(`/api/data?date=${today}`);
+      const data = await apiFetch(`/pretop20/api/data?date=${today}`);
       snapshots = data;
       rankCache = calcConsistency(snapshots);
       rebuild();
@@ -551,7 +551,7 @@ function setMode(m) {
 async function onDateChange() {
   currentDate = document.getElementById('dateSelect').value;
   hidden.clear();
-  const data = await apiFetch(`/api/data?date=${currentDate}`);
+  const data = await apiFetch(`/pretop20/api/data?date=${currentDate}`);
   snapshots = data;
   lastCount = data.length;
   rankCache = calcConsistency(snapshots);
@@ -565,7 +565,7 @@ async function onDateChange() {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 async function init() {
-  const dates = await apiFetch('/api/dates');
+  const dates = await apiFetch('/pretop20/api/dates');
   const today = todayStr();
   const sel = document.getElementById('dateSelect');
 
@@ -579,7 +579,7 @@ async function init() {
   currentDate = dates.includes(today) ? today : (dates[0] || today);
   sel.value = currentDate;
 
-  const data = await apiFetch(`/api/data?date=${currentDate}`);
+  const data = await apiFetch(`/pretop20/api/data?date=${currentDate}`);
   snapshots = data;
   lastCount = data.length;
   rankCache = calcConsistency(snapshots);

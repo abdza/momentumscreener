@@ -1,7 +1,7 @@
 """
 Premarket Volume Tracker - simple HTTP server (no external dependencies).
 Run: python3 server.py
-Then open: http://localhost:5000
+Then open: http://localhost:5000/pretop20/
 """
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
@@ -21,14 +21,14 @@ class Handler(BaseHTTPRequestHandler):
         path = parsed.path
         params = parse_qs(parsed.query)
 
-        if path == '/':
+        if path in ('/', '/pretop20', '/pretop20/'):
             self._serve_file('index.html', 'text/html; charset=utf-8')
-        elif path == '/api/dates':
+        elif path == '/pretop20/api/dates':
             self._serve_json(self._get_dates())
-        elif path == '/api/data':
+        elif path == '/pretop20/api/data':
             date = params.get('date', [datetime.now().strftime('%Y%m%d')])[0]
             self._serve_json(self._get_data(date))
-        elif path == '/api/latest':
+        elif path == '/pretop20/api/latest':
             date = params.get('date', [datetime.now().strftime('%Y%m%d')])[0]
             self._serve_json(self._get_latest(date))
         else:
@@ -94,7 +94,7 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     port = 5000
     server = HTTPServer(('0.0.0.0', port), Handler)
-    print(f'Premarket tracker running at http://localhost:{port}')
+    print(f'Premarket tracker running at http://localhost:{port}/pretop20/')
     print('Press Ctrl+C to stop.')
     try:
         server.serve_forever()
