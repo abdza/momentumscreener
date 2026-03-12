@@ -213,6 +213,7 @@ canvas { width: 100% !important; }
       <button class="mode-btn active" id="btnVolume" onclick="setMode('volume')">Volume</button>
       <button class="mode-btn" id="btnVolPct" onclick="setMode('volpct')">Vol %</button>
       <button class="mode-btn" id="btnRank" onclick="setMode('rank')">Rank</button>
+      <button class="mode-btn" id="btnChange" onclick="setMode('change')">Change %</button>
     </div>
     <label>Top</label>
     <input type="number" id="topN" value="10" min="1" max="20" onchange="rebuild()">
@@ -331,7 +332,7 @@ function buildDatasets(topN) {
   const shown = rankCache.slice(0, topN);
 
   // Pre-compute total volume per snapshot for vol% mode
-  const snapTotals = mode === 'volpct'
+  const snapTotals = (mode === 'volpct')
     ? snapshots.map(snap => snap.data.reduce((s, d) => s + d.premarket_volume, 0))
     : null;
 
@@ -344,6 +345,7 @@ function buildDatasets(topN) {
       let y;
       if (mode === 'volume') y = vol;
       else if (mode === 'volpct') y = snapTotals[si] > 0 ? (vol / snapTotals[si]) * 100 : null;
+      else if (mode === 'change') y = snap.data[idx].premarket_change;
       else y = idx + 1; // rank
       return { x: snap.timestamp, y };
     });
@@ -378,6 +380,18 @@ function yAxisConfig() {
       title: { display: true, text: 'Share of Total Vol (%)', color: '#6e7681', font: { size: 11 } },
       grid: { color: '#1c2128' },
       ticks: { color: '#6e7681', font: { size: 11 }, callback: v => v.toFixed(1) + '%' }
+    };
+  }
+  if (mode === 'change') {
+    return {
+      type: 'linear',
+      title: { display: true, text: 'Premarket Change (%)', color: '#6e7681', font: { size: 11 } },
+      grid: { color: '#1c2128' },
+      ticks: {
+        color: '#6e7681',
+        font: { size: 11 },
+        callback: v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%'
+      }
     };
   }
   return {
@@ -560,6 +574,7 @@ function setMode(m) {
   document.getElementById('btnVolume').classList.toggle('active', m === 'volume');
   document.getElementById('btnVolPct').classList.toggle('active', m === 'volpct');
   document.getElementById('btnRank').classList.toggle('active', m === 'rank');
+  document.getElementById('btnChange').classList.toggle('active', m === 'change');
   rebuild();
 }
 
