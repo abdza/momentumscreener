@@ -118,7 +118,7 @@ canvas { width: 100% !important; }
 }
 
 .sidebar-head {
-  padding: 9px 14px;
+  padding: 7px 14px;
   background: #161b22;
   border-bottom: 1px solid #30363d;
   font-size: 11px;
@@ -127,6 +127,23 @@ canvas { width: 100% !important; }
   letter-spacing: .5px;
   color: #6e7681;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sort-select {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: auto;
 }
 
 .ticker-list {
@@ -216,7 +233,7 @@ canvas { width: 100% !important; }
       <button class="mode-btn" id="btnChange" onclick="setMode('change')">Change %</button>
     </div>
     <label>Top</label>
-    <input type="number" id="topN" value="10" min="1" max="20" onchange="rebuild()">
+    <input type="number" id="topN" value="10" min="1" max="20" onchange="onTopNChange()">
     <label>tickers</label>
     <input type="date" id="dateSelect" onchange="onDateChange()">
   </div>
@@ -228,7 +245,16 @@ canvas { width: 100% !important; }
     <div class="status" id="status">Loading…</div>
   </div>
   <div class="sidebar">
-    <div class="sidebar-head">Consistency Rankings</div>
+    <div class="sidebar-head">
+      Consistency Rankings
+      <select class="sort-select" id="rankSort" onchange="onSortChange()">
+        <option value="pct">Consistency %</option>
+        <option value="avgRank">Avg Rank</option>
+        <option value="latestVol">Latest Vol</option>
+        <option value="latestChange">Latest Change</option>
+        <option value="count">Appearances</option>
+      </select>
+    </div>
     <div class="ticker-list" id="tickerList"></div>
   </div>
 </div>
@@ -249,6 +275,7 @@ let currentDate = '';
 let lastCount = 0;
 let pollTimer = null;
 let rankCache = [];
+let rankSort = 'pct';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -322,14 +349,33 @@ function calcConsistency(snaps) {
       ...t,
       avgRank: t.rankSum / t.count,
       pct: t.count / total
-    }))
-    .sort((a, b) => b.pct - a.pct || a.avgRank - b.avgRank);
+    }));
+}
+
+function sortRankCache() {
+  rankCache.sort((a, b) => {
+    switch (rankSort) {
+      case 'avgRank':      return a.avgRank - b.avgRank;
+      case 'latestVol':    return b.latestVol - a.latestVol;
+      case 'latestChange': return b.latestChange - a.latestChange;
+      case 'count':        return b.count - a.count;
+      default:             return b.pct - a.pct || a.avgRank - b.avgRank;
+    }
+  });
+}
+
+function resetHidden() {
+  const topN = getTopN();
+  hidden.clear();
+  rankCache.forEach((t, i) => {
+    if (i >= topN) hidden.add(t.name);
+  });
 }
 
 // ── Chart ─────────────────────────────────────────────────────────────────────
 
-function buildDatasets(topN) {
-  const shown = rankCache.slice(0, topN);
+function buildDatasets() {
+  const shown = rankCache.filter(t => !hidden.has(t.name));
 
   // Pre-compute total volume per snapshot for vol% mode
   const snapTotals = (mode === 'volpct')
@@ -412,8 +458,7 @@ function yAxisConfig() {
 
 function rebuild() {
   if (!snapshots.length) return;
-  const topN = getTopN();
-  const datasets = buildDatasets(topN);
+  const datasets = buildDatasets();
 
   if (chart) { chart.destroy(); chart = null; }
 
@@ -485,7 +530,6 @@ function rebuild() {
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
 function renderSidebar() {
-  const topN = getTopN();
   const list = document.getElementById('tickerList');
 
   if (!rankCache.length) {
@@ -495,10 +539,17 @@ function renderSidebar() {
 
   const maxCount = rankCache[0]?.count || 1;
 
+  // Build color map: assign colors in order of visible tickers
+  const colorMap = {};
+  let colorIdx = 0;
+  rankCache.forEach(t => {
+    if (!hidden.has(t.name)) colorMap[t.name] = COLORS[colorIdx++ % COLORS.length];
+  });
+
   list.innerHTML = rankCache.map((t, i) => {
-    const inChart = i < topN;
-    const color = inChart ? COLORS[i % COLORS.length] : '#444';
-    const isMuted = hidden.has(t.name);
+    const inChart = !hidden.has(t.name);
+    const color = inChart ? colorMap[t.name] : '#444';
+    const isMuted = !inChart;
     const chg = t.latestChange;
     const chgClass = chg > 0 ? 'green' : chg < 0 ? 'red' : 'gray';
     const chgStr = chg !== 0
@@ -549,6 +600,7 @@ function startPolling() {
       const data = await apiFetch(`/pretop20/api/data?date=${today}`);
       snapshots = data;
       rankCache = calcConsistency(snapshots);
+      sortRankCache();
       rebuild();
       renderSidebar();
     }
@@ -569,6 +621,20 @@ function toggleTicker(name) {
   renderSidebar();
 }
 
+function onTopNChange() {
+  resetHidden();
+  rebuild();
+  renderSidebar();
+}
+
+function onSortChange() {
+  rankSort = document.getElementById('rankSort').value;
+  sortRankCache();
+  resetHidden();
+  rebuild();
+  renderSidebar();
+}
+
 function setMode(m) {
   mode = m;
   document.getElementById('btnVolume').classList.toggle('active', m === 'volume');
@@ -580,11 +646,12 @@ function setMode(m) {
 
 async function onDateChange() {
   currentDate = document.getElementById('dateSelect').value.replace(/-/g, '');
-  hidden.clear();
   const data = await apiFetch(`/pretop20/api/data?date=${currentDate}`);
   snapshots = data;
   lastCount = data.length;
   rankCache = calcConsistency(snapshots);
+  sortRankCache();
+  resetHidden();
   rebuild();
   renderSidebar();
   updateStatus();
@@ -612,6 +679,8 @@ async function init() {
   snapshots = data;
   lastCount = data.length;
   rankCache = calcConsistency(snapshots);
+  sortRankCache();
+  resetHidden();
   rebuild();
   renderSidebar();
   updateStatus();
