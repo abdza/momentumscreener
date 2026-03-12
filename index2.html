@@ -227,7 +227,7 @@ canvas { width: 100% !important; }
   <h1>📈 Market Hour Tracker</h1>
   <div class="controls">
     <div class="mode-toggle">
-      <button class="mode-btn active" id="btnClose" onclick="setMode('close')">Close</button>
+      <button class="mode-btn active" id="btnClose" onclick="setMode('close')">Close %</button>
       <button class="mode-btn" id="btnVolume" onclick="setMode('volume')">Volume</button>
       <button class="mode-btn" id="btnChange" onclick="setMode('change')">Change from Open</button>
       <button class="mode-btn" id="btnRank" onclick="setMode('rank')">Rank</button>
@@ -379,14 +379,26 @@ function resetHidden() {
 function buildDatasets() {
   const shown = rankCache.filter(t => !hidden.has(t.name));
 
+  // For close mode: find each ticker's first known close for normalization
+  const firstClose = {};
+  if (mode === 'close') {
+    snapshots.forEach(snap => {
+      snap.data.forEach(entry => {
+        if (!(entry.name in firstClose) && entry.close > 0)
+          firstClose[entry.name] = entry.close;
+      });
+    });
+  }
+
   return shown.map((t, i) => {
     const color = COLORS[i % COLORS.length];
+    const base = firstClose[t.name] || null;
     const data = snapshots.map(snap => {
       const idx = snap.data.findIndex(d => d.name === t.name);
       if (idx === -1) return { x: snap.timestamp, y: null };
       const entry = snap.data[idx];
       let y;
-      if (mode === 'close')   y = entry.close;
+      if (mode === 'close')   y = base ? (entry.close - base) / base * 100 : null;
       else if (mode === 'volume') y = entry.volume;
       else if (mode === 'change') y = entry.change_from_open;
       else y = idx + 1; // rank
@@ -411,9 +423,9 @@ function yAxisConfig() {
   if (mode === 'close') {
     return {
       type: 'linear',
-      title: { display: true, text: 'Close Price ($)', color: '#6e7681', font: { size: 11 } },
+      title: { display: true, text: 'Close % from session start', color: '#6e7681', font: { size: 11 } },
       grid: { color: '#1c2128' },
-      ticks: { color: '#6e7681', font: { size: 11 }, callback: v => '$' + v.toFixed(2) }
+      ticks: { color: '#6e7681', font: { size: 11 }, callback: v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%' }
     };
   }
   if (mode === 'volume') {
@@ -495,11 +507,11 @@ function rebuild() {
               const chg = entry.change_from_open;
               const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
               return [
-                ` Close  : $${entry.close.toFixed(2)}`,
-                ` Volume : ${fmtVol(entry.volume)} (${entry.volume.toLocaleString()})`,
+                ` Close   : $${entry.close.toFixed(4)}`,
+                ` Volume  : ${fmtVol(entry.volume)} (${entry.volume.toLocaleString()})`,
                 ` Chg/Open: ${chgStr}`,
-                ` Rank   : #${rank}`,
-                ` Sector : ${entry.sector || '—'}`,
+                ` Rank    : #${rank}`,
+                ` Sector  : ${entry.sector || '—'}`,
               ];
             }
           }
