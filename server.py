@@ -120,7 +120,8 @@ class Handler(BaseHTTPRequestHandler):
                 d, t = parts[2], parts[3]
                 ts = f'{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}'
                 with open(f) as fp:
-                    snapshots.append({'timestamp': ts, 'data': json.load(fp)})
+                    raw = fp.read().replace('NaN', 'null').replace('Infinity', 'null')
+                snapshots.append({'timestamp': ts, 'data': json.loads(raw)})
             except Exception:
                 pass
         return snapshots
