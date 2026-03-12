@@ -232,6 +232,8 @@ canvas { width: 100% !important; }
       <button class="mode-btn" id="btnChange" onclick="setMode('change')">Change from Open</button>
       <button class="mode-btn" id="btnRank" onclick="setMode('rank')">Rank</button>
     </div>
+    <label>Session</label>
+    <select id="sessionSelect" onchange="onSessionChange()"></select>
     <label>Top</label>
     <input type="number" id="topN" value="10" min="1" max="20" onchange="onTopNChange()">
     <label>tickers</label>
@@ -268,7 +270,10 @@ const COLORS = [
 ];
 
 let chart = null;
-let snapshots = [];
+let allSnapshots = [];   // full day data from API
+let snapshots = [];      // current session's snapshots
+let sessions = [];       // array of snapshot arrays, one per detected session
+let sessionIdx = 0;      // which session is shown
 let hidden = new Set();
 let mode = 'close';
 let currentDate = '';
@@ -295,6 +300,52 @@ function fmtVol(v) {
 
 function getTopN() {
   return Math.max(1, Math.min(20, parseInt(document.getElementById('topN').value) || 10));
+}
+
+// ── Session detection ─────────────────────────────────────────────────────────
+
+// Split snapshots into sessions whenever there's a gap > 60 minutes between them
+function detectSessions(snaps) {
+  if (!snaps.length) return [];
+  const result = [];
+  let current = [snaps[0]];
+  for (let i = 1; i < snaps.length; i++) {
+    const gap = new Date(snaps[i].timestamp) - new Date(snaps[i-1].timestamp);
+    if (gap > 60 * 60 * 1000) {
+      result.push(current);
+      current = [];
+    }
+    current.push(snaps[i]);
+  }
+  result.push(current);
+  return result;
+}
+
+function buildSessionLabel(sess, idx, total) {
+  if (!sess.length) return `Session ${idx + 1}`;
+  const start = new Date(sess[0].timestamp);
+  const end   = new Date(sess[sess.length - 1].timestamp);
+  const fmt = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const label = `${fmt(start)} – ${fmt(end)} (${sess.length} snaps)`;
+  // Most recent session last in the array = "current"
+  return (idx === total - 1) ? `Current: ${label}` : `Prev: ${label}`;
+}
+
+function populateSessionSelect() {
+  const sel = document.getElementById('sessionSelect');
+  sel.innerHTML = sessions.map((s, i) =>
+    `<option value="${i}">${buildSessionLabel(s, i, sessions.length)}</option>`
+  ).join('');
+  sel.value = sessionIdx;
+}
+
+function applySession() {
+  snapshots = sessions[sessionIdx] || [];
+  rankCache = calcConsistency(snapshots);
+  sortRankCache();
+  resetHidden();
+  rebuild();
+  renderSidebar();
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -589,7 +640,7 @@ function updateStatus() {
   const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const isToday = currentDate === todayStr();
   const dot = isToday ? '<span class="live-dot"></span>' : '';
-  el.innerHTML = `${dot}${isToday ? 'Live · ' : ''}Updated ${now} · ${snapshots.length} snapshots`;
+  el.innerHTML = `${dot}${isToday ? 'Live · ' : ''}Updated ${now} · ${snapshots.length} snaps (session ${sessionIdx + 1}/${sessions.length})`;
 }
 
 // ── Polling ───────────────────────────────────────────────────────────────────
@@ -603,7 +654,18 @@ function startPolling() {
     if (res.count > lastCount) {
       lastCount = res.count;
       const data = await apiFetch(`/markethour/api/data?date=${today}`);
-      snapshots = data;
+      allSnapshots = data;
+      const newSessions = detectSessions(allSnapshots);
+      // If a new session appeared, switch to it; otherwise stay on current
+      if (newSessions.length !== sessions.length) {
+        sessions = newSessions;
+        sessionIdx = sessions.length - 1;
+        populateSessionSelect();
+      } else {
+        sessions = newSessions;
+        populateSessionSelect();
+      }
+      snapshots = sessions[sessionIdx] || [];
       rankCache = calcConsistency(snapshots);
       sortRankCache();
       rebuild();
@@ -624,6 +686,12 @@ function toggleTicker(name) {
   else hidden.add(name);
   rebuild();
   renderSidebar();
+}
+
+function onSessionChange() {
+  sessionIdx = parseInt(document.getElementById('sessionSelect').value);
+  applySession();
+  updateStatus();
 }
 
 function onTopNChange() {
@@ -652,13 +720,12 @@ function setMode(m) {
 async function onDateChange() {
   currentDate = document.getElementById('dateSelect').value.replace(/-/g, '');
   const data = await apiFetch(`/markethour/api/data?date=${currentDate}`);
-  snapshots = data;
+  allSnapshots = data;
   lastCount = data.length;
-  rankCache = calcConsistency(snapshots);
-  sortRankCache();
-  resetHidden();
-  rebuild();
-  renderSidebar();
+  sessions = detectSessions(allSnapshots);
+  sessionIdx = sessions.length - 1; // default to most recent session
+  populateSessionSelect();
+  applySession();
   updateStatus();
   stopPolling();
   if (currentDate === todayStr()) startPolling();
@@ -680,13 +747,12 @@ async function init() {
   sel.value = fmtDate(currentDate);
 
   const data = await apiFetch(`/markethour/api/data?date=${currentDate}`);
-  snapshots = data;
+  allSnapshots = data;
   lastCount = data.length;
-  rankCache = calcConsistency(snapshots);
-  sortRankCache();
-  resetHidden();
-  rebuild();
-  renderSidebar();
+  sessions = detectSessions(allSnapshots);
+  sessionIdx = sessions.length - 1;
+  populateSessionSelect();
+  applySession();
   updateStatus();
 
   if (currentDate === today) startPolling();
