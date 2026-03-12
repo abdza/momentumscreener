@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Hour Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: 'Segoe UI', system-ui, monospace;
+  font-size: 13px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+h1 { font-size: 15px; color: #58a6ff; white-space: nowrap; }
+
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.mode-toggle {
+  display: flex;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mode-btn {
+  background: #21262d;
+  border: none;
+  color: #8b949e;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.1s;
+}
+
+.mode-btn.active {
+  background: #1f6feb;
+  color: #fff;
+}
+
+label { font-size: 12px; color: #8b949e; }
+
+select, input[type=number] {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+input[type=number] { width: 54px; text-align: center; }
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 270px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.chart-area {
+  position: relative;
+  padding: 14px 14px 10px;
+  min-width: 0;
+}
+
+canvas { width: 100% !important; }
+
+.status {
+  position: absolute;
+  bottom: 12px;
+  right: 18px;
+  font-size: 11px;
+  color: #6e7681;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.live-dot {
+  width: 6px; height: 6px;
+  background: #3fb950;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.sidebar {
+  border-left: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-head {
+  padding: 7px 14px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: #6e7681;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sort-select {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: auto;
+}
+
+.ticker-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ticker-list::-webkit-scrollbar { width: 4px; }
+.ticker-list::-webkit-scrollbar-track { background: transparent; }
+.ticker-list::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+
+.ticker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #161b22;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.ticker-row:hover { background: #161b22; }
+.ticker-row.muted { opacity: 0.35; }
+
+.dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ticker-info { flex: 1; min-width: 0; }
+
+.ticker-name {
+  font-weight: 700;
+  color: #e6edf3;
+  font-size: 13px;
+}
+
+.ticker-sector {
+  font-size: 10px;
+  color: #6e7681;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.consistency-bar {
+  height: 2px;
+  background: #21262d;
+  border-radius: 1px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+
+.consistency-fill { height: 100%; border-radius: 1px; }
+
+.ticker-meta {
+  text-align: right;
+  flex-shrink: 0;
+  min-width: 64px;
+}
+
+.change-pct { font-size: 12px; font-weight: 600; }
+.meta-sub { font-size: 10px; color: #6e7681; }
+
+.green { color: #3fb950; }
+.red { color: #f85149; }
+.gray { color: #6e7681; }
+
+.empty-msg {
+  padding: 40px 20px;
+  text-align: center;
+  color: #6e7681;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📈 Market Hour Tracker</h1>
+  <div class="controls">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnClose" onclick="setMode('close')">Close</button>
+      <button class="mode-btn" id="btnVolume" onclick="setMode('volume')">Volume</button>
+      <button class="mode-btn" id="btnChange" onclick="setMode('change')">Change from Open</button>
+      <button class="mode-btn" id="btnRank" onclick="setMode('rank')">Rank</button>
+    </div>
+    <label>Top</label>
+    <input type="number" id="topN" value="10" min="1" max="20" onchange="onTopNChange()">
+    <label>tickers</label>
+    <input type="date" id="dateSelect" onchange="onDateChange()">
+  </div>
+</div>
+
+<div class="main">
+  <div class="chart-area">
+    <canvas id="chart"></canvas>
+    <div class="status" id="status">Loading…</div>
+  </div>
+  <div class="sidebar">
+    <div class="sidebar-head">
+      Consistency Rankings
+      <select class="sort-select" id="rankSort" onchange="onSortChange()">
+        <option value="pct">Consistency %</option>
+        <option value="avgRank">Avg Rank</option>
+        <option value="latestVol">Latest Vol</option>
+        <option value="latestChange">Latest Chg from Open</option>
+        <option value="count">Appearances</option>
+      </select>
+    </div>
+    <div class="ticker-list" id="tickerList"></div>
+  </div>
+</div>
+
+<script>
+const COLORS = [
+  '#36A2EB','#FF6384','#FFCE56','#4BC0C0','#9966FF',
+  '#FF9F40','#00D4AA','#58A6FF','#F08030','#E74C3C',
+  '#2ECC71','#F39C12','#9B59B6','#1ABC9C','#E67E22',
+  '#E91E63','#00BCD4','#8BC34A','#FF5722','#607D8B'
+];
+
+let chart = null;
+let snapshots = [];
+let hidden = new Set();
+let mode = 'close';
+let currentDate = '';
+let lastCount = 0;
+let pollTimer = null;
+let rankCache = [];
+let rankSort = 'pct';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function todayStr() {
+  return new Date().toISOString().slice(0,10).replace(/-/g,'');
+}
+
+function fmtDate(d) {
+  return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+}
+
+function fmtVol(v) {
+  if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
+  if (v >= 1e3) return (v/1e3).toFixed(1)+'K';
+  return v.toString();
+}
+
+function getTopN() {
+  return Math.max(1, Math.min(20, parseInt(document.getElementById('topN').value) || 10));
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+
+async function apiFetch(url) {
+  const r = await fetch(url);
+  return r.json();
+}
+
+// ── Consistency calc ──────────────────────────────────────────────────────────
+
+function calcConsistency(snaps) {
+  if (!snaps.length) return [];
+  const total = snaps.length;
+  const map = {};
+
+  snaps.forEach(snap => {
+    snap.data.forEach((item, i) => {
+      const n = item.name;
+      if (!map[n]) {
+        map[n] = {
+          name: n,
+          sector: item.sector || '',
+          exchange: item.exchange || '',
+          count: 0,
+          rankSum: 0,
+          maxVol: 0,
+          latestVol: 0,
+          latestChange: 0,
+          latestClose: 0,
+          latestRank: null
+        };
+      }
+      map[n].count++;
+      map[n].rankSum += (i + 1);
+      if (item.volume > map[n].maxVol) map[n].maxVol = item.volume;
+    });
+  });
+
+  const last = snaps[snaps.length - 1];
+  if (last) {
+    last.data.forEach((item, i) => {
+      if (map[item.name]) {
+        map[item.name].latestVol = item.volume;
+        map[item.name].latestChange = item.change_from_open;
+        map[item.name].latestClose = item.close;
+        map[item.name].latestRank = i + 1;
+      }
+    });
+  }
+
+  return Object.values(map)
+    .map(t => ({
+      ...t,
+      avgRank: t.rankSum / t.count,
+      pct: t.count / total
+    }));
+}
+
+function sortRankCache() {
+  rankCache.sort((a, b) => {
+    switch (rankSort) {
+      case 'avgRank':      return a.avgRank - b.avgRank;
+      case 'latestVol':    return b.latestVol - a.latestVol;
+      case 'latestChange': return b.latestChange - a.latestChange;
+      case 'count':        return b.count - a.count;
+      default:             return b.pct - a.pct || a.avgRank - b.avgRank;
+    }
+  });
+}
+
+function resetHidden() {
+  const topN = getTopN();
+  hidden.clear();
+  rankCache.forEach((t, i) => {
+    if (i >= topN) hidden.add(t.name);
+  });
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+
+function buildDatasets() {
+  const shown = rankCache.filter(t => !hidden.has(t.name));
+
+  return shown.map((t, i) => {
+    const color = COLORS[i % COLORS.length];
+    const data = snapshots.map(snap => {
+      const idx = snap.data.findIndex(d => d.name === t.name);
+      if (idx === -1) return { x: snap.timestamp, y: null };
+      const entry = snap.data[idx];
+      let y;
+      if (mode === 'close')   y = entry.close;
+      else if (mode === 'volume') y = entry.volume;
+      else if (mode === 'change') y = entry.change_from_open;
+      else y = idx + 1; // rank
+      return { x: snap.timestamp, y };
+    });
+    return {
+      label: t.name,
+      data,
+      borderColor: color,
+      backgroundColor: color + '18',
+      borderWidth: 1.8,
+      pointRadius: 2,
+      pointHoverRadius: 7,
+      tension: 0.25,
+      spanGaps: false,
+      hidden: hidden.has(t.name)
+    };
+  });
+}
+
+function yAxisConfig() {
+  if (mode === 'close') {
+    return {
+      type: 'linear',
+      title: { display: true, text: 'Close Price ($)', color: '#6e7681', font: { size: 11 } },
+      grid: { color: '#1c2128' },
+      ticks: { color: '#6e7681', font: { size: 11 }, callback: v => '$' + v.toFixed(2) }
+    };
+  }
+  if (mode === 'volume') {
+    return {
+      type: 'logarithmic',
+      title: { display: true, text: 'Volume', color: '#6e7681', font: { size: 11 } },
+      grid: { color: '#1c2128' },
+      ticks: { color: '#6e7681', font: { size: 11 }, callback: v => fmtVol(v) }
+    };
+  }
+  if (mode === 'change') {
+    return {
+      type: 'linear',
+      title: { display: true, text: 'Change from Open (%)', color: '#6e7681', font: { size: 11 } },
+      grid: { color: '#1c2128' },
+      ticks: {
+        color: '#6e7681',
+        font: { size: 11 },
+        callback: v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%'
+      }
+    };
+  }
+  return {
+    type: 'linear',
+    reverse: true,
+    min: 1,
+    max: 20,
+    title: { display: true, text: 'Rank (1 = top momentum)', color: '#6e7681', font: { size: 11 } },
+    grid: { color: '#1c2128' },
+    ticks: {
+      color: '#6e7681',
+      font: { size: 11 },
+      stepSize: 1,
+      callback: v => Number.isInteger(v) ? `#${v}` : ''
+    }
+  };
+}
+
+function rebuild() {
+  if (!snapshots.length) return;
+  const datasets = buildDatasets();
+
+  if (chart) { chart.destroy(); chart = null; }
+
+  const ctx = document.getElementById('chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 250 },
+      interaction: { mode: 'nearest', intersect: true },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#161b22',
+          borderColor: '#30363d',
+          borderWidth: 1,
+          titleColor: '#58a6ff',
+          bodyColor: '#c9d1d9',
+          padding: 12,
+          displayColors: false,
+          callbacks: {
+            title: items => {
+              if (!items.length) return '';
+              const item = items[0];
+              const ticker = item.dataset.label;
+              const time = new Date(item.raw.x).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              return `${ticker}  ·  ${time}`;
+            },
+            label: item => {
+              const snap = snapshots[item.dataIndex];
+              if (!snap) return [];
+              const ticker = item.dataset.label;
+              const entry = snap.data.find(d => d.name === ticker);
+              if (!entry) return [];
+              const rank = snap.data.indexOf(entry) + 1;
+              const chg = entry.change_from_open;
+              const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+              return [
+                ` Close  : $${entry.close.toFixed(2)}`,
+                ` Volume : ${fmtVol(entry.volume)} (${entry.volume.toLocaleString()})`,
+                ` Chg/Open: ${chgStr}`,
+                ` Rank   : #${rank}`,
+                ` Sector : ${entry.sector || '—'}`,
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            tooltipFormat: 'HH:mm',
+            displayFormats: { minute: 'HH:mm', hour: 'HH:mm' }
+          },
+          grid: { color: '#1c2128' },
+          ticks: { color: '#6e7681', font: { size: 11 }, maxTicksLimit: 12 }
+        },
+        y: yAxisConfig()
+      }
+    }
+  });
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+
+function renderSidebar() {
+  const list = document.getElementById('tickerList');
+
+  if (!rankCache.length) {
+    list.innerHTML = '<div class="empty-msg">No data for this date.</div>';
+    return;
+  }
+
+  const maxCount = rankCache[0]?.count || 1;
+
+  // Build color map: assign colors in order of visible tickers
+  const colorMap = {};
+  let colorIdx = 0;
+  rankCache.forEach(t => {
+    if (!hidden.has(t.name)) colorMap[t.name] = COLORS[colorIdx++ % COLORS.length];
+  });
+
+  list.innerHTML = rankCache.map((t, i) => {
+    const inChart = !hidden.has(t.name);
+    const color = inChart ? colorMap[t.name] : '#444';
+    const isMuted = !inChart;
+    const chg = t.latestChange;
+    const chgClass = chg > 0 ? 'green' : chg < 0 ? 'red' : 'gray';
+    const chgStr = chg !== 0
+      ? (chg > 0 ? '+' : '') + chg.toFixed(2) + '%'
+      : '0.00%';
+    const barWidth = ((t.count / maxCount) * 100).toFixed(1);
+
+    return `
+    <div class="ticker-row${isMuted ? ' muted' : ''}" onclick="toggleTicker('${t.name}')">
+      <div class="dot" style="background:${color}"></div>
+      <div class="ticker-info">
+        <div class="ticker-name">${t.name}</div>
+        <div class="ticker-sector">${t.sector}</div>
+        <div class="consistency-bar">
+          <div class="consistency-fill" style="width:${barWidth}%;background:${color}"></div>
+        </div>
+      </div>
+      <div class="ticker-meta">
+        <div class="change-pct ${chgClass}">${chgStr}</div>
+        <div class="meta-sub">${t.count}/${snapshots.length} snaps</div>
+        <div class="meta-sub">avg #${t.avgRank.toFixed(1)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+
+function updateStatus() {
+  const el = document.getElementById('status');
+  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const isToday = currentDate === todayStr();
+  const dot = isToday ? '<span class="live-dot"></span>' : '';
+  el.innerHTML = `${dot}${isToday ? 'Live · ' : ''}Updated ${now} · ${snapshots.length} snapshots`;
+}
+
+// ── Polling ───────────────────────────────────────────────────────────────────
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(async () => {
+    const today = todayStr();
+    if (currentDate !== today) return;
+    const res = await apiFetch(`/markethour/api/latest?date=${today}`);
+    if (res.count > lastCount) {
+      lastCount = res.count;
+      const data = await apiFetch(`/markethour/api/data?date=${today}`);
+      snapshots = data;
+      rankCache = calcConsistency(snapshots);
+      sortRankCache();
+      rebuild();
+      renderSidebar();
+    }
+    updateStatus();
+  }, 30000);
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+// ── Event handlers ────────────────────────────────────────────────────────────
+
+function toggleTicker(name) {
+  if (hidden.has(name)) hidden.delete(name);
+  else hidden.add(name);
+  rebuild();
+  renderSidebar();
+}
+
+function onTopNChange() {
+  resetHidden();
+  rebuild();
+  renderSidebar();
+}
+
+function onSortChange() {
+  rankSort = document.getElementById('rankSort').value;
+  sortRankCache();
+  resetHidden();
+  rebuild();
+  renderSidebar();
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnClose').classList.toggle('active', m === 'close');
+  document.getElementById('btnVolume').classList.toggle('active', m === 'volume');
+  document.getElementById('btnChange').classList.toggle('active', m === 'change');
+  document.getElementById('btnRank').classList.toggle('active', m === 'rank');
+  rebuild();
+}
+
+async function onDateChange() {
+  currentDate = document.getElementById('dateSelect').value.replace(/-/g, '');
+  const data = await apiFetch(`/markethour/api/data?date=${currentDate}`);
+  snapshots = data;
+  lastCount = data.length;
+  rankCache = calcConsistency(snapshots);
+  sortRankCache();
+  resetHidden();
+  rebuild();
+  renderSidebar();
+  updateStatus();
+  stopPolling();
+  if (currentDate === todayStr()) startPolling();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+async function init() {
+  const dates = await apiFetch('/markethour/api/dates');
+  const today = todayStr();
+  const sel = document.getElementById('dateSelect');
+
+  if (dates.length) {
+    sel.min = fmtDate(dates[dates.length - 1]);
+    sel.max = fmtDate(dates[0]);
+  }
+
+  currentDate = dates.includes(today) ? today : (dates[0] || today);
+  sel.value = fmtDate(currentDate);
+
+  const data = await apiFetch(`/markethour/api/data?date=${currentDate}`);
+  snapshots = data;
+  lastCount = data.length;
+  rankCache = calcConsistency(snapshots);
+  sortRankCache();
+  resetHidden();
+  rebuild();
+  renderSidebar();
+  updateStatus();
+
+  if (currentDate === today) startPolling();
+}
+
+init();
+</script>
+</body>
+</html>
