@@ -251,7 +251,7 @@ canvas { width: 100% !important; }
         <option value="pct">Consistency %</option>
         <option value="avgRank">Avg Rank</option>
         <option value="latestVol">Latest Vol</option>
-        <option value="latestChange">Latest Change</option>
+        <option value="latestChange" selected>Latest Change</option>
         <option value="count">Appearances</option>
       </select>
     </div>
@@ -275,7 +275,7 @@ let currentDate = '';
 let lastCount = 0;
 let pollTimer = null;
 let rankCache = [];
-let rankSort = 'pct';
+let rankSort = 'latestChange';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
