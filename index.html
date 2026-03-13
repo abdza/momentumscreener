@@ -227,13 +227,13 @@ canvas { width: 100% !important; }
   <h1>🌅 Premarket Volume Tracker</h1>
   <div class="controls">
     <div class="mode-toggle">
-      <button class="mode-btn active" id="btnVolume" onclick="setMode('volume')">Volume</button>
+      <button class="mode-btn" id="btnVolume" onclick="setMode('volume')">Volume</button>
       <button class="mode-btn" id="btnVolPct" onclick="setMode('volpct')">Vol %</button>
       <button class="mode-btn" id="btnRank" onclick="setMode('rank')">Rank</button>
-      <button class="mode-btn" id="btnChange" onclick="setMode('change')">Change %</button>
+      <button class="mode-btn active" id="btnChange" onclick="setMode('change')">Change %</button>
     </div>
     <label>Top</label>
-    <input type="number" id="topN" value="10" min="1" max="20" onchange="onTopNChange()">
+    <input type="number" id="topN" value="10" min="1" max="100" onchange="onTopNChange()">
     <label>tickers</label>
     <input type="date" id="dateSelect" onchange="onDateChange()">
   </div>
@@ -270,7 +270,7 @@ const COLORS = [
 let chart = null;
 let snapshots = [];
 let hidden = new Set();
-let mode = 'volume';
+let mode = 'change';
 let currentDate = '';
 let lastCount = 0;
 let pollTimer = null;
