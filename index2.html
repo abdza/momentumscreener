@@ -530,6 +530,11 @@ function rebuild() {
       maintainAspectRatio: false,
       animation: { duration: 250 },
       interaction: { mode: 'nearest', intersect: true },
+      onClick: (event, elements) => {
+        if (!elements.length) return;
+        const ticker = chart.data.datasets[elements[0].datasetIndex].label;
+        window.open(`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(ticker)}`, '_blank');
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
