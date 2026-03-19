@@ -219,6 +219,58 @@ canvas { width: 100% !important; }
   color: #6e7681;
   font-size: 12px;
 }
+
+@media (max-width: 640px) {
+  body {
+    height: auto;
+    overflow: auto;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  h1 { font-size: 13px; }
+
+  .controls {
+    margin-left: 0;
+    width: 100%;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .mode-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 55vw auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  .chart-area {
+    height: 55vw;
+    min-height: 220px;
+    padding: 8px 8px 6px;
+  }
+
+  .sidebar {
+    border-left: none;
+    border-top: 1px solid #30363d;
+    max-height: 50vh;
+  }
+
+  .status {
+    font-size: 10px;
+    bottom: 6px;
+    right: 8px;
+  }
+}
 </style>
 </head>
 <body>
