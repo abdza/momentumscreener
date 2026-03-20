@@ -278,78 +278,97 @@ class PremarketTop20Monitor:
         """Generate TradingView chart link for the symbol"""
         return f"https://www.tradingview.com/chart/?symbol={symbol}"
 
-    def get_top20_by_premarket_volume(self):
-        """Get top 20 tickers sorted by premarket volume descending"""
+    def _fetch_query_records(self, query, label):
+        """Helper to execute a query and return a list of valid records with premarket volume > 0"""
         try:
-            query = (Query()
-                    .select(
-                        'name',                # Symbol/Name
-                        'premarket_volume',    # Pre-market volume
-                        'premarket_change',    # Pre-market change %
-                        'close',               # Previous close price
-                        'sector',              # Sector
-                        'exchange'             # Exchange
-                    )
-                    .order_by('premarket_volume', ascending=False)
-                    .limit(100))  # Get more to filter manually
-
-            logger.info("📊 Fetching premarket volume data from TradingView...")
             data = query.get_scanner_data(cookies=self.cookies)
 
-            # Process the data - handle different response formats
             df_data = None
             if isinstance(data, tuple) and len(data) == 2:
-                total_count, df_data = data
+                _, df_data = data
             else:
                 df_data = data
 
             if df_data is None:
-                logger.error("❌ No data returned from query")
-                return None
+                logger.error(f"❌ No data returned from {label} query")
+                return []
 
-            # Convert to records list
             all_records = []
             if hasattr(df_data, 'to_dict'):
                 all_records = df_data.to_dict('records')
             elif isinstance(df_data, list):
                 all_records = df_data
             elif isinstance(df_data, dict):
-                # If it's already a dict, wrap it in a list
                 all_records = [df_data]
             else:
-                logger.error(f"❌ Unexpected data format: {type(df_data)}")
-                return None
+                logger.error(f"❌ Unexpected data format from {label}: {type(df_data)}")
+                return []
 
-            logger.info(f"✅ Retrieved {len(all_records)} records")
-
-            # Filter for valid records and get top 20
-            valid_records = []
+            valid = []
             for record in all_records:
-                try:
-                    # Ensure record is a dict
-                    if not isinstance(record, dict):
-                        logger.warning(f"⚠️  Skipping non-dict record: {type(record)}")
-                        continue
-
-                    # Filter out records with no premarket volume
-                    pm_volume = record.get('premarket_volume')
-                    if pm_volume and pm_volume > 0:
-                        valid_records.append(record)
-
-                    # Stop when we have enough
-                    if len(valid_records) >= 20:
-                        break
-                except Exception as e:
-                    logger.warning(f"⚠️  Error processing record: {e}")
+                if not isinstance(record, dict):
                     continue
+                pm_volume = record.get('premarket_volume')
+                if pm_volume and pm_volume > 0:
+                    valid.append(record)
 
-            logger.info(f"✅ Found {len(valid_records)} tickers with premarket volume")
+            logger.info(f"✅ {label}: {len(valid)} tickers with premarket volume")
+            return valid
+        except Exception as e:
+            logger.error(f"❌ Error in {label} query: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return []
+
+    def get_top20_by_premarket_volume(self):
+        """Get top 20 tickers by premarket volume, supplemented by top gainers to catch early movers"""
+        try:
+            fields = ['name', 'premarket_volume', 'premarket_change', 'close', 'sector', 'exchange']
+
+            # Primary: top 20 by premarket volume
+            volume_query = (Query()
+                    .select(*fields)
+                    .order_by('premarket_volume', ascending=False)
+                    .limit(100))
+
+            # Secondary: top 20 by premarket change % — captures early movers with low volume
+            change_query = (Query()
+                    .select(*fields)
+                    .order_by('premarket_change', ascending=False)
+                    .limit(100))
+
+            logger.info("📊 Fetching premarket data from TradingView (volume + change queries)...")
+            volume_records = self._fetch_query_records(volume_query, "volume-sorted")
+            change_records = self._fetch_query_records(change_query, "change-sorted")
+
+            # Merge: volume top 20 first, then append any new tickers from change top 20
+            seen_symbols = set()
+            merged = []
+
+            for record in volume_records[:20]:
+                symbol = record.get('name')
+                if symbol and symbol not in seen_symbols:
+                    seen_symbols.add(symbol)
+                    merged.append(record)
+
+            added_from_change = 0
+            for record in change_records[:20]:
+                symbol = record.get('name')
+                if symbol and symbol not in seen_symbols:
+                    seen_symbols.add(symbol)
+                    merged.append(record)
+                    added_from_change += 1
+
+            if added_from_change:
+                logger.info(f"📈 Added {added_from_change} early movers from change-sorted query")
+
+            logger.info(f"✅ Total merged tickers: {len(merged)}")
 
             # Log the screener data to file
-            if valid_records:
-                self._log_screener_data(valid_records)
+            if merged:
+                self._log_screener_data(merged)
 
-            return valid_records if valid_records else None
+            return merged if merged else None
 
         except Exception as e:
             logger.error(f"❌ Error getting screener data: {e}")
