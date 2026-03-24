@@ -88,10 +88,15 @@ class Handler(BaseHTTPRequestHandler):
     def _pretop20_data(self, date):
         files = sorted(glob.glob(os.path.join(PRETOP20_DIR, f'screener_{date}_*.json')))
         snapshots = []
+        prev_data = None
         for f in files:
             try:
                 with open(f) as fp:
-                    snapshots.append(json.load(fp))
+                    snap = json.load(fp)
+                curr_data = snap.get('data')
+                if curr_data != prev_data:
+                    snapshots.append(snap)
+                    prev_data = curr_data
             except Exception:
                 pass
         return snapshots
@@ -114,6 +119,7 @@ class Handler(BaseHTTPRequestHandler):
     def _markethour_data(self, date):
         files = sorted(glob.glob(os.path.join(MOMENTUM_DIR, f'raw_data_{date}_*.json')))
         snapshots = []
+        prev_data = None
         for f in files:
             try:
                 parts = os.path.basename(f).replace('.json', '').split('_')
@@ -121,7 +127,10 @@ class Handler(BaseHTTPRequestHandler):
                 ts = f'{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}'
                 with open(f) as fp:
                     raw = fp.read().replace('NaN', 'null').replace('Infinity', 'null')
-                snapshots.append({'timestamp': ts, 'data': json.loads(raw)})
+                curr_data = json.loads(raw)
+                if curr_data != prev_data:
+                    snapshots.append({'timestamp': ts, 'data': curr_data})
+                    prev_data = curr_data
             except Exception:
                 pass
         return snapshots
