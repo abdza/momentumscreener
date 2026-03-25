@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Premarket Top 20 Volume Monitor
-Monitors the top 20 tickers by premarket volume every 2 minutes.
+Monitors the top 20 tickers by premarket volume every 1 minute.
 Sends Telegram notification when ticker positions change.
 
 Usage:
@@ -555,7 +555,7 @@ class PremarketTop20Monitor:
             message += f"   🔄 Total Vol: {tvol_str}\n\n"
 
         message += f"{'='*40}\n"
-        message += f"💡 Positions tracked every 2 minutes"
+        message += f"💡 Positions tracked every 1 minute"
 
         return message
 
@@ -665,8 +665,8 @@ class PremarketTop20Monitor:
         return True
 
     def run_continuous(self):
-        """Run continuous monitoring every 2 minutes"""
-        logger.info("🚀 Starting continuous monitoring (every 2 minutes)...")
+        """Run continuous monitoring every 1 minute"""
+        logger.info("🚀 Starting continuous monitoring (every 1 minute)...")
         logger.info("Press Ctrl+C to stop")
 
         scan_count = 0
@@ -680,9 +680,9 @@ class PremarketTop20Monitor:
 
                 self.run_single_scan()
 
-                # Wait 2 minutes
-                logger.info("⏳ Waiting 2 minutes until next scan...")
-                time.sleep(120)  # 2 minutes = 120 seconds
+                # Wait 1 minute
+                logger.info("⏳ Waiting 1 minute until next scan...")
+                time.sleep(60)  # 1 minute = 60 seconds
 
         except KeyboardInterrupt:
             logger.info("\n👋 Monitoring stopped by user")

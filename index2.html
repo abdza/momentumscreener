@@ -414,6 +414,9 @@ function calcConsistency(snaps) {
   const total = snaps.length;
   const map = {};
 
+  // Track all close values seen per ticker to detect frozen prices
+  const closeValues = {};
+
   snaps.forEach(snap => {
     snap.data.forEach((item, i) => {
       const n = item.name;
@@ -430,10 +433,12 @@ function calcConsistency(snaps) {
           latestClose: 0,
           latestRank: null
         };
+        closeValues[n] = new Set();
       }
       map[n].count++;
       map[n].rankSum += (i + 1);
       if (item.volume > map[n].maxVol) map[n].maxVol = item.volume;
+      if (item.close > 0) closeValues[n].add(item.close);
     });
   });
 
@@ -449,7 +454,11 @@ function calcConsistency(snaps) {
     });
   }
 
+  // Only include tickers with at least 2 snaps AND whose close price actually moved
+  // (frozen = same close across all appearances — stale screener data)
+  const minSnaps = Math.min(3, total);
   return Object.values(map)
+    .filter(t => t.count >= minSnaps && (closeValues[t.name] || new Set()).size > 1)
     .map(t => ({
       ...t,
       avgRank: t.rankSum / t.count,
