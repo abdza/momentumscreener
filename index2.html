@@ -502,6 +502,9 @@ function buildDatasets() {
     });
   }
 
+  // Pre-compute total volume per snapshot for point sizing
+  const snapTotals = snapshots.map(snap => snap.data.reduce((s, d) => s + d.volume, 0));
+
   return shown.map((t, i) => {
     const color = COLORS[i % COLORS.length];
     const base = firstClose[t.name] || null;
@@ -516,13 +519,21 @@ function buildDatasets() {
       else y = idx + 1; // rank
       return { x: snap.timestamp, y };
     });
+    const pointRadii = snapshots.map((snap, si) => {
+      const idx = snap.data.findIndex(d => d.name === t.name);
+      if (idx === -1) return 2;
+      const total = snapTotals[si];
+      if (!total) return 2;
+      const volPct = snap.data[idx].volume / total * 100;
+      return Math.max(2, volPct * 0.5);
+    });
     return {
       label: t.name,
       data,
       borderColor: color,
       backgroundColor: color + '18',
       borderWidth: 1.8,
-      pointRadius: 2,
+      pointRadius: pointRadii,
       pointHoverRadius: 7,
       tension: 0.25,
       spanGaps: false,
@@ -621,11 +632,14 @@ function rebuild() {
               const entry = snap.data.find(d => d.name === ticker);
               if (!entry) return [];
               const rank = snap.data.indexOf(entry) + 1;
+              const totalVol = snap.data.reduce((s, d) => s + d.volume, 0);
+              const pct = totalVol > 0 ? (entry.volume / totalVol * 100).toFixed(2) : '—';
               const chg = entry.change_from_open;
               const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
               return [
                 ` Close   : $${entry.close.toFixed(4)}`,
                 ` Volume  : ${fmtVol(entry.volume)} (${entry.volume.toLocaleString()})`,
+                ` Vol %   : ${pct}% of total`,
                 ` Chg/Open: ${chgStr}`,
                 ` Rank    : #${rank}`,
                 ` Sector  : ${entry.sector || '—'}`,

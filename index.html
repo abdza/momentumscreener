@@ -429,10 +429,8 @@ function resetHidden() {
 function buildDatasets() {
   const shown = rankCache.filter(t => !hidden.has(t.name));
 
-  // Pre-compute total volume per snapshot for vol% mode
-  const snapTotals = (mode === 'volpct')
-    ? snapshots.map(snap => snap.data.reduce((s, d) => s + d.premarket_volume, 0))
-    : null;
+  // Pre-compute total volume per snapshot for vol% sizing and vol% mode
+  const snapTotals = snapshots.map(snap => snap.data.reduce((s, d) => s + d.premarket_volume, 0));
 
   return shown.map((t, i) => {
     const color = COLORS[i % COLORS.length];
@@ -447,13 +445,21 @@ function buildDatasets() {
       else y = idx + 1; // rank
       return { x: snap.timestamp, y };
     });
+    const pointRadii = snapshots.map((snap, si) => {
+      const idx = snap.data.findIndex(d => d.name === t.name);
+      if (idx === -1) return 2;
+      const total = snapTotals[si];
+      if (!total) return 2;
+      const volPct = snap.data[idx].premarket_volume / total * 100;
+      return Math.max(2, volPct * 0.5);
+    });
     return {
       label: t.name,
       data,
       borderColor: color,
       backgroundColor: color + '18',
       borderWidth: 1.8,
-      pointRadius: 2,
+      pointRadius: pointRadii,
       pointHoverRadius: 7,
       tension: 0.25,
       spanGaps: false,
