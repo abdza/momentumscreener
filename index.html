@@ -213,6 +213,19 @@ canvas { width: 100% !important; }
 .red { color: #f85149; }
 .gray { color: #6e7681; }
 
+.sig-badge {
+  display: inline-block;
+  background: #3d2e00;
+  color: #ffd700;
+  border: 1px solid #9e7c00;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
 .empty-msg {
   padding: 40px 20px;
   text-align: center;
@@ -284,6 +297,7 @@ canvas { width: 100% !important; }
       <button class="mode-btn" id="btnRank" onclick="setMode('rank')">Rank</button>
       <button class="mode-btn active" id="btnChange" onclick="setMode('change')">Change %</button>
     </div>
+    <button class="mode-btn active" id="btnSignals" onclick="toggleSignals()" style="border:1px solid #9e7c00;border-radius:6px;background:#3d2e00;color:#ffd700;">⚡ Signals</button>
     <label>Top</label>
     <input type="number" id="topN" value="10" min="1" max="100" onchange="onTopNChange()">
     <label>tickers</label>
@@ -328,6 +342,62 @@ let lastCount = 0;
 let pollTimer = null;
 let rankCache = [];
 let rankSort = 'latestChange';
+let signalCache = {};
+let showSignals = true;
+
+// ── Entry-signal detection ────────────────────────────────────────────────────
+// Rule (from analyze_pretop20_peaks.py): once a ticker is first seen with a
+// gain >= 5%, watch its next 15 observations. Signal fires if price ended the
+// window higher, rose in at least half the minutes, and volume accelerated
+// (2nd half of window traded more than the 1st half).
+const SIG_WINDOW = 15;
+const SIG_MIN_CHG = 5;
+
+function calcSignals(snaps) {
+  const series = {};
+  snaps.forEach((snap, si) => {
+    snap.data.forEach(item => {
+      if (typeof item.premarket_change !== 'number') return;
+      (series[item.name] = series[item.name] || []).push({
+        si,
+        chg: item.premarket_change,
+        vol: item.premarket_volume || 0
+      });
+    });
+  });
+
+  const signals = {};
+  for (const [name, obs] of Object.entries(series)) {
+    const start = obs.findIndex(o => o.chg >= SIG_MIN_CHG);
+    if (start === -1) continue;
+    const w = obs.slice(start, start + SIG_WINDOW);
+    if (w.length < SIG_WINDOW) continue;
+    if (new Set(w.map(o => o.chg)).size < 3) continue; // frozen/stale quote
+
+    const price = w.map(o => 1 + o.chg / 100);
+    let ups = 0, volFirst = 0, volSecond = 0;
+    const half = Math.floor((w.length - 1) / 2);
+    for (let i = 1; i < w.length; i++) {
+      if (price[i] > price[i - 1]) ups++;
+      const dv = Math.max(0, w[i].vol - w[i - 1].vol);
+      if (i - 1 < half) volFirst += dv; else volSecond += dv;
+    }
+    const winGain = price[price.length - 1] / price[0] - 1;
+    const upRatio = ups / (w.length - 1);
+    const volAccel = volFirst > 0 ? volSecond / volFirst : 0;
+
+    if (winGain > 0 && upRatio >= 0.5 && volAccel > 1) {
+      signals[name] = { si: w[w.length - 1].si, winGain, upRatio, volAccel };
+    }
+  }
+  return signals;
+}
+
+function toggleSignals() {
+  showSignals = !showSignals;
+  document.getElementById('btnSignals').classList.toggle('active', showSignals);
+  rebuild();
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -432,7 +502,7 @@ function buildDatasets() {
   // Pre-compute total volume per snapshot for vol% sizing and vol% mode
   const snapTotals = snapshots.map(snap => snap.data.reduce((s, d) => s + d.premarket_volume, 0));
 
-  return shown.map((t, i) => {
+  const datasets = shown.map((t, i) => {
     const color = COLORS[i % COLORS.length];
     const data = snapshots.map((snap, si) => {
       const idx = snap.data.findIndex(d => d.name === t.name);
@@ -466,6 +536,43 @@ function buildDatasets() {
       hidden: hidden.has(t.name)
     };
   });
+
+  if (showSignals) {
+    const shownNames = new Set(shown.map(t => t.name));
+    const pts = [];
+    for (const [name, sig] of Object.entries(signalCache)) {
+      if (!shownNames.has(name)) continue;
+      const snap = snapshots[sig.si];
+      if (!snap) continue;
+      const idx = snap.data.findIndex(d => d.name === name);
+      if (idx === -1) continue;
+      const vol = snap.data[idx].premarket_volume;
+      let y;
+      if (mode === 'volume') y = vol;
+      else if (mode === 'volpct') y = snapTotals[sig.si] > 0 ? vol / snapTotals[sig.si] * 100 : null;
+      else if (mode === 'change') y = snap.data[idx].premarket_change;
+      else y = idx + 1;
+      pts.push({ x: snap.timestamp, y, ticker: name, sig });
+    }
+    if (pts.length) {
+      datasets.push({
+        label: '⚡ signals',
+        signal: true,
+        type: 'scatter',
+        data: pts,
+        pointStyle: 'star',
+        pointRadius: 11,
+        pointHoverRadius: 14,
+        borderColor: '#ffd700',
+        backgroundColor: '#ffd700',
+        borderWidth: 3,
+        showLine: false,
+        order: -1
+      });
+    }
+  }
+
+  return datasets;
 }
 
 function yAxisConfig() {
@@ -531,7 +638,8 @@ function rebuild() {
       interaction: { mode: 'nearest', intersect: true },
       onClick: (event, elements) => {
         if (!elements.length) return;
-        const ticker = chart.data.datasets[elements[0].datasetIndex].label;
+        const ds = chart.data.datasets[elements[0].datasetIndex];
+        const ticker = ds.signal ? ds.data[elements[0].index].ticker : ds.label;
         window.open(`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(ticker)}`, '_blank');
       },
       plugins: {
@@ -548,11 +656,22 @@ function rebuild() {
             title: items => {
               if (!items.length) return '';
               const item = items[0];
-              const ticker = item.dataset.label;
+              const ticker = item.dataset.signal ? item.raw.ticker : item.dataset.label;
               const time = new Date(item.raw.x).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              return `${ticker}  ·  ${time}`;
+              return item.dataset.signal
+                ? `⚡ ${ticker}  ·  ENTRY SIGNAL  ·  ${time}`
+                : `${ticker}  ·  ${time}`;
             },
             label: item => {
+              if (item.dataset.signal) {
+                const s = item.raw.sig;
+                return [
+                  ` Rising in ${(s.upRatio * 100).toFixed(0)}% of first ${SIG_WINDOW} min`,
+                  ` Window gain : +${(s.winGain * 100).toFixed(1)}%`,
+                  ` Vol accel   : ${s.volAccel.toFixed(2)}x`,
+                  ` (peaks usually ~15-20 min after signal)`,
+                ];
+              }
               const snap = snapshots[item.dataIndex];
               if (!snap) return [];
               const ticker = item.dataset.label;
@@ -620,12 +739,17 @@ function renderSidebar() {
       : '0.00%';
     const barWidth = ((t.count / maxCount) * 100).toFixed(1);
     const rankLabel = t.latestRank ? `#${t.latestRank} now` : 'not in last';
+    const sig = signalCache[t.name];
+    const sigTime = sig && snapshots[sig.si]
+      ? new Date(snapshots[sig.si].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+    const sigBadge = sig ? `<span class="sig-badge" title="Entry signal: rising + accelerating volume">⚡ ${sigTime}</span>` : '';
 
     return `
     <div class="ticker-row${isMuted ? ' muted' : ''}" onclick="toggleTicker('${t.name}')">
       <div class="dot" style="background:${color}"></div>
       <div class="ticker-info">
-        <div class="ticker-name">${t.name}</div>
+        <div class="ticker-name">${t.name}${sigBadge}</div>
         <div class="ticker-sector">${t.sector}</div>
         <div class="consistency-bar">
           <div class="consistency-fill" style="width:${barWidth}%;background:${color}"></div>
@@ -663,6 +787,7 @@ function startPolling() {
       const data = await apiFetch(`/pretop20/api/data?date=${today}`);
       snapshots = data;
       rankCache = calcConsistency(snapshots);
+      signalCache = calcSignals(snapshots);
       sortRankCache();
       rebuild();
       renderSidebar();
@@ -713,6 +838,7 @@ async function onDateChange() {
   snapshots = data;
   lastCount = data.length;
   rankCache = calcConsistency(snapshots);
+  signalCache = calcSignals(snapshots);
   sortRankCache();
   resetHidden();
   rebuild();
@@ -742,6 +868,7 @@ async function init() {
   snapshots = data;
   lastCount = data.length;
   rankCache = calcConsistency(snapshots);
+  signalCache = calcSignals(snapshots);
   sortRankCache();
   resetHidden();
   rebuild();
