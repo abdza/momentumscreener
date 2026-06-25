@@ -613,8 +613,14 @@ class PremarketTop20Monitor:
         except Exception as e:
             logger.error(f"❌ Error logging notification: {e}")
 
+    def _find_new_tickers(self, current_positions):
+        """Find tickers that are new to the top 20 (not in previous positions)"""
+        if not self.previous_positions:
+            return set(current_positions.keys())
+        return set(current_positions.keys()) - set(self.previous_positions.keys())
+
     def run_single_scan(self):
-        """Run a single scan and send notification if positions changed"""
+        """Run a single scan and send notification if new tickers entered top 20"""
         logger.info("🔍 Running single scan...")
 
         # Get top 20 by premarket volume
@@ -627,28 +633,14 @@ class PremarketTop20Monitor:
         # Detect position changes
         has_changed, current_positions = self._detect_position_changes(top20_data)
 
-        # Send notification if positions changed
+        # Check for new tickers entering the top 20
+        new_tickers = self._find_new_tickers(current_positions)
+
         if has_changed:
-            logger.info("📱 Sending notification due to position changes...")
-            message = self._format_telegram_message(top20_data)
-
-            # Print to console
-            print("\n" + "="*50)
-            print(message.replace('[', '').replace(']', '').replace('(', ' ('))
-            print("="*50 + "\n")
-
-            # Send to Telegram
-            if self.telegram_bot:
-                loop = asyncio.get_event_loop()
-                loop.run_until_complete(self._send_telegram_message(message))
-
-            # Update top 10 "new ticker" tracking after notification is sent
+            # Always update tracking and save positions when data changes
             self._update_top10_tracking(top20_data)
-
-            # Update high gainer (>40%) tracking after notification is sent
             self._update_high_gainer_tracking(top20_data)
 
-            # Update previous volumes for total volume % calculation
             self.previous_volumes = {}
             for record in top20_data:
                 symbol = record.get('name')
@@ -656,9 +648,23 @@ class PremarketTop20Monitor:
                 if symbol:
                     self.previous_volumes[symbol] = pm_volume
 
-            # Save current positions
             self._save_positions(current_positions)
             self.previous_positions = current_positions
+
+            # Only send Telegram notification if new tickers entered top 20
+            if new_tickers:
+                logger.info(f"📱 New tickers in top 20: {', '.join(sorted(new_tickers))} - sending notification...")
+                message = self._format_telegram_message(top20_data)
+
+                print("\n" + "="*50)
+                print(message.replace('[', '').replace(']', '').replace('(', ' ('))
+                print("="*50 + "\n")
+
+                if self.telegram_bot:
+                    loop = asyncio.get_event_loop()
+                    loop.run_until_complete(self._send_telegram_message(message))
+            else:
+                logger.info("✅ Positions changed but no new tickers - skipping Telegram notification")
         else:
             logger.info("✅ No changes - skipping notification")
 

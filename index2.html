@@ -836,6 +836,8 @@ async function init() {
   updateStatus();
 
   if (currentDate === today) startPolling();
+
+  setInterval(() => location.reload(), 120000);
 }
 
 init();
