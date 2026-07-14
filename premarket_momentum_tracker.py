@@ -596,7 +596,7 @@ class VolumeMomentumTracker:
                 timeframe=TimeFrame.Day,
                 start=start_date,
                 end=end_date,
-                feed=DataFeed.IEX  # Use IEX feed (free tier)
+                feed=DataFeed.SIP
             )
 
             bars = self.alpaca_client.get_stock_bars(request_params)
@@ -677,7 +677,7 @@ class VolumeMomentumTracker:
                 timeframe=TimeFrame.Minute,
                 start=start_time,
                 end=end_time,
-                feed=DataFeed.IEX
+                feed=DataFeed.SIP
             )
 
             logger.info(f"Fetching premarket historical data for {len(symbols)} symbols...")
@@ -773,7 +773,7 @@ class VolumeMomentumTracker:
                 timeframe=TimeFrame.Minute,
                 start=start_time,
                 end=end_time,
-                feed=DataFeed.IEX
+                feed=DataFeed.SIP
             )
 
             bars_data = self.alpaca_client.get_stock_bars(bars_request)
@@ -940,7 +940,7 @@ class VolumeMomentumTracker:
             # Fetch from Alpaca only for symbols that need updating
             if symbols_to_fetch:
                 # Fetch latest trades for symbols in batch
-                request_params = StockLatestTradeRequest(symbol_or_symbols=symbols_to_fetch)
+                request_params = StockLatestTradeRequest(symbol_or_symbols=symbols_to_fetch, feed=DataFeed.SIP)
                 latest_trades = self.alpaca_client.get_stock_latest_trade(request_params)
 
                 # Also fetch recent bars to get volume data and previous close
@@ -952,7 +952,7 @@ class VolumeMomentumTracker:
                     timeframe=TimeFrame.Day,
                     start=start_time,
                     end=end_time,
-                    feed=DataFeed.IEX
+                    feed=DataFeed.SIP
                 )
                 bars_data = self.alpaca_client.get_stock_bars(bars_request)
 
@@ -2221,7 +2221,7 @@ class VolumeMomentumTracker:
                     timeframe=TimeFrame.Day,
                     start=start_date,
                     end=end_date,
-                    feed=DataFeed.IEX  # Use IEX feed (free tier)
+                    feed=DataFeed.SIP
                 )
 
                 bars = self.alpaca_client.get_stock_bars(request_params)

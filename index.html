@@ -146,6 +146,19 @@ canvas { width: 100% !important; }
   margin-left: auto;
 }
 
+.show-all-btn {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.show-all-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+
 .ticker-list {
   overflow-y: auto;
   flex: 1;
@@ -167,6 +180,26 @@ canvas { width: 100% !important; }
 
 .ticker-row:hover { background: #161b22; }
 .ticker-row.muted { opacity: 0.35; }
+
+.solo-btn {
+  flex-shrink: 0;
+  width: 18px; height: 18px;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  background: #0d1117;
+  color: #6e7681;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s, border-color 0.1s, color 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ticker-row:hover .solo-btn { opacity: 1; }
+.solo-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 
 .dot {
   width: 9px; height: 9px;
@@ -218,6 +251,19 @@ canvas { width: 100% !important; }
   background: #3d2e00;
   color: #ffd700;
   border: 1px solid #9e7c00;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
+.spike-badge {
+  display: inline-block;
+  background: #3d1400;
+  color: #ff7b3d;
+  border: 1px solid #9e3300;
   border-radius: 4px;
   font-size: 10px;
   font-weight: 700;
@@ -298,6 +344,7 @@ canvas { width: 100% !important; }
       <button class="mode-btn active" id="btnChange" onclick="setMode('change')">Change %</button>
     </div>
     <button class="mode-btn active" id="btnSignals" onclick="toggleSignals()" style="border:1px solid #9e7c00;border-radius:6px;background:#3d2e00;color:#ffd700;">⚡ Signals</button>
+    <button class="mode-btn active" id="btnCandleSpikes" onclick="toggleCandleSpikes()" style="border:1px solid #9e3300;border-radius:6px;background:#3d1400;color:#ff7b3d;">🕯️ Spikes</button>
     <label>Top</label>
     <input type="number" id="topN" value="10" min="1" max="100" onchange="onTopNChange()">
     <label>tickers</label>
@@ -320,6 +367,7 @@ canvas { width: 100% !important; }
         <option value="latestChange" selected>Latest Change</option>
         <option value="count">Appearances</option>
       </select>
+      <button class="show-all-btn" onclick="showAllTickers()">Show All</button>
     </div>
     <div class="ticker-list" id="tickerList"></div>
   </div>
@@ -344,6 +392,8 @@ let rankCache = [];
 let rankSort = 'latestChange';
 let signalCache = {};
 let showSignals = true;
+let candleSpikeCache = {};
+let showCandleSpikes = true;
 
 // ── Entry-signal detection ────────────────────────────────────────────────────
 // Rule (from analyze_pretop20_peaks.py): once a ticker is first seen with a
@@ -396,6 +446,30 @@ function calcSignals(snaps) {
 function toggleSignals() {
   showSignals = !showSignals;
   document.getElementById('btnSignals').classList.toggle('active', showSignals);
+  rebuild();
+}
+
+// ── Candle-spike detection ──────────────────────────────────────────────────
+// The backend (premarket_top20_monitor.py) flags a ticker's 'candle_spike_ratio'
+// when its latest 10-min premarket candle range (high-low) is >=3x the average
+// of its prior candles — an early volatility signal, independent of the
+// consistency/entry-signal logic above. We mark the first snapshot it appears in.
+function calcCandleSpikes(snaps) {
+  const spikes = {};
+  snaps.forEach((snap, si) => {
+    snap.data.forEach(item => {
+      if (typeof item.candle_spike_ratio !== 'number') return;
+      if (!spikes[item.name]) {
+        spikes[item.name] = { si, ratio: item.candle_spike_ratio };
+      }
+    });
+  });
+  return spikes;
+}
+
+function toggleCandleSpikes() {
+  showCandleSpikes = !showCandleSpikes;
+  document.getElementById('btnCandleSpikes').classList.toggle('active', showCandleSpikes);
   rebuild();
 }
 
@@ -572,6 +646,41 @@ function buildDatasets() {
     }
   }
 
+  if (showCandleSpikes) {
+    const shownNames = new Set(shown.map(t => t.name));
+    const pts = [];
+    for (const [name, spike] of Object.entries(candleSpikeCache)) {
+      if (!shownNames.has(name)) continue;
+      const snap = snapshots[spike.si];
+      if (!snap) continue;
+      const idx = snap.data.findIndex(d => d.name === name);
+      if (idx === -1) continue;
+      const vol = snap.data[idx].premarket_volume;
+      let y;
+      if (mode === 'volume') y = vol;
+      else if (mode === 'volpct') y = snapTotals[spike.si] > 0 ? vol / snapTotals[spike.si] * 100 : null;
+      else if (mode === 'change') y = snap.data[idx].premarket_change;
+      else y = idx + 1;
+      pts.push({ x: snap.timestamp, y, ticker: name, spike });
+    }
+    if (pts.length) {
+      datasets.push({
+        label: '🕯️ candle spikes',
+        candleSpike: true,
+        type: 'scatter',
+        data: pts,
+        pointStyle: 'triangle',
+        pointRadius: 11,
+        pointHoverRadius: 14,
+        borderColor: '#ff7b3d',
+        backgroundColor: '#ff7b3d',
+        borderWidth: 3,
+        showLine: false,
+        order: -1
+      });
+    }
+  }
+
   return datasets;
 }
 
@@ -639,7 +748,7 @@ function rebuild() {
       onClick: (event, elements) => {
         if (!elements.length) return;
         const ds = chart.data.datasets[elements[0].datasetIndex];
-        const ticker = ds.signal ? ds.data[elements[0].index].ticker : ds.label;
+        const ticker = (ds.signal || ds.candleSpike) ? ds.data[elements[0].index].ticker : ds.label;
         window.open(`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(ticker)}`, '_blank');
       },
       plugins: {
@@ -656,11 +765,11 @@ function rebuild() {
             title: items => {
               if (!items.length) return '';
               const item = items[0];
-              const ticker = item.dataset.signal ? item.raw.ticker : item.dataset.label;
+              const ticker = (item.dataset.signal || item.dataset.candleSpike) ? item.raw.ticker : item.dataset.label;
               const time = new Date(item.raw.x).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              return item.dataset.signal
-                ? `⚡ ${ticker}  ·  ENTRY SIGNAL  ·  ${time}`
-                : `${ticker}  ·  ${time}`;
+              if (item.dataset.signal) return `⚡ ${ticker}  ·  ENTRY SIGNAL  ·  ${time}`;
+              if (item.dataset.candleSpike) return `🕯️ ${ticker}  ·  CANDLE SPIKE  ·  ${time}`;
+              return `${ticker}  ·  ${time}`;
             },
             label: item => {
               if (item.dataset.signal) {
@@ -670,6 +779,13 @@ function rebuild() {
                   ` Window gain : +${(s.winGain * 100).toFixed(1)}%`,
                   ` Vol accel   : ${s.volAccel.toFixed(2)}x`,
                   ` (peaks usually ~15-20 min after signal)`,
+                ];
+              }
+              if (item.dataset.candleSpike) {
+                const s = item.raw.spike;
+                return [
+                  ` Latest 10-min range : ${s.ratio}x the recent average`,
+                  ` (fires before volume/change rank would catch it)`,
                 ];
               }
               const snap = snapshots[item.dataIndex];
@@ -744,12 +860,17 @@ function renderSidebar() {
       ? new Date(snapshots[sig.si].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '';
     const sigBadge = sig ? `<span class="sig-badge" title="Entry signal: rising + accelerating volume">⚡ ${sigTime}</span>` : '';
+    const spike = candleSpikeCache[t.name];
+    const spikeTime = spike && snapshots[spike.si]
+      ? new Date(snapshots[spike.si].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+    const spikeBadge = spike ? `<span class="spike-badge" title="Candle spike: ${spike.ratio}x recent 10-min range">🕯️ ${spikeTime}</span>` : '';
 
     return `
     <div class="ticker-row${isMuted ? ' muted' : ''}" onclick="toggleTicker('${t.name}')">
       <div class="dot" style="background:${color}"></div>
       <div class="ticker-info">
-        <div class="ticker-name">${t.name}${sigBadge}</div>
+        <div class="ticker-name">${t.name}${sigBadge}${spikeBadge}</div>
         <div class="ticker-sector">${t.sector}</div>
         <div class="consistency-bar">
           <div class="consistency-fill" style="width:${barWidth}%;background:${color}"></div>
@@ -760,6 +881,7 @@ function renderSidebar() {
         <div class="meta-sub">${t.count}/${snapshots.length} snaps</div>
         <div class="meta-sub">avg #${t.avgRank.toFixed(1)}</div>
       </div>
+      <button class="solo-btn" title="Show only this ticker" onclick="soloTicker(event, '${t.name}')">1</button>
     </div>`;
   }).join('');
 }
@@ -788,6 +910,7 @@ function startPolling() {
       snapshots = data;
       rankCache = calcConsistency(snapshots);
       signalCache = calcSignals(snapshots);
+      candleSpikeCache = calcCandleSpikes(snapshots);
       sortRankCache();
       rebuild();
       renderSidebar();
@@ -805,6 +928,20 @@ function stopPolling() {
 function toggleTicker(name) {
   if (hidden.has(name)) hidden.delete(name);
   else hidden.add(name);
+  rebuild();
+  renderSidebar();
+}
+
+function soloTicker(evt, name) {
+  evt.stopPropagation();
+  hidden.clear();
+  rankCache.forEach(t => { if (t.name !== name) hidden.add(t.name); });
+  rebuild();
+  renderSidebar();
+}
+
+function showAllTickers() {
+  hidden.clear();
   rebuild();
   renderSidebar();
 }
@@ -839,6 +976,7 @@ async function onDateChange() {
   lastCount = data.length;
   rankCache = calcConsistency(snapshots);
   signalCache = calcSignals(snapshots);
+  candleSpikeCache = calcCandleSpikes(snapshots);
   sortRankCache();
   resetHidden();
   rebuild();
@@ -869,6 +1007,7 @@ async function init() {
   lastCount = data.length;
   rankCache = calcConsistency(snapshots);
   signalCache = calcSignals(snapshots);
+  candleSpikeCache = calcCandleSpikes(snapshots);
   sortRankCache();
   resetHidden();
   rebuild();
