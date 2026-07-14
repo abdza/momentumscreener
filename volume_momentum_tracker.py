@@ -61,6 +61,19 @@ from collections import defaultdict
 
 from tradingview_screener import Query
 
+# Alpaca imports for real-time price/volume data
+try:
+    from alpaca.data.historical import StockHistoricalDataClient
+    from alpaca.data.historical.screener import ScreenerClient
+    from alpaca.data.requests import (StockBarsRequest, StockLatestTradeRequest,
+                                      MostActivesRequest, MarketMoversRequest)
+    from alpaca.data.timeframe import TimeFrame
+    from alpaca.data.enums import DataFeed
+    ALPACA_AVAILABLE = True
+except ImportError:
+    ALPACA_AVAILABLE = False
+    print("⚠️  alpaca-py not installed. Run: pip install alpaca-py")
+
 try:
     from paper_trading_system import PaperTradingSystem
     PAPER_TRADING_AVAILABLE = True
@@ -88,6 +101,16 @@ logger = logging.getLogger(__name__)
 
 # PID file path
 PID_FILE = "/tmp/screener.pid"
+
+# Alpaca screener candidate source: the TradingView scanner serves this
+# account 15-minute delayed data (update_mode: delayed_streaming_900), so a
+# ticker spiking now won't crack TradingView's rankings until ~15 minutes
+# later. Alpaca's screener endpoints are real-time and close that gap by
+# feeding extra candidates into the merge.
+ALPACA_SCREENER_TOP = 50         # how many gainers/most-actives to request
+ALPACA_GAINER_MIN_CHANGE = 10.0  # only take gainers up at least this %
+ALPACA_MOST_ACTIVES_KEEP = 20    # most-active-by-volume symbols to keep
+ALPACA_MAX_PRICE = 20.0          # match the manual price < $20 filter
 
 def get_float_shares_value(data, key='float_shares_outstanding'):
     """
@@ -152,6 +175,27 @@ class VolumeMomentumTracker:
         # Previous close price cache to check for flat-before-spike condition
         self.prev_close_cache = {}
         self.prev_close_cache_duration = 60 * 60  # Cache prev close for 1 hour
+
+        # Alpaca price cache to avoid excessive API calls
+        self.alpaca_price_cache = {}  # {symbol: {'price': float, 'volume': int, 'timestamp': datetime}}
+        self.alpaca_price_cache_duration = 60  # Cache prices for 1 minute
+
+        # Initialize Alpaca client for real-time market data
+        self.alpaca_client = None
+        self.alpaca_screener_client = None
+        if ALPACA_AVAILABLE:
+            try:
+                api_key = os.environ.get('APCA_API_KEY_ID')
+                api_secret = os.environ.get('APCA_API_SECRET_KEY')
+
+                if api_key and api_secret:
+                    self.alpaca_client = StockHistoricalDataClient(api_key, api_secret)
+                    self.alpaca_screener_client = ScreenerClient(api_key, api_secret)
+                    logger.info("✅ Alpaca market data client initialized successfully")
+                else:
+                    logger.warning("⚠️  Alpaca API keys not found in environment. Set APCA_API_KEY_ID and APCA_API_SECRET_KEY")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize Alpaca client: {e}")
 
         if telegram_bot_token and telegram_chat_id:
             try:
@@ -1801,7 +1845,7 @@ class VolumeMomentumTracker:
             price_data = {}
             for record in current_data:
                 ticker = record.get('name')
-                price = record.get('close', 0)
+                price = record.get('alpaca_price', record.get('close', 0))
                 if ticker and price > 0:
                     price_data[ticker] = price
             
@@ -1912,8 +1956,8 @@ class VolumeMomentumTracker:
 
             for record in screener_data:
                 ticker = record.get('name', 'N/A')
-                current_price = record.get('close', 0)
-                current_volume = record.get('volume', 0)
+                current_price = record.get('alpaca_price', record.get('close', 0))
+                current_volume = record.get('alpaca_volume', record.get('volume', 0))
                 float_shares = record.get('float_shares_outstanding', 0)
 
                 try:
@@ -2626,6 +2670,206 @@ class VolumeMomentumTracker:
 
         return alerts
 
+    def _update_prices_with_alpaca(self, records):
+        """
+        Overlay real-time price/volume from Alpaca onto TradingView screener records.
+        TradingView's screener snapshot can lag; Alpaca gives us a live quote per symbol.
+        Adds 'alpaca_price', 'alpaca_volume', 'alpaca_previous_close', and
+        'change_from_prev_close' fields without removing the original TradingView fields.
+        Uses a short-lived cache to avoid re-fetching the same symbol within a scan cycle.
+
+        Args:
+            records: List of dicts from TradingView screener
+
+        Returns:
+            Updated list of records with current prices from Alpaca where available
+        """
+        if not self.alpaca_client:
+            return records
+
+        if not records:
+            return records
+
+        try:
+            current_time = datetime.now()
+
+            # Alpaca rejects the whole batch on TV-style class/preferred
+            # symbols (e.g. DCOM/P), so only fetch plain alphabetic symbols
+            all_symbols = [record['name'] for record in records
+                           if record.get('name') and record['name'].isalpha()]
+            symbols_to_fetch = []
+            cached_count = 0
+
+            for symbol in all_symbols:
+                if symbol in self.alpaca_price_cache:
+                    cache_entry = self.alpaca_price_cache[symbol]
+                    cache_age = (current_time - cache_entry['timestamp']).total_seconds()
+                    if cache_age < self.alpaca_price_cache_duration:
+                        cached_count += 1
+                        continue
+                symbols_to_fetch.append(symbol)
+
+            logger.info(f"Alpaca price update: {len(symbols_to_fetch)} to fetch, {cached_count} from cache")
+
+            if symbols_to_fetch:
+                request_params = StockLatestTradeRequest(symbol_or_symbols=symbols_to_fetch, feed=DataFeed.SIP)
+                latest_trades = self.alpaca_client.get_stock_latest_trade(request_params)
+
+                end_time = datetime.now()
+                start_time = end_time - timedelta(days=5)  # Ensure at least 2 trading days
+
+                bars_request = StockBarsRequest(
+                    symbol_or_symbols=symbols_to_fetch,
+                    timeframe=TimeFrame.Day,
+                    start=start_time,
+                    end=end_time,
+                    feed=DataFeed.SIP
+                )
+                bars_data = self.alpaca_client.get_stock_bars(bars_request)
+
+                for symbol in symbols_to_fetch:
+                    cache_entry = {'timestamp': current_time, 'price': None, 'volume': None, 'previous_close': None, 'open': None}
+
+                    if symbol in latest_trades:
+                        cache_entry['price'] = float(latest_trades[symbol].price)
+
+                    if bars_data and hasattr(bars_data, 'data') and symbol in bars_data.data:
+                        symbol_bars = bars_data.data[symbol]
+                        if symbol_bars:
+                            cache_entry['volume'] = int(symbol_bars[-1].volume)
+                            cache_entry['open'] = float(symbol_bars[-1].open)
+                            if len(symbol_bars) >= 2:
+                                cache_entry['previous_close'] = float(symbol_bars[-2].close)
+                            elif len(symbol_bars) == 1:
+                                cache_entry['previous_close'] = float(symbol_bars[-1].close)
+
+                    self.alpaca_price_cache[symbol] = cache_entry
+
+            updated_count = 0
+            for record in records:
+                symbol = record['name']
+
+                if symbol in self.alpaca_price_cache:
+                    cache_entry = self.alpaca_price_cache[symbol]
+
+                    if cache_entry['price'] is not None:
+                        record['alpaca_price'] = cache_entry['price']
+                        updated_count += 1
+
+                    if cache_entry['volume'] is not None:
+                        record['alpaca_volume'] = cache_entry['volume']
+
+                    if cache_entry.get('open'):
+                        record['alpaca_open'] = cache_entry['open']
+                        if cache_entry['price'] is not None:
+                            record['alpaca_change_from_open'] = ((cache_entry['price'] - cache_entry['open']) / cache_entry['open']) * 100
+
+                    if cache_entry['previous_close'] is not None:
+                        record['alpaca_previous_close'] = cache_entry['previous_close']
+                        if cache_entry['price'] is not None and cache_entry['previous_close'] > 0:
+                            change_from_prev = ((cache_entry['price'] - cache_entry['previous_close']) / cache_entry['previous_close']) * 100
+                            record['change_from_prev_close'] = change_from_prev
+
+            logger.info(f"✅ Updated {updated_count}/{len(records)} symbols with Alpaca prices")
+            return records
+
+        except Exception as e:
+            logger.error(f"Failed to update prices with Alpaca: {e}")
+            return records
+
+    @staticmethod
+    def _is_common_stock_symbol(symbol):
+        """
+        Filter out warrants/units/rights and share-class/preferred symbols.
+        Uses the Nasdaq 5th-letter convention (W=warrant, R=rights, U=unit)
+        plus rejecting dotted/non-alphabetic symbols like BRK.A.
+        """
+        if not symbol or not symbol.isalpha():
+            return False
+        if len(symbol) >= 5 and symbol[-1] in ('W', 'R', 'U'):
+            return False
+        return True
+
+    def _add_alpaca_screener_candidates(self, records):
+        """
+        Append real-time candidate tickers from Alpaca's screener endpoints
+        (top gainers by % change and most-active by volume) to the TradingView
+        records. TradingView scanner data is 15-min delayed for this account,
+        so a spiking ticker only enters its rankings ~15 minutes late; the
+        Alpaca screener catches it live.
+
+        Candidate records only carry 'name'; _finalize_alpaca_candidates()
+        fills in price/volume/change_from_open from the Alpaca overlay after
+        _update_prices_with_alpaca() has run.
+        """
+        if not self.alpaca_screener_client or records is None:
+            return records
+
+        seen = {record.get('name') for record in records}
+
+        def add_symbols(symbols):
+            added = 0
+            for symbol in symbols:
+                if symbol in seen or not self._is_common_stock_symbol(symbol):
+                    continue
+                seen.add(symbol)
+                records.append({
+                    'name': symbol,
+                    'sector': '',
+                    'exchange': '',
+                    'source': 'alpaca_screener',
+                })
+                added += 1
+            return added
+
+        gainer_count = 0
+        try:
+            movers = self.alpaca_screener_client.get_market_movers(
+                MarketMoversRequest(top=ALPACA_SCREENER_TOP))
+            gainer_count = add_symbols(
+                m.symbol for m in movers.gainers
+                if (m.percent_change or 0) >= ALPACA_GAINER_MIN_CHANGE
+                and (m.price or 0) < ALPACA_MAX_PRICE)
+        except Exception as e:
+            logger.warning(f"⚠️  Alpaca market-movers fetch failed: {e}")
+
+        active_count = 0
+        try:
+            actives = self.alpaca_screener_client.get_most_actives(
+                MostActivesRequest(by='volume', top=ALPACA_SCREENER_TOP))
+            active_count = add_symbols(
+                a.symbol for a in actives.most_actives[:ALPACA_MOST_ACTIVES_KEEP])
+        except Exception as e:
+            logger.warning(f"⚠️  Alpaca most-actives fetch failed: {e}")
+
+        if gainer_count or active_count:
+            logger.info(f"⚡ Added Alpaca screener candidates: {gainer_count} gainers, {active_count} most-active")
+        return records
+
+    def _finalize_alpaca_candidates(self, records):
+        """
+        Backfill TradingView-shaped fields on Alpaca-screener candidates from
+        the Alpaca price overlay so the chart (which needs numeric close/
+        volume/change_from_open) and downstream consumers can render them.
+        Drops candidates with no Alpaca data or that fail the price < $20
+        filter applied to the TradingView records.
+        """
+        if records is None:
+            return records
+
+        finalized = []
+        for record in records:
+            if record.get('source') == 'alpaca_screener':
+                price = record.get('alpaca_price')
+                if not price or price >= ALPACA_MAX_PRICE or not record.get('alpaca_volume'):
+                    continue
+                record['close'] = price
+                record['volume'] = record['alpaca_volume']
+                if record.get('alpaca_change_from_open') is not None:
+                    record['change_from_open'] = record['alpaca_change_from_open']
+            finalized.append(record)
+        return finalized
+
     def get_volume_screener_data(self, limit=200):
         """Get small cap data sorted by volume descending"""
         try:
@@ -2672,6 +2916,9 @@ class VolumeMomentumTracker:
                             break
 
                     logger.info(f"After filtering (price < $20, no OTC): {len(filtered_records)} records")
+                    filtered_records = self._add_alpaca_screener_candidates(filtered_records)
+                    filtered_records = self._update_prices_with_alpaca(filtered_records)
+                    filtered_records = self._finalize_alpaca_candidates(filtered_records)
                     return filtered_records
                 else:
                     logger.error(f"Unexpected data format: {type(df_data)}")
@@ -2711,6 +2958,9 @@ class VolumeMomentumTracker:
                                 break
 
                         logger.info(f"Simplified query filtered results: {len(filtered_records)} records")
+                        filtered_records = self._add_alpaca_screener_candidates(filtered_records)
+                        filtered_records = self._update_prices_with_alpaca(filtered_records)
+                        filtered_records = self._finalize_alpaca_candidates(filtered_records)
                         return filtered_records
 
             except Exception as e2:
@@ -2873,7 +3123,7 @@ class VolumeMomentumTracker:
 
         for record in current_data:
             ticker = record.get('name')
-            current_price = record.get('close', 0)
+            current_price = record.get('alpaca_price', record.get('close', 0))
             change_pct = record.get('change|5', 0)
 
             # ONLY ALERT ON POSITIVE PRICE MOVEMENTS (for long trades)
@@ -2914,7 +3164,7 @@ class VolumeMomentumTracker:
                             'current_price': current_price,
                             'change_pct': change_pct,
                             'price_change_window': price_change,
-                            'volume': record.get('volume', 0),
+                            'volume': record.get('alpaca_volume', record.get('volume', 0)),
                             'relative_volume': record.get('relative_volume_10d_calc', 0),
                             'sector': record.get('sector', 'Unknown'),
                             'time_window': time_window_minutes,
@@ -2932,7 +3182,7 @@ class VolumeMomentumTracker:
                         'current_price': current_price,
                         'change_pct': change_pct,
                         'price_change_window': change_pct,
-                        'volume': record.get('volume', 0),
+                        'volume': record.get('alpaca_volume', record.get('volume', 0)),
                         'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
                         'time_window': time_window_minutes,
@@ -2965,15 +3215,15 @@ class VolumeMomentumTracker:
 
                 # Alert on significant POSITIVE pre-market price changes only (long trades)
                 if premarket_change > 5:  # ONLY positive moves > 5%
-                    # Calculate actual current premarket price (not previous day's close)
+                    # Prefer live Alpaca price; fall back to estimate from TradingView close
                     close_price = record.get('close', 0)
-                    current_premarket_price = close_price * (1 + premarket_change / 100)
+                    current_premarket_price = record.get('alpaca_price', close_price * (1 + premarket_change / 100))
 
                     premarket_price_alerts.append({
                         'ticker': ticker,
                         'premarket_change': premarket_change,
                         'current_price': current_premarket_price,
-                        'volume': record.get('volume', 0),
+                        'volume': record.get('alpaca_volume', record.get('volume', 0)),
                         'relative_volume': record.get('relative_volume_10d_calc', 0),
                         'sector': record.get('sector', 'Unknown'),
                         'alert_type': 'significant_premarket_move',
@@ -2982,9 +3232,9 @@ class VolumeMomentumTracker:
 
                 # Alert on high pre-market volume (if available)
                 if premarket_volume > 100000:  # > 100k pre-market volume
-                    # Calculate actual current premarket price (not previous day's close)
+                    # Prefer live Alpaca price; fall back to estimate from TradingView close
                     close_price = record.get('close', 0)
-                    current_premarket_price = close_price * (1 + premarket_change / 100)
+                    current_premarket_price = record.get('alpaca_price', close_price * (1 + premarket_change / 100))
 
                     premarket_volume_alerts.append({
                         'ticker': ticker,
@@ -3017,14 +3267,14 @@ class VolumeMomentumTracker:
                 if pm_change_acceleration > 3 and current_pm_change > 0:  # Must be positive and accelerating up
                     # Calculate actual current premarket price (not previous day's close)
                     close_price = current_record.get('close', 0)
-                    current_premarket_price = close_price * (1 + current_pm_change / 100)
+                    current_premarket_price = current_record.get('alpaca_price', close_price * (1 + current_pm_change / 100))
 
                     premarket_price_alerts.append({
                         'ticker': ticker,
                         'premarket_change': current_pm_change,
                         'premarket_change_acceleration': pm_change_acceleration,
                         'current_price': current_premarket_price,
-                        'volume': current_record.get('volume', 0),
+                        'volume': current_record.get('alpaca_volume', current_record.get('volume', 0)),
                         'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                         'sector': current_record.get('sector', 'Unknown'),
                         'alert_type': 'premarket_acceleration',
@@ -3037,7 +3287,7 @@ class VolumeMomentumTracker:
                     if pm_volume_change > 50:  # 50%+ increase in pre-market volume
                         # Calculate actual current premarket price (not previous day's close)
                         close_price = current_record.get('close', 0)
-                        current_premarket_price = close_price * (1 + current_pm_change / 100)
+                        current_premarket_price = current_record.get('alpaca_price', close_price * (1 + current_pm_change / 100))
 
                         premarket_volume_alerts.append({
                             'ticker': ticker,
@@ -3055,13 +3305,13 @@ class VolumeMomentumTracker:
                 if current_pm_change > 3:  # New significant POSITIVE pre-market move
                     # Calculate actual current premarket price (not previous day's close)
                     close_price = current_record.get('close', 0)
-                    current_premarket_price = close_price * (1 + current_pm_change / 100)
+                    current_premarket_price = current_record.get('alpaca_price', close_price * (1 + current_pm_change / 100))
 
                     premarket_price_alerts.append({
                         'ticker': ticker,
                         'premarket_change': current_pm_change,
                         'current_price': current_premarket_price,
-                        'volume': current_record.get('volume', 0),
+                        'volume': current_record.get('alpaca_volume', current_record.get('volume', 0)),
                         'relative_volume': current_record.get('relative_volume_10d_calc', 0),
                         'sector': current_record.get('sector', 'Unknown'),
                         'alert_type': 'new_premarket_move',
@@ -3091,9 +3341,9 @@ class VolumeMomentumTracker:
                 sustained_positive_alerts.append({
                     'ticker': ticker,
                     'change_from_open': change_from_open,
-                    'current_price': record.get('close', 0),
+                    'current_price': record.get('alpaca_price', record.get('close', 0)),
                     'change_pct': record.get('change|5', 0),
-                    'volume': record.get('volume', 0),
+                    'volume': record.get('alpaca_volume', record.get('volume', 0)),
                     'relative_volume': record.get('relative_volume_10d_calc', 0),
                     'sector': record.get('sector', 'Unknown'),
                     'alert_type': 'sustained_positive'

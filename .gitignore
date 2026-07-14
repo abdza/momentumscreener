@@ -172,6 +172,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+secrets.env
 screener.sh
 premarket_screener.sh
 end_of_day.sh
@@ -182,3 +183,4 @@ momentum_data/
 premarket_momentum_data/
 paper_trades/
 pretop20/
+orb_data/

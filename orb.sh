@@ -1,5 +1,6 @@
 #!/bin/bash
 
-cd /home/abdza/data/kakikoding/trading/momentumscreener
+cd /home/abdza/momentumscreener
 source venv/bin/activate
-python orb_screener.py --bot-token "6139828455:AAENlRvYwThvnpvNRMATScsVLnXMasZQyng" --chat-id "223382251"
+source secrets.env
+python orb_screener.py --bot-token "$TELEGRAM_BOT_TOKEN" --chat-id "$TELEGRAM_CHAT_ID"

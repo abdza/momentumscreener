@@ -16,12 +16,26 @@ import sys
 import os
 import requests
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import logging
+import pytz
 from telegram import Bot
 
 from tradingview_screener import Query
+
+# Alpaca imports for real-time price/volume data
+try:
+    from alpaca.data.historical import StockHistoricalDataClient
+    from alpaca.data.historical.screener import ScreenerClient
+    from alpaca.data.requests import (StockBarsRequest, StockLatestTradeRequest,
+                                      MostActivesRequest, MarketMoversRequest)
+    from alpaca.data.timeframe import TimeFrame
+    from alpaca.data.enums import DataFeed
+    ALPACA_AVAILABLE = True
+except ImportError:
+    ALPACA_AVAILABLE = False
+    print("⚠️  alpaca-py not installed. Run: pip install alpaca-py")
 
 # Configure logging
 logging.basicConfig(
@@ -40,6 +54,27 @@ POSITIONS_FILE = "premarket_top20_positions.json"
 # Log directory for screener data and notifications
 LOG_DIR = Path("pretop20")
 LOG_DIR.mkdir(exist_ok=True)
+
+ET_TZ = pytz.timezone('America/New_York')
+
+# Candle-spike detection: flag a symbol when its latest 10-minute premarket
+# candle range (high-low) is this many times the average range of the prior
+# candles, so it can be promoted into the watch list before volume/change
+# rankings would otherwise surface it.
+CANDLE_SPIKE_BUCKET_MINUTES = 10
+CANDLE_SPIKE_RATIO_THRESHOLD = 3.0
+CANDLE_SPIKE_BASELINE_BUCKETS = 6  # up to 1 hour of prior candles
+CANDLE_SPIKE_MIN_BASELINE_BUCKETS = 2  # need some history to avoid noise
+CANDLE_SPIKE_MIN_BARS_IN_BUCKET = 3  # ignore just-started/mostly-empty buckets
+
+# Alpaca screener candidate source: the TradingView scanner serves this
+# account 15-minute delayed data (update_mode: delayed_streaming_900), so a
+# ticker spiking now won't crack TradingView's volume/change rankings until
+# ~15 minutes later. Alpaca's screener endpoints are real-time and close
+# that gap by feeding extra candidates into the merge.
+ALPACA_SCREENER_TOP = 50        # how many gainers/most-actives to request
+ALPACA_GAINER_MIN_CHANGE = 10.0  # only take gainers up at least this %
+ALPACA_MOST_ACTIVES_KEEP = 20    # most-active-by-volume symbols to keep
 
 class PremarketTop20Monitor:
     def __init__(self, telegram_bot_token=None, telegram_chat_id=None):
@@ -79,6 +114,27 @@ class PremarketTop20Monitor:
         self.high_gainer_notification_count = {}
         # Peak premarket_change seen while ticker is above 40%
         self.high_gainer_peak = {}
+
+        # Alpaca price cache to avoid excessive API calls
+        self.alpaca_price_cache = {}  # {symbol: {'price': float, 'volume': int, 'timestamp': datetime}}
+        self.alpaca_price_cache_duration = 60  # Cache prices for 1 minute
+
+        # Initialize Alpaca client for real-time market data
+        self.alpaca_client = None
+        self.alpaca_screener_client = None
+        if ALPACA_AVAILABLE:
+            try:
+                api_key = os.environ.get('APCA_API_KEY_ID')
+                api_secret = os.environ.get('APCA_API_SECRET_KEY')
+
+                if api_key and api_secret:
+                    self.alpaca_client = StockHistoricalDataClient(api_key, api_secret)
+                    self.alpaca_screener_client = ScreenerClient(api_key, api_secret)
+                    logger.info("✅ Alpaca market data client initialized successfully")
+                else:
+                    logger.warning("⚠️  Alpaca API keys not found in environment. Set APCA_API_KEY_ID and APCA_API_SECRET_KEY")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize Alpaca client: {e}")
 
     def _get_tradingview_cookies(self):
         """Get TradingView cookies for API access"""
@@ -204,7 +260,7 @@ class PremarketTop20Monitor:
 
         for record in top20_data:
             symbol = record.get('name')
-            pm_change = record.get('premarket_change', 0)
+            pm_change = record.get('alpaca_premarket_change', record.get('premarket_change', 0))
 
             if symbol and pm_change and pm_change > 40:
                 current_high_gainers[symbol] = pm_change
@@ -320,6 +376,301 @@ class PremarketTop20Monitor:
             logger.error(f"Traceback: {traceback.format_exc()}")
             return []
 
+    def _update_prices_with_alpaca(self, records):
+        """
+        Overlay real-time price/change/volume from Alpaca onto TradingView screener records.
+        TradingView's screener snapshot can lag; Alpaca gives us a live quote per symbol plus
+        today's actual premarket minute-bar volume. Adds 'alpaca_price', 'alpaca_previous_close',
+        'alpaca_premarket_change', and 'alpaca_premarket_volume' without removing the original
+        TradingView fields. Uses a short-lived cache to avoid re-fetching the same symbol within
+        a scan cycle.
+
+        Args:
+            records: List of dicts from TradingView screener
+
+        Returns:
+            Updated list of records with current price/change/volume from Alpaca where available
+        """
+        if not self.alpaca_client:
+            return records
+
+        if not records:
+            return records
+
+        try:
+            current_time = datetime.now()
+
+            # Alpaca rejects the whole batch on TV-style class/preferred
+            # symbols (e.g. DCOM/P), so only fetch plain alphabetic symbols
+            all_symbols = [record['name'] for record in records
+                           if record.get('name') and record['name'].isalpha()]
+            symbols_to_fetch = []
+            cached_count = 0
+
+            for symbol in all_symbols:
+                if symbol in self.alpaca_price_cache:
+                    cache_entry = self.alpaca_price_cache[symbol]
+                    cache_age = (current_time - cache_entry['timestamp']).total_seconds()
+                    if cache_age < self.alpaca_price_cache_duration:
+                        cached_count += 1
+                        continue
+                symbols_to_fetch.append(symbol)
+
+            logger.info(f"Alpaca price update: {len(symbols_to_fetch)} to fetch, {cached_count} from cache")
+
+            if symbols_to_fetch:
+                # Latest trade for live price
+                trade_request = StockLatestTradeRequest(symbol_or_symbols=symbols_to_fetch, feed=DataFeed.SIP)
+                latest_trades = self.alpaca_client.get_stock_latest_trade(trade_request)
+
+                # Daily bars to get previous close
+                end_time = datetime.now()
+                start_time = end_time - timedelta(days=5)  # Ensure at least 2 trading days
+                daily_bars_request = StockBarsRequest(
+                    symbol_or_symbols=symbols_to_fetch,
+                    timeframe=TimeFrame.Day,
+                    start=start_time,
+                    end=end_time,
+                    feed=DataFeed.SIP
+                )
+                daily_bars_data = self.alpaca_client.get_stock_bars(daily_bars_request)
+
+                # Today's minute bars (extended hours) to sum actual premarket volume
+                minute_start = end_time - timedelta(days=1)
+                minute_bars_request = StockBarsRequest(
+                    symbol_or_symbols=symbols_to_fetch,
+                    timeframe=TimeFrame.Minute,
+                    start=minute_start,
+                    end=end_time,
+                    feed=DataFeed.SIP
+                )
+                minute_bars_data = self.alpaca_client.get_stock_bars(minute_bars_request)
+
+                today = end_time.date()
+
+                for symbol in symbols_to_fetch:
+                    cache_entry = {'timestamp': current_time, 'price': None, 'previous_close': None, 'premarket_volume': None}
+
+                    if symbol in latest_trades:
+                        cache_entry['price'] = float(latest_trades[symbol].price)
+
+                    if daily_bars_data and hasattr(daily_bars_data, 'data') and symbol in daily_bars_data.data:
+                        symbol_daily_bars = daily_bars_data.data[symbol]
+                        if symbol_daily_bars:
+                            if len(symbol_daily_bars) >= 2:
+                                cache_entry['previous_close'] = float(symbol_daily_bars[-2].close)
+                            elif len(symbol_daily_bars) == 1:
+                                cache_entry['previous_close'] = float(symbol_daily_bars[-1].close)
+
+                    if minute_bars_data and hasattr(minute_bars_data, 'data') and symbol in minute_bars_data.data:
+                        symbol_minute_bars = minute_bars_data.data[symbol]
+                        premarket_volume = 0
+                        for bar in symbol_minute_bars:
+                            bar_time = bar.timestamp
+                            if bar_time.date() != today:
+                                continue
+                            # Premarket is 4:00-9:30 AM ET; Alpaca timestamps are UTC.
+                            # ~9:00-14:30 UTC (EST) / 8:00-13:30 UTC (EDT) - approximate as before 14:30 UTC
+                            is_premarket = (bar_time.hour < 14) or (bar_time.hour == 14 and bar_time.minute < 30)
+                            if is_premarket:
+                                premarket_volume += bar.volume
+                        cache_entry['premarket_volume'] = premarket_volume
+
+                    self.alpaca_price_cache[symbol] = cache_entry
+
+            updated_count = 0
+            for record in records:
+                symbol = record.get('name')
+                if symbol not in self.alpaca_price_cache:
+                    continue
+
+                cache_entry = self.alpaca_price_cache[symbol]
+
+                if cache_entry['price'] is not None:
+                    record['alpaca_price'] = cache_entry['price']
+                    updated_count += 1
+
+                if cache_entry['previous_close'] is not None:
+                    record['alpaca_previous_close'] = cache_entry['previous_close']
+                    if cache_entry['price'] is not None and cache_entry['previous_close'] > 0:
+                        record['alpaca_premarket_change'] = ((cache_entry['price'] - cache_entry['previous_close']) / cache_entry['previous_close']) * 100
+
+                if cache_entry['premarket_volume'] is not None:
+                    record['alpaca_premarket_volume'] = cache_entry['premarket_volume']
+
+            logger.info(f"✅ Updated {updated_count}/{len(records)} symbols with Alpaca prices")
+            return records
+
+        except Exception as e:
+            logger.error(f"Failed to update prices with Alpaca: {e}")
+            return records
+
+    @staticmethod
+    def _is_common_stock_symbol(symbol):
+        """
+        Filter out warrants/units/rights and share-class/preferred symbols.
+        Uses the Nasdaq 5th-letter convention (W=warrant, R=rights, U=unit)
+        plus rejecting dotted/non-alphabetic symbols like BRK.A.
+        """
+        if not symbol or not symbol.isalpha():
+            return False
+        if len(symbol) >= 5 and symbol[-1] in ('W', 'R', 'U'):
+            return False
+        return True
+
+    def _get_alpaca_screener_candidates(self):
+        """
+        Fetch real-time candidate tickers from Alpaca's screener endpoints:
+        top gainers by % change and most-active by volume.
+
+        These records only carry 'name' (no TradingView premarket fields);
+        the Alpaca price overlay fills in real prices/volume afterwards, and
+        get_top20_by_premarket_volume backfills the premarket_* fields from
+        that so the chart and notifications can render them.
+
+        Returns:
+            List of minimal record dicts, gainers first.
+        """
+        if not self.alpaca_screener_client:
+            return []
+
+        candidates = []
+        seen = set()
+
+        def add_symbols(symbols):
+            added = 0
+            for symbol in symbols:
+                if symbol in seen or not self._is_common_stock_symbol(symbol):
+                    continue
+                seen.add(symbol)
+                candidates.append({
+                    'name': symbol,
+                    'sector': '',
+                    'exchange': '',
+                    'source': 'alpaca_screener',
+                })
+                added += 1
+            return added
+
+        gainer_count = 0
+        try:
+            movers = self.alpaca_screener_client.get_market_movers(
+                MarketMoversRequest(top=ALPACA_SCREENER_TOP))
+            gainer_count = add_symbols(
+                m.symbol for m in movers.gainers
+                if (m.percent_change or 0) >= ALPACA_GAINER_MIN_CHANGE)
+        except Exception as e:
+            logger.warning(f"⚠️  Alpaca market-movers fetch failed: {e}")
+
+        active_count = 0
+        try:
+            actives = self.alpaca_screener_client.get_most_actives(
+                MostActivesRequest(by='volume', top=ALPACA_SCREENER_TOP))
+            active_count = add_symbols(
+                a.symbol for a in actives.most_actives[:ALPACA_MOST_ACTIVES_KEEP])
+        except Exception as e:
+            logger.warning(f"⚠️  Alpaca most-actives fetch failed: {e}")
+
+        if candidates:
+            logger.info(f"⚡ Alpaca screener candidates: {gainer_count} gainers, {active_count} most-active")
+        return candidates
+
+    def _detect_candle_spikes(self, symbols):
+        """
+        Flag symbols whose latest 10-minute premarket candle (high-low range) is
+        an outlier vs. their own recent candles. This catches abnormal volatility
+        expansion (e.g. a breakout starting) before it necessarily shows up as a
+        top-20 ranking by volume or cumulative % change.
+
+        Args:
+            symbols: List of ticker symbols to check (a broader candidate pool,
+                     not just the current merged top-20/top-gainers list)
+
+        Returns:
+            Dict {symbol: {'ratio': float, 'range': float, 'baseline_avg': float,
+                            'bucket_start': datetime}} for symbols exceeding
+            CANDLE_SPIKE_RATIO_THRESHOLD
+        """
+        if not self.alpaca_client or not symbols:
+            return {}
+
+        try:
+            end_time = datetime.now()
+            lookback_minutes = CANDLE_SPIKE_BUCKET_MINUTES * (CANDLE_SPIKE_BASELINE_BUCKETS + 1)
+            start_time = end_time - timedelta(minutes=lookback_minutes + 30)
+
+            bars_request = StockBarsRequest(
+                symbol_or_symbols=symbols,
+                timeframe=TimeFrame.Minute,
+                start=start_time,
+                end=end_time,
+                feed=DataFeed.SIP
+            )
+            bars_data = self.alpaca_client.get_stock_bars(bars_request)
+
+            if not bars_data or not hasattr(bars_data, 'data'):
+                return {}
+
+            today = end_time.date()
+            spikes = {}
+
+            for symbol, bars in bars_data.data.items():
+                # Bucket premarket minute bars into CANDLE_SPIKE_BUCKET_MINUTES-wide candles
+                buckets = {}  # bucket_start (ET datetime) -> {'high':, 'low':, 'count':}
+                for bar in bars:
+                    bar_time_et = bar.timestamp.astimezone(ET_TZ)
+                    if bar_time_et.date() != today:
+                        continue
+                    is_premarket = (bar_time_et.hour, bar_time_et.minute) < (9, 30) and bar_time_et.hour >= 4
+                    if not is_premarket:
+                        continue
+
+                    bucket_minute = (bar_time_et.minute // CANDLE_SPIKE_BUCKET_MINUTES) * CANDLE_SPIKE_BUCKET_MINUTES
+                    bucket_start = bar_time_et.replace(minute=bucket_minute, second=0, microsecond=0)
+
+                    b = buckets.setdefault(bucket_start, {'high': bar.high, 'low': bar.low, 'count': 0})
+                    b['high'] = max(b['high'], bar.high)
+                    b['low'] = min(b['low'], bar.low)
+                    b['count'] += 1
+
+                if len(buckets) < CANDLE_SPIKE_MIN_BASELINE_BUCKETS + 1:
+                    continue
+
+                ordered_starts = sorted(buckets.keys())
+                latest_start = ordered_starts[-1]
+                latest = buckets[latest_start]
+                if latest['count'] < CANDLE_SPIKE_MIN_BARS_IN_BUCKET:
+                    continue
+
+                baseline_starts = ordered_starts[-(CANDLE_SPIKE_BASELINE_BUCKETS + 1):-1]
+                baseline_ranges = [buckets[s]['high'] - buckets[s]['low'] for s in baseline_starts if buckets[s]['count'] > 0]
+                if len(baseline_ranges) < CANDLE_SPIKE_MIN_BASELINE_BUCKETS:
+                    continue
+
+                baseline_avg = sum(baseline_ranges) / len(baseline_ranges)
+                latest_range = latest['high'] - latest['low']
+                if baseline_avg <= 0:
+                    continue
+
+                ratio = latest_range / baseline_avg
+                if ratio >= CANDLE_SPIKE_RATIO_THRESHOLD:
+                    spikes[symbol] = {
+                        'ratio': round(ratio, 2),
+                        'range': round(latest_range, 4),
+                        'baseline_avg': round(baseline_avg, 4),
+                        'bucket_start': latest_start.isoformat()
+                    }
+
+            if spikes:
+                summary = ', '.join(f"{s}({v['ratio']}x)" for s, v in spikes.items())
+                logger.info(f"🕯️ Candle spikes detected: {summary}")
+
+            return spikes
+
+        except Exception as e:
+            logger.error(f"Failed to detect candle spikes: {e}")
+            return {}
+
     def get_top20_by_premarket_volume(self):
         """Get top 20 tickers by premarket volume, supplemented by top gainers to catch early movers"""
         try:
@@ -362,7 +713,76 @@ class PremarketTop20Monitor:
             if added_from_change:
                 logger.info(f"📈 Added {added_from_change} early movers from change-sorted query")
 
+            # Tertiary: real-time movers from Alpaca's screener. TradingView
+            # scanner data is 15-min delayed for this account, so a spike only
+            # enters its rankings ~15 minutes late (e.g. UBXG on 2026-07-14
+            # spiked at 8:59 ET but ranked at 9:15 ET); Alpaca catches it live.
+            alpaca_candidates = self._get_alpaca_screener_candidates()
+            added_from_alpaca = 0
+            for record in alpaca_candidates:
+                symbol = record.get('name')
+                if symbol and symbol not in seen_symbols:
+                    seen_symbols.add(symbol)
+                    merged.append(record)
+                    added_from_alpaca += 1
+
+            if added_from_alpaca:
+                logger.info(f"⚡ Added {added_from_alpaca} real-time movers from Alpaca screener")
+
+            # Candle-spike detection: check a broader candidate pool (not just the
+            # merged top-20/top-gainers) so an abnormal 10-min range can promote a
+            # ticker into the watch list before its volume/change rank would.
+            record_lookup = {}
+            for record in volume_records[:60] + change_records[:60] + alpaca_candidates:
+                symbol = record.get('name')
+                if symbol and symbol not in record_lookup:
+                    record_lookup[symbol] = record
+
+            spikes = self._detect_candle_spikes(list(record_lookup.keys()))
+
+            added_from_spike = 0
+            for symbol, spike in spikes.items():
+                if symbol not in seen_symbols and symbol in record_lookup:
+                    seen_symbols.add(symbol)
+                    merged.append(record_lookup[symbol])
+                    added_from_spike += 1
+
+            if added_from_spike:
+                logger.info(f"🕯️ Added {added_from_spike} early movers from candle-spike detection")
+
+            # Attach spike info to every merged record that qualifies, whether it was
+            # already present via volume/change or just promoted above, so the chart
+            # can highlight it.
+            for record in merged:
+                spike = spikes.get(record.get('name'))
+                if spike:
+                    record['candle_spike_ratio'] = spike['ratio']
+                    record['candle_spike_range'] = spike['range']
+                    record['candle_spike_baseline_avg'] = spike['baseline_avg']
+
             logger.info(f"✅ Total merged tickers: {len(merged)}")
+
+            # Overlay real-time price/change/volume from Alpaca
+            merged = self._update_prices_with_alpaca(merged)
+
+            # Alpaca-screener candidates carry no TradingView premarket fields;
+            # fill them from the overlay so the chart (which needs numeric
+            # premarket_change/premarket_volume) and notifications render them.
+            # Drop candidates with no premarket activity today - the Alpaca
+            # screener can return the previous session's movers early on.
+            filled = []
+            for record in merged:
+                if record.get('source') == 'alpaca_screener':
+                    if record.get('alpaca_premarket_change') is None or not record.get('alpaca_premarket_volume'):
+                        continue
+                if record.get('premarket_change') is None and record.get('alpaca_premarket_change') is not None:
+                    record['premarket_change'] = record['alpaca_premarket_change']
+                if not record.get('premarket_volume') and record.get('alpaca_premarket_volume'):
+                    record['premarket_volume'] = record['alpaca_premarket_volume']
+                if record.get('close') is None and record.get('alpaca_previous_close') is not None:
+                    record['close'] = record['alpaca_previous_close']
+                filled.append(record)
+            merged = filled
 
             # Log the screener data to file
             if merged:
@@ -405,7 +825,7 @@ class PremarketTop20Monitor:
             if symbol:
                 current_positions[symbol] = {
                     'position': idx,
-                    'premarket_change': record.get('premarket_change', 0)
+                    'premarket_change': record.get('alpaca_premarket_change', record.get('premarket_change', 0))
                 }
 
         # If this is the first run, consider it a change
@@ -446,7 +866,7 @@ class PremarketTop20Monitor:
         volume_changes = {}
         for record in top20_data:
             symbol = record.get('name')
-            pm_volume = record.get('premarket_volume', 0) or 0
+            pm_volume = record.get('alpaca_premarket_volume', record.get('premarket_volume', 0)) or 0
             if symbol:
                 if self.previous_volumes:
                     # Calculate delta from previous volume (0 if ticker is new)
@@ -478,8 +898,8 @@ class PremarketTop20Monitor:
 
         for idx, record in enumerate(top20_data, 1):
             symbol = record.get('name', 'N/A')
-            pm_volume = record.get('premarket_volume', 0)
-            pm_change = record.get('premarket_change', 0)
+            pm_volume = record.get('alpaca_premarket_volume', record.get('premarket_volume', 0))
+            pm_change = record.get('alpaca_premarket_change', record.get('premarket_change', 0))
 
             # Format volume with commas
             volume_str = f"{pm_volume:,.0f}" if pm_volume else "N/A"
@@ -644,7 +1064,7 @@ class PremarketTop20Monitor:
             self.previous_volumes = {}
             for record in top20_data:
                 symbol = record.get('name')
-                pm_volume = record.get('premarket_volume', 0) or 0
+                pm_volume = record.get('alpaca_premarket_volume', record.get('premarket_volume', 0)) or 0
                 if symbol:
                     self.previous_volumes[symbol] = pm_volume
 
