@@ -192,19 +192,6 @@ class EndOfDayAnalyzer:
                 alert_price = alert_data.get('alert_price', 0)
                 alert_type = alert_data.get('alert_type', 'price_spike')
 
-                # FIX: Correct alert_price for premarket alerts that were logged incorrectly
-                # Old bug: premarket alerts logged previous day's close instead of current premarket price
-                # If this is a premarket alert and we have premarket_change data, recalculate the correct price
-                premarket_alert_types = ['premarket_acceleration', 'new_premarket_move', 'premarket_volume_surge',
-                                        'significant_premarket_move', 'high_premarket_volume']
-                if alert_type in premarket_alert_types:
-                    premarket_change = alert_data.get('change_pct', alert_data.get('premarket_change', 0))
-                    if premarket_change != 0:
-                        # Recalculate: alert_price is actually previous close, need to add the premarket change
-                        corrected_price = alert_price * (1 + premarket_change / 100)
-                        print(f"  ⚠️  Correcting premarket alert price for {ticker}: ${alert_price:.4f} → ${corrected_price:.4f} (using {premarket_change:+.1f}% change)")
-                        alert_price = corrected_price
-                
                 # For Telegram alerts, we only keep the first one per ticker
                 # since these are the actual alerts the user received
                 if ticker not in ticker_first_alerts:
@@ -470,7 +457,7 @@ class EndOfDayAnalyzer:
         # Analyze each alert
         results = []
         
-        print(f"\\n📈 ANALYZING {len(all_alerts)} TICKERS...")
+        print(f"\n📈 ANALYZING {len(all_alerts)} TICKERS...")
         print("-" * 60)
         
         for i, alert_info in enumerate(all_alerts, 1):
@@ -662,16 +649,16 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                 await self.telegram_bot.send_message(self.telegram_chat_id, report, parse_mode='HTML')
             else:
                 # Split into chunks
-                lines = report.split('\\n')
+                lines = report.split('\n')
                 current_chunk = ""
-                
+
                 for line in lines:
-                    if len(current_chunk + line + "\\n") <= max_length:
-                        current_chunk += line + "\\n"
+                    if len(current_chunk + line + "\n") <= max_length:
+                        current_chunk += line + "\n"
                     else:
                         if current_chunk:
                             await self.telegram_bot.send_message(self.telegram_chat_id, current_chunk, parse_mode='HTML')
-                        current_chunk = line + "\\n"
+                        current_chunk = line + "\n"
                 
                 # Send remaining chunk
                 if current_chunk:
@@ -753,7 +740,7 @@ async def main():
     if args.bot_token and args.chat_id:
         await analyzer.send_telegram_report(report)
     
-    print("\\n✅ Analysis complete!")
+    print("\n✅ Analysis complete!")
 
 
 if __name__ == "__main__":
