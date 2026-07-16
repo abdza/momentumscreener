@@ -49,18 +49,21 @@ except ImportError:
     TELEGRAM_AVAILABLE = False
 
 class EndOfDayAnalyzer:
-    def __init__(self, data_dir="momentum_data", success_threshold=30.0, 
-                 telegram_bot_token=None, telegram_chat_id=None):
+    def __init__(self, data_dir="momentum_data", success_threshold=30.0,
+                 telegram_bot_token=None, telegram_chat_id=None,
+                 orb_data_dir="orb_data"):
         """
         Initialize the End-of-Day Analyzer
-        
+
         Args:
             data_dir (str): Directory containing alert data
             success_threshold (float): Success threshold percentage (default: 30%)
             telegram_bot_token (str): Telegram bot token for notifications
             telegram_chat_id (str): Telegram chat ID for notifications
+            orb_data_dir (str): Directory containing ORB screener data
         """
         self.data_dir = Path(data_dir)
+        self.orb_data_dir = Path(orb_data_dir)
         self.success_threshold = success_threshold
         
         # Initialize Telegram bot if credentials provided
@@ -483,6 +486,279 @@ class EndOfDayAnalyzer:
         
         return results
     
+    def load_orb_scans(self, target_date):
+        """Load ORB screener signals for a date, grouped into 30-min and 60-min opening ranges.
+
+        The ORB screener runs at 10:00 and 10:30 ET (22:00/22:30 Malaysia time).
+        The 10:00 scan uses the 9:30-10:00 range, the 10:30 scan uses 9:30-10:30.
+        """
+        if not self.orb_data_dir.exists():
+            print(f"⚠️  ORB data directory not found: {self.orb_data_dir}")
+            return []
+
+        if not YFINANCE_AVAILABLE:
+            print("⚠️  pytz/yfinance not available - skipping ORB analysis")
+            return []
+
+        malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
+        et_tz = pytz.timezone('America/New_York')
+
+        scans = {}  # range_minutes -> {'label', 'range_minutes', 'tickers': {name: record}}
+
+        for json_file in sorted(self.orb_data_dir.glob('screener_*.json')):
+            try:
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    payload = json.load(f)
+            except Exception as e:
+                print(f"⚠️  Could not read {json_file.name}: {e}")
+                continue
+
+            ts_str = payload.get('timestamp', '')
+            try:
+                ts = datetime.fromisoformat(ts_str)
+            except (ValueError, TypeError):
+                continue
+            if ts.tzinfo is None:
+                ts = malaysia_tz.localize(ts)
+            ts_et = ts.astimezone(et_tz)
+
+            if ts_et.date() != target_date:
+                continue
+
+            # Only accept scans taken shortly after 10:00 or 10:30 ET
+            minutes_after_open = (ts_et.hour - 9) * 60 + (ts_et.minute - 30)
+            if minutes_after_open < 25 or minutes_after_open > 90:
+                continue
+
+            range_minutes = 30 if minutes_after_open <= 45 else 60
+
+            if range_minutes not in scans:
+                scans[range_minutes] = {
+                    'label': f"{range_minutes}-min ORB ({'10:00' if range_minutes == 30 else '10:30'} ET scan)",
+                    'range_minutes': range_minutes,
+                    'tickers': {}
+                }
+
+            for record in payload.get('data', []):
+                name = record.get('name') if isinstance(record, dict) else None
+                if name and name not in scans[range_minutes]['tickers']:
+                    scans[range_minutes]['tickers'][name] = record
+
+        return [scans[k] for k in sorted(scans)]
+
+    def fetch_intraday_data(self, ticker, target_date):
+        """Fetch intraday bars for a single day (5m preferred, 15m fallback), in ET"""
+        if not YFINANCE_AVAILABLE:
+            return None
+
+        et_tz = pytz.timezone('America/New_York')
+        stock = yf.Ticker(ticker)
+
+        for interval in ('5m', '15m'):
+            try:
+                data = stock.history(start=target_date, end=target_date + timedelta(days=1),
+                                     interval=interval)
+            except Exception:
+                continue
+            if data is None or data.empty:
+                continue
+            try:
+                if data.index.tz is None:
+                    data.index = data.index.tz_localize(et_tz)
+                else:
+                    data.index = data.index.tz_convert(et_tz)
+            except Exception:
+                continue
+            data = data[data.index.date == target_date]
+            if not data.empty:
+                return data
+        return None
+
+    def analyze_orb_trade(self, ticker, target_date, range_minutes):
+        """Backtest one ORB trade: entry at range high, stop at range low, 1:1 target.
+
+        Entry triggers when price crosses above the range high after the range period.
+        Ties within a single bar (both stop and target touched) count as a loss.
+        """
+        data = self.fetch_intraday_data(ticker, target_date)
+        if data is None or data.empty:
+            return {'outcome': 'no_data'}
+
+        et_tz = pytz.timezone('America/New_York')
+        open_time = et_tz.localize(datetime.combine(
+            target_date, datetime.min.time().replace(hour=9, minute=30)))
+        range_end = open_time + timedelta(minutes=range_minutes)
+        close_time = et_tz.localize(datetime.combine(
+            target_date, datetime.min.time().replace(hour=16)))
+
+        range_bars = data[(data.index >= open_time) & (data.index < range_end)]
+        after_bars = data[(data.index >= range_end) & (data.index < close_time)]
+
+        if range_bars.empty or after_bars.empty:
+            return {'outcome': 'no_data'}
+
+        entry = float(range_bars['High'].max())
+        stop = float(range_bars['Low'].min())
+        risk = entry - stop
+        if risk <= 0:
+            return {'outcome': 'invalid_range'}
+        target = entry + risk
+
+        result = {
+            'entry': entry,
+            'stop': stop,
+            'target': target,
+            'risk_pct': (risk / entry) * 100,
+        }
+
+        triggered = False
+        for ts, bar in after_bars.iterrows():
+            high = float(bar['High'])
+            low = float(bar['Low'])
+
+            if not triggered:
+                if high > entry:
+                    triggered = True
+                    result['trigger_time'] = ts.strftime('%H:%M')
+                    if low <= stop:
+                        result['outcome'] = 'loss'
+                        return result
+                    if high >= target:
+                        result['outcome'] = 'win'
+                        return result
+                continue
+
+            if low <= stop:
+                result['outcome'] = 'loss'
+                return result
+            if high >= target:
+                result['outcome'] = 'win'
+                return result
+
+        if triggered:
+            end_close = float(after_bars['Close'].iloc[-1])
+            result['outcome'] = 'open'
+            result['end_r'] = (end_close - entry) / risk
+        else:
+            result['outcome'] = 'no_trigger'
+        return result
+
+    def analyze_orb_performance(self, target_date):
+        """Backtest the ORB 1:1 strategy for all tickers in the day's ORB scans"""
+        scans = self.load_orb_scans(target_date)
+
+        if not scans:
+            print(f"\n📭 No ORB screener data found for {target_date}")
+            return []
+
+        print(f"\n🎯 ANALYZING ORB SIGNALS FOR {target_date}")
+        print("=" * 60)
+
+        for scan in scans:
+            tickers = scan['tickers']
+            print(f"\n📋 {scan['label']}: {len(tickers)} tickers")
+            print("-" * 60)
+
+            results = []
+            for i, (ticker, record) in enumerate(tickers.items(), 1):
+                print(f"[{i:2d}/{len(tickers)}] {ticker}...", end=' ')
+                trade = self.analyze_orb_trade(ticker, target_date, scan['range_minutes'])
+
+                rel_vol = record.get('relative_volume_10d_calc')
+                if rel_vol is not None and rel_vol != rel_vol:  # NaN check
+                    rel_vol = None
+
+                results.append({
+                    'ticker': ticker,
+                    'rel_vol': rel_vol,
+                    'change_from_open': record.get('change_from_open'),
+                    'volume': record.get('volume'),
+                    **trade
+                })
+
+                markers = {'win': '✅ WIN', 'loss': '❌ LOSS', 'open': '⏳ OPEN (no exit)',
+                           'no_trigger': '➖ never triggered', 'no_data': '⚠️  no data',
+                           'invalid_range': '⚠️  invalid range'}
+                print(markers.get(trade['outcome'], trade['outcome']))
+
+            scan['results'] = results
+
+        return scans
+
+    def generate_orb_report(self, orb_scans, target_date):
+        """Generate the ORB backtest section of the report"""
+        report = f"""
+
+<b>🎯 ORB 1:1 BACKTEST - {target_date}</b>
+{'='*60}
+Entry: break above opening range high | Stop: range low | Target: 1:1 R
+(ties within a bar counted as loss)"""
+
+        outcome_emoji = {'win': '✅', 'loss': '❌', 'open': '⏳', 'no_trigger': '➖',
+                         'no_data': '⚠️', 'invalid_range': '⚠️'}
+
+        all_resolved = []  # for the RVol breakdown across both scans
+
+        for scan in orb_scans:
+            results = scan.get('results', [])
+            if not results:
+                continue
+
+            wins = [r for r in results if r['outcome'] == 'win']
+            losses = [r for r in results if r['outcome'] == 'loss']
+            opens = [r for r in results if r['outcome'] == 'open']
+            no_trigger = [r for r in results if r['outcome'] == 'no_trigger']
+            no_data = [r for r in results if r['outcome'] in ('no_data', 'invalid_range')]
+            triggered = len(wins) + len(losses) + len(opens)
+            resolved = len(wins) + len(losses)
+            win_rate = (len(wins) / resolved * 100) if resolved else 0
+
+            all_resolved.extend(wins + losses)
+
+            report += f"""
+
+<b>📋 {scan['label']}</b>
+{'─'*30}
+Signals: {len(results)} | Triggered entry: {triggered} | No trigger: {len(no_trigger)} | No data: {len(no_data)}
+Wins (hit 1:1): {len(wins)} | Losses (hit stop): {len(losses)} | Open at close: {len(opens)}
+Win Rate (resolved trades): {win_rate:.0f}% ({len(wins)}/{resolved})"""
+
+            for r in sorted(results, key=lambda x: (x['rel_vol'] is None, -(x['rel_vol'] or 0))):
+                emoji = outcome_emoji.get(r['outcome'], '?')
+                ticker_link = self.format_ticker_link(r['ticker'])
+                rvol_str = f"{r['rel_vol']:.1f}x" if r['rel_vol'] is not None else "N/A"
+
+                line = f"\n{emoji} {ticker_link} | RVol: {rvol_str}"
+                if 'entry' in r:
+                    line += f" | E: ${r['entry']:.2f} S: ${r['stop']:.2f} ({r['risk_pct']:.1f}% risk)"
+                if 'trigger_time' in r:
+                    line += f" | in @ {r['trigger_time']}"
+                if r['outcome'] == 'open' and 'end_r' in r:
+                    line += f" | closed at {r['end_r']:+.2f}R"
+                report += line
+
+        # Relative volume breakdown across all resolved trades
+        if all_resolved:
+            report += f"""
+
+<b>📊 WIN RATE BY RELATIVE VOLUME (resolved trades, both scans)</b>
+{'─'*30}"""
+            buckets = [
+                ('RVol ≥ 5x', lambda v: v is not None and v >= 5),
+                ('RVol 1x-5x', lambda v: v is not None and 1 <= v < 5),
+                ('RVol < 1x', lambda v: v is not None and v < 1),
+                ('RVol unknown', lambda v: v is None),
+            ]
+            for label, match in buckets:
+                bucket = [r for r in all_resolved if match(r['rel_vol'])]
+                if not bucket:
+                    continue
+                bucket_wins = len([r for r in bucket if r['outcome'] == 'win'])
+                bucket_rate = bucket_wins / len(bucket) * 100
+                report += f"\n{label:14} | {bucket_wins:2d}/{len(bucket):2d} wins ({bucket_rate:.0f}%)"
+
+        return report
+
     def generate_analysis_report(self, results, target_date):
         """Generate comprehensive analysis report"""
         if not results:
@@ -684,6 +960,8 @@ def parse_arguments():
                        help='Success threshold percentage (default: 30.0)')
     parser.add_argument('--data-dir', type=str, default='momentum_data',
                        help='Directory containing alert data (default: momentum_data)')
+    parser.add_argument('--orb-data-dir', type=str, default='orb_data',
+                       help='Directory containing ORB screener data (default: orb_data)')
     
     return parser.parse_args()
 
@@ -721,19 +999,27 @@ async def main():
         data_dir=args.data_dir,
         success_threshold=args.success_threshold,
         telegram_bot_token=args.bot_token,
-        telegram_chat_id=args.chat_id
+        telegram_chat_id=args.chat_id,
+        orb_data_dir=args.orb_data_dir
     )
-    
+
     # Analyze performance
     results = analyzer.analyze_day_performance(target_date)
-    
-    if not results:
+
+    # Backtest the day's ORB signals
+    orb_scans = analyzer.analyze_orb_performance(target_date)
+
+    if not results and not orb_scans:
         print("❌ No analysis results available")
         sys.exit(1)
-    
+
     # Generate report
-    report = analyzer.generate_analysis_report(results, target_date)
-    
+    report = ""
+    if results:
+        report = analyzer.generate_analysis_report(results, target_date)
+    if orb_scans:
+        report += analyzer.generate_orb_report(orb_scans, target_date)
+
     print(report)
     
     # Send Telegram notification if configured
