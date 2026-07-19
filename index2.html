@@ -522,58 +522,58 @@ function resetHidden() {
 
 // ── Chart ─────────────────────────────────────────────────────────────────────
 
+function snapVolTotals() {
+  return snapshots.map(snap => snap.data.reduce((s, d) => s + d.volume, 0));
+}
+
+// First known close for a ticker, for close-mode normalization
+function firstCloseFor(name) {
+  for (const snap of snapshots) {
+    const entry = snap.data.find(d => d.name === name);
+    if (entry && entry.close > 0) return entry.close;
+  }
+  return null;
+}
+
+function tickerDataset(t, color, snapTotals) {
+  const base = mode === 'close' ? firstCloseFor(t.name) : null;
+  const data = snapshots.map(snap => {
+    const idx = snap.data.findIndex(d => d.name === t.name);
+    if (idx === -1) return { x: snap.timestamp, y: null };
+    const entry = snap.data[idx];
+    let y;
+    if (mode === 'close')   y = base ? (entry.close - base) / base * 100 : null;
+    else if (mode === 'volume') y = entry.volume;
+    else if (mode === 'change') y = entry.change_from_open;
+    else y = idx + 1; // rank
+    return { x: snap.timestamp, y };
+  });
+  const pointRadii = snapshots.map((snap, si) => {
+    const idx = snap.data.findIndex(d => d.name === t.name);
+    if (idx === -1) return 2;
+    const total = snapTotals[si];
+    if (!total) return 2;
+    const volPct = snap.data[idx].volume / total * 100;
+    return Math.max(2, volPct * 0.5);
+  });
+  return {
+    label: t.name,
+    data,
+    borderColor: color,
+    backgroundColor: color + '18',
+    borderWidth: 1.8,
+    pointRadius: pointRadii,
+    pointHoverRadius: 7,
+    tension: 0.25,
+    spanGaps: false,
+    hidden: false
+  };
+}
+
 function buildDatasets() {
   const shown = rankCache.filter(t => !hidden.has(t.name));
-
-  // For close mode: find each ticker's first known close for normalization
-  const firstClose = {};
-  if (mode === 'close') {
-    snapshots.forEach(snap => {
-      snap.data.forEach(entry => {
-        if (!(entry.name in firstClose) && entry.close > 0)
-          firstClose[entry.name] = entry.close;
-      });
-    });
-  }
-
-  // Pre-compute total volume per snapshot for point sizing
-  const snapTotals = snapshots.map(snap => snap.data.reduce((s, d) => s + d.volume, 0));
-
-  return shown.map((t, i) => {
-    const color = COLORS[i % COLORS.length];
-    const base = firstClose[t.name] || null;
-    const data = snapshots.map(snap => {
-      const idx = snap.data.findIndex(d => d.name === t.name);
-      if (idx === -1) return { x: snap.timestamp, y: null };
-      const entry = snap.data[idx];
-      let y;
-      if (mode === 'close')   y = base ? (entry.close - base) / base * 100 : null;
-      else if (mode === 'volume') y = entry.volume;
-      else if (mode === 'change') y = entry.change_from_open;
-      else y = idx + 1; // rank
-      return { x: snap.timestamp, y };
-    });
-    const pointRadii = snapshots.map((snap, si) => {
-      const idx = snap.data.findIndex(d => d.name === t.name);
-      if (idx === -1) return 2;
-      const total = snapTotals[si];
-      if (!total) return 2;
-      const volPct = snap.data[idx].volume / total * 100;
-      return Math.max(2, volPct * 0.5);
-    });
-    return {
-      label: t.name,
-      data,
-      borderColor: color,
-      backgroundColor: color + '18',
-      borderWidth: 1.8,
-      pointRadius: pointRadii,
-      pointHoverRadius: 7,
-      tension: 0.25,
-      spanGaps: false,
-      hidden: hidden.has(t.name)
-    };
-  });
+  const snapTotals = snapVolTotals();
+  return shown.map((t, i) => tickerDataset(t, COLORS[i % COLORS.length], snapTotals));
 }
 
 function yAxisConfig() {
@@ -696,6 +696,8 @@ function rebuild() {
       }
     }
   });
+
+  applyHoverSolo();
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -729,7 +731,7 @@ function renderSidebar() {
     const barWidth = ((t.count / maxCount) * 100).toFixed(1);
 
     return `
-    <div class="ticker-row${isMuted ? ' muted' : ''}" onclick="toggleTicker('${t.name}')">
+    <div class="ticker-row${isMuted ? ' muted' : ''}" onclick="toggleTicker('${t.name}')" onmouseenter="hoverSolo('${t.name}')" onmouseleave="hoverSoloEnd()">
       <div class="dot" style="background:${color}"></div>
       <div class="ticker-info">
         <div class="ticker-name">${t.name}</div>
@@ -809,6 +811,42 @@ function soloTicker(evt, name) {
   rankCache.forEach(t => { if (t.name !== name) hidden.add(t.name); });
   rebuild();
   renderSidebar();
+}
+
+// Hover-solo: temporarily isolate one ticker's line while the cursor is on its
+// sidebar row, without touching the persistent hidden-set state.
+let hoverSoloName = null;
+
+function hoverSolo(name) {
+  hoverSoloName = name;
+  applyHoverSolo();
+}
+
+function applyHoverSolo() {
+  if (!chart || !hoverSoloName) return;
+  chart.data.datasets = chart.data.datasets.filter(ds => !ds._hoverTemp);
+  const inChart = chart.data.datasets.some(ds => ds.label === hoverSoloName);
+  if (!inChart) {
+    // Muted ticker: build a temporary dataset so it can be previewed
+    const t = rankCache.find(r => r.name === hoverSoloName);
+    if (t) {
+      const ds = tickerDataset(t, '#58a6ff', snapVolTotals());
+      ds._hoverTemp = true;
+      chart.data.datasets.push(ds);
+    }
+  }
+  chart.data.datasets.forEach(ds => {
+    ds.hidden = ds.label !== hoverSoloName;
+  });
+  chart.update('none');
+}
+
+function hoverSoloEnd() {
+  hoverSoloName = null;
+  if (!chart) return;
+  chart.data.datasets = chart.data.datasets.filter(ds => !ds._hoverTemp);
+  chart.data.datasets.forEach(ds => { ds.hidden = false; });
+  chart.update('none');
 }
 
 function showAllTickers() {
