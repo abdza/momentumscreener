@@ -407,10 +407,11 @@ function calcSignals(snaps) {
   const series = {};
   snaps.forEach((snap, si) => {
     snap.data.forEach(item => {
-      if (typeof item.premarket_change !== 'number') return;
+      const chg = pmChange(item);
+      if (typeof chg !== 'number') return;
       (series[item.name] = series[item.name] || []).push({
         si,
-        chg: item.premarket_change,
+        chg,
         vol: item.premarket_volume || 0
       });
     });
@@ -493,6 +494,25 @@ function getTopN() {
   return Math.max(1, Math.min(20, parseInt(document.getElementById('topN').value) || 10));
 }
 
+// TradingView's premarket_change is ~15min delayed for this account (see
+// premarket_top20_monitor.py); alpaca_premarket_change is computed live from
+// Alpaca quotes each scan (current alpaca_price vs. alpaca_previous_close,
+// entirely from Alpaca — see _update_prices_with_alpaca), so prefer it
+// whenever it's present.
+function pmChange(item) {
+  return typeof item.alpaca_premarket_change === 'number' ? item.alpaca_premarket_change : item.premarket_change;
+}
+
+function pmPrice(item) {
+  return typeof item.alpaca_price === 'number' ? item.alpaca_price : null;
+}
+
+// "Close" here means prior session's close — the baseline the premarket %
+// change is measured against. Prefer Alpaca's live-fetched value.
+function pmPrevClose(item) {
+  return typeof item.alpaca_previous_close === 'number' ? item.alpaca_previous_close : item.close;
+}
+
 // ── API ───────────────────────────────────────────────────────────────────────
 
 async function apiFetch(url) {
@@ -534,7 +554,7 @@ function calcConsistency(snaps) {
     last.data.forEach((item, i) => {
       if (map[item.name]) {
         map[item.name].latestVol = item.premarket_volume;
-        map[item.name].latestChange = item.premarket_change;
+        map[item.name].latestChange = pmChange(item);
         map[item.name].latestRank = i + 1;
       }
     });
@@ -582,7 +602,7 @@ function tickerDataset(t, color, snapTotals) {
     let y;
     if (mode === 'volume') y = vol;
     else if (mode === 'volpct') y = snapTotals[si] > 0 ? (vol / snapTotals[si]) * 100 : null;
-    else if (mode === 'change') y = snap.data[idx].premarket_change;
+    else if (mode === 'change') y = pmChange(snap.data[idx]);
     else y = idx + 1; // rank
     return { x: snap.timestamp, y };
   });
@@ -629,7 +649,7 @@ function buildDatasets() {
       let y;
       if (mode === 'volume') y = vol;
       else if (mode === 'volpct') y = snapTotals[sig.si] > 0 ? vol / snapTotals[sig.si] * 100 : null;
-      else if (mode === 'change') y = snap.data[idx].premarket_change;
+      else if (mode === 'change') y = pmChange(snap.data[idx]);
       else y = idx + 1;
       pts.push({ x: snap.timestamp, y, ticker: name, sig });
     }
@@ -664,7 +684,7 @@ function buildDatasets() {
       let y;
       if (mode === 'volume') y = vol;
       else if (mode === 'volpct') y = snapTotals[spike.si] > 0 ? vol / snapTotals[spike.si] * 100 : null;
-      else if (mode === 'change') y = snap.data[idx].premarket_change;
+      else if (mode === 'change') y = pmChange(snap.data[idx]);
       else y = idx + 1;
       pts.push({ x: snap.timestamp, y, ticker: name, spike });
     }
@@ -801,15 +821,21 @@ function rebuild() {
               const rank = snap.data.indexOf(entry) + 1;
               const totalVol = snap.data.reduce((s, d) => s + d.premarket_volume, 0);
               const pct = totalVol > 0 ? (entry.premarket_volume / totalVol * 100).toFixed(2) : '—';
-              const chg = entry.premarket_change;
+              const chg = pmChange(entry);
               const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-              return [
+              const price = pmPrice(entry);
+              const prevClose = pmPrevClose(entry);
+              const lines = [];
+              if (price !== null) lines.push(` Price      : $${price.toFixed(4)}`);
+              if (prevClose !== null) lines.push(` Prev Close : $${prevClose.toFixed(4)}`);
+              lines.push(
                 ` Volume : ${fmtVol(entry.premarket_volume)} (${entry.premarket_volume.toLocaleString()})`,
                 ` Vol %  : ${pct}% of total`,
                 ` Change : ${chgStr}`,
                 ` Rank   : #${rank}`,
                 ` Sector : ${entry.sector || '—'}`,
-              ];
+              );
+              return lines;
             }
           }
         }

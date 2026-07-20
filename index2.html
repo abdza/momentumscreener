@@ -441,6 +441,17 @@ async function apiFetch(url) {
   return r.json();
 }
 
+// TradingView's change_from_open/close are ~15min delayed for this account
+// (see volume_momentum_tracker.py); alpaca_change_from_open/alpaca_price are
+// computed live from Alpaca quotes each scan, so prefer them whenever present.
+function pmChange(item) {
+  return typeof item.alpaca_change_from_open === 'number' ? item.alpaca_change_from_open : item.change_from_open;
+}
+
+function pmPrice(item) {
+  return typeof item.alpaca_price === 'number' ? item.alpaca_price : item.close;
+}
+
 // ── Consistency calc ──────────────────────────────────────────────────────────
 
 function calcConsistency(snaps) {
@@ -472,7 +483,8 @@ function calcConsistency(snaps) {
       map[n].count++;
       map[n].rankSum += (i + 1);
       if (item.volume > map[n].maxVol) map[n].maxVol = item.volume;
-      if (item.close > 0) closeValues[n].add(item.close);
+      const p = pmPrice(item);
+      if (p > 0) closeValues[n].add(p);
     });
   });
 
@@ -481,8 +493,8 @@ function calcConsistency(snaps) {
     last.data.forEach((item, i) => {
       if (map[item.name]) {
         map[item.name].latestVol = item.volume;
-        map[item.name].latestChange = item.change_from_open;
-        map[item.name].latestClose = item.close;
+        map[item.name].latestChange = pmChange(item);
+        map[item.name].latestClose = pmPrice(item);
         map[item.name].latestRank = i + 1;
       }
     });
@@ -530,7 +542,10 @@ function snapVolTotals() {
 function firstCloseFor(name) {
   for (const snap of snapshots) {
     const entry = snap.data.find(d => d.name === name);
-    if (entry && entry.close > 0) return entry.close;
+    if (entry) {
+      const p = pmPrice(entry);
+      if (p > 0) return p;
+    }
   }
   return null;
 }
@@ -542,9 +557,9 @@ function tickerDataset(t, color, snapTotals) {
     if (idx === -1) return { x: snap.timestamp, y: null };
     const entry = snap.data[idx];
     let y;
-    if (mode === 'close')   y = base ? (entry.close - base) / base * 100 : null;
+    if (mode === 'close')   y = base ? (pmPrice(entry) - base) / base * 100 : null;
     else if (mode === 'volume') y = entry.volume;
-    else if (mode === 'change') y = entry.change_from_open;
+    else if (mode === 'change') y = pmChange(entry);
     else y = idx + 1; // rank
     return { x: snap.timestamp, y };
   });
@@ -668,10 +683,10 @@ function rebuild() {
               const rank = snap.data.indexOf(entry) + 1;
               const totalVol = snap.data.reduce((s, d) => s + d.volume, 0);
               const pct = totalVol > 0 ? (entry.volume / totalVol * 100).toFixed(2) : '—';
-              const chg = entry.change_from_open;
+              const chg = pmChange(entry);
               const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
               return [
-                ` Close   : $${entry.close.toFixed(4)}`,
+                ` Close   : $${pmPrice(entry).toFixed(4)}`,
                 ` Volume  : ${fmtVol(entry.volume)} (${entry.volume.toLocaleString()})`,
                 ` Vol %   : ${pct}% of total`,
                 ` Chg/Open: ${chgStr}`,
