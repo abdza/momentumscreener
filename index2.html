@@ -200,6 +200,7 @@ canvas { width: 100% !important; }
 }
 .ticker-row:hover .solo-btn { opacity: 1; }
 .solo-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+.solo-btn.active { opacity: 1; background: #58a6ff; border-color: #58a6ff; color: #0d1117; }
 
 .dot {
   width: 9px; height: 9px;
@@ -524,12 +525,52 @@ function sortRankCache() {
   });
 }
 
+// ── Persisted manual hide/show overrides ────────────────────────────────────
+// Clicking a ticker to hide/show it is a manual override on top of the
+// topN-based default. Persisted per trading date so it survives the page's
+// auto-refresh but doesn't bleed into the next trading day.
+function hiddenStorageKey() {
+  return `markethour_hidden_${currentDate}`;
+}
+
+function loadHiddenOverrides() {
+  try {
+    const raw = localStorage.getItem(hiddenStorageKey());
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function setHiddenOverride(name, isHidden) {
+  try {
+    const overrides = loadHiddenOverrides();
+    overrides[name] = isHidden;
+    localStorage.setItem(hiddenStorageKey(), JSON.stringify(overrides));
+  } catch (e) {}
+}
+
+function clearHiddenOverrides() {
+  try { localStorage.removeItem(hiddenStorageKey()); } catch (e) {}
+}
+
+function applyHiddenOverrides() {
+  const overrides = loadHiddenOverrides();
+  Object.entries(overrides).forEach(([name, isHidden]) => {
+    if (isHidden) hidden.add(name);
+    else hidden.delete(name);
+  });
+}
+
 function resetHidden() {
   const topN = getTopN();
   hidden.clear();
   rankCache.forEach((t, i) => {
     if (i >= topN) hidden.add(t.name);
   });
+  applyHiddenOverrides();
+  soloedName = null;
+  preSoloHidden = null;
 }
 
 // ── Chart ─────────────────────────────────────────────────────────────────────
@@ -760,7 +801,7 @@ function renderSidebar() {
         <div class="meta-sub">${t.count}/${snapshots.length} snaps</div>
         <div class="meta-sub">avg #${t.avgRank.toFixed(1)}</div>
       </div>
-      <button class="solo-btn" title="Show only this ticker" onclick="soloTicker(event, '${t.name}')">1</button>
+      <button class="solo-btn${t.name === soloedName ? ' active' : ''}" title="Show only this ticker" onclick="soloTicker(event, '${t.name}')">1</button>
     </div>`;
   }).join('');
 }
@@ -814,16 +855,35 @@ function stopPolling() {
 // ── Event handlers ────────────────────────────────────────────────────────────
 
 function toggleTicker(name) {
+  // A plain row click while soloed breaks the solo's all-but-one invariant,
+  // so forget the solo toggle rather than let it restore a stale snapshot.
+  soloedName = null;
+  preSoloHidden = null;
   if (hidden.has(name)) hidden.delete(name);
   else hidden.add(name);
+  setHiddenOverride(name, hidden.has(name));
   rebuild();
   renderSidebar();
 }
 
+// Soloing is a toggle: first click isolates the ticker, remembering the
+// hidden-set as it stood beforehand; clicking the same ticker's solo button
+// again restores exactly that prior state (not "show everything").
+let soloedName = null;
+let preSoloHidden = null;
+
 function soloTicker(evt, name) {
   evt.stopPropagation();
-  hidden.clear();
-  rankCache.forEach(t => { if (t.name !== name) hidden.add(t.name); });
+  if (soloedName === name) {
+    hidden = new Set(preSoloHidden);
+    soloedName = null;
+    preSoloHidden = null;
+  } else {
+    if (soloedName === null) preSoloHidden = new Set(hidden);
+    hidden.clear();
+    rankCache.forEach(t => { if (t.name !== name) hidden.add(t.name); });
+    soloedName = name;
+  }
   rebuild();
   renderSidebar();
 }
@@ -866,6 +926,9 @@ function hoverSoloEnd() {
 
 function showAllTickers() {
   hidden.clear();
+  clearHiddenOverrides();
+  soloedName = null;
+  preSoloHidden = null;
   rebuild();
   renderSidebar();
 }
