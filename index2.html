@@ -247,6 +247,19 @@ canvas { width: 100% !important; }
 .red { color: #f85149; }
 .gray { color: #6e7681; }
 
+.accel-badge {
+  display: inline-block;
+  background: #04260f;
+  color: #3fb950;
+  border: 1px solid #1a7f37;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
 .empty-msg {
   padding: 40px 20px;
   text-align: center;
@@ -368,6 +381,7 @@ let lastCount = 0;
 let pollTimer = null;
 let rankCache = [];
 let rankSort = 'latestChange';
+let accelCache = {};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -429,6 +443,7 @@ function populateSessionSelect() {
 function applySession() {
   snapshots = sessions[sessionIdx] || [];
   rankCache = calcConsistency(snapshots);
+  accelCache = calcAccel(snapshots);
   sortRankCache();
   resetHidden();
   rebuild();
@@ -451,6 +466,39 @@ function pmChange(item) {
 
 function pmPrice(item) {
   return typeof item.alpaca_price === 'number' ? item.alpaca_price : item.close;
+}
+
+// ── Acceleration (sudden incline) detection ─────────────────────────────────
+// Compares the ticker's last two change-from-open readings against the pair
+// before that. If the most recent jump is much bigger than the previous one
+// (or the previous move was flat/falling and this one isn't), the move just
+// went from a gentle slope to an obvious incline — flag it. Recomputed from
+// scratch whenever the session's data is recalculated, so the mark only shows
+// while the *latest* reading is the one driving it.
+const ACCEL_MIN_JUMP = 1.5;   // minimum pp jump between the last two readings
+const ACCEL_FACTOR = 2.5;     // latest jump must be this many times the prior jump
+
+function calcAccel(snaps) {
+  const series = {};
+  snaps.forEach((snap, si) => {
+    snap.data.forEach(item => {
+      const chg = pmChange(item);
+      if (typeof chg !== 'number') return;
+      (series[item.name] = series[item.name] || []).push({ si, chg });
+    });
+  });
+
+  const accel = {};
+  for (const [name, obs] of Object.entries(series)) {
+    if (obs.length < 3) continue;
+    const [a, b, c] = obs.slice(-3);
+    const prevDiff = b.chg - a.chg;
+    const lastDiff = c.chg - b.chg;
+    if (lastDiff < ACCEL_MIN_JUMP) continue;
+    const isAccel = prevDiff <= 0 ? true : lastDiff >= prevDiff * ACCEL_FACTOR;
+    if (isAccel) accel[name] = { si: c.si, lastDiff, prevDiff };
+  }
+  return accel;
 }
 
 // ── Consistency calc ──────────────────────────────────────────────────────────
@@ -785,12 +833,14 @@ function renderSidebar() {
       ? (chg > 0 ? '+' : '') + chg.toFixed(2) + '%'
       : '0.00%';
     const barWidth = ((t.count / maxCount) * 100).toFixed(1);
+    const accel = accelCache[t.name];
+    const accelBadge = accel ? `<span class="accel-badge" title="Accelerating: latest move +${accel.lastDiff.toFixed(2)}pp vs +${accel.prevDiff.toFixed(2)}pp before">🚀 surge</span>` : '';
 
     return `
     <div class="ticker-row${isMuted ? ' muted' : ''}" onclick="toggleTicker('${t.name}')" onmouseenter="hoverSolo('${t.name}')" onmouseleave="hoverSoloEnd()">
       <div class="dot" style="background:${color}"></div>
       <div class="ticker-info">
-        <div class="ticker-name">${t.name}</div>
+        <div class="ticker-name">${t.name}${accelBadge}</div>
         <div class="ticker-sector">${t.sector}</div>
         <div class="consistency-bar">
           <div class="consistency-fill" style="width:${barWidth}%;background:${color}"></div>
@@ -840,6 +890,7 @@ function startPolling() {
       }
       snapshots = sessions[sessionIdx] || [];
       rankCache = calcConsistency(snapshots);
+      accelCache = calcAccel(snapshots);
       sortRankCache();
       rebuild();
       renderSidebar();
