@@ -27,6 +27,7 @@ import glob
 import json
 import logging
 import os
+import re
 import sys
 import time
 from datetime import datetime, date, timedelta, time as dt_time
@@ -215,7 +216,8 @@ class LiveTrader:
         except Exception as e:
             logger.error(f"❌ Failed to send Telegram message: {e}")
             try:
-                plain_message = message.replace('*', '').replace('`', '')
+                plain_message = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', message)
+                plain_message = plain_message.replace('*', '').replace('`', '')
                 await self.telegram_bot.send_message(
                     self.telegram_chat_id,
                     plain_message,
@@ -280,7 +282,7 @@ class LiveTrader:
             self.open_positions[ticker] = (spike_bar, premarket_low_so_far)
             logger.info(f"📈 OPENED {ticker} @ ${spike_bar.close:.2f} ({spike_bar.ts.strftime('%H:%M')} ET)")
             self._notify(
-                f"🟢 *BUY* `{ticker}`\n"
+                f"🟢 *BUY* [{ticker}](https://www.tradingview.com/chart/?symbol={ticker})\n"
                 f"Entry: ${spike_bar.close:.2f} @ {spike_bar.ts.strftime('%H:%M')} ET"
             )
 
@@ -299,7 +301,7 @@ class LiveTrader:
                 logger.info(f"📉 CLOSED {ticker} {marker} {trade['profit_pct']:+.1f}% "
                             f"[{trade['exit_reason']}]")
                 self._notify(
-                    f"🔴 *SELL* `{ticker}` {marker}\n"
+                    f"🔴 *SELL* [{ticker}](https://www.tradingview.com/chart/?symbol={ticker}) {marker}\n"
                     f"Exit: ${trade['exit_price']:.2f}  P/L: {trade['profit_pct']:+.1f}% "
                     f"(${trade['profit_loss']:+.2f})\n"
                     # exit_reason is UPPER_SNAKE_CASE (e.g. RANGE_DRAWDOWN_NO_RECOVERY) -
