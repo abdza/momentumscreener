@@ -22,6 +22,7 @@ Usage:
 """
 
 import argparse
+import asyncio
 import glob
 import json
 import logging
@@ -32,6 +33,7 @@ from datetime import datetime, date, timedelta, time as dt_time
 from pathlib import Path
 
 import pytz
+from telegram import Bot
 
 import flat_spike_strategy as strategy
 from flat_spike_strategy import Bar, DailyBar
@@ -160,6 +162,17 @@ class LiveTrader:
             sys.exit(1)
         self.client = StockHistoricalDataClient(api_key, api_secret)
 
+        telegram_bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+        telegram_chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+        self.telegram_chat_id = telegram_chat_id
+        self.telegram_bot = None
+        if telegram_bot_token and telegram_chat_id:
+            self.telegram_bot = Bot(token=telegram_bot_token)
+            logger.info("✅ Telegram bot initialized")
+        else:
+            logger.warning("⚠️  No Telegram credentials found (TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID) - "
+                            "trade notifications disabled")
+
         self.pretop20_dir = pretop20_dir
         self.data_dir = data_dir
         self.trade_file = data_dir / 'trade_history.json'
@@ -187,6 +200,38 @@ class LiveTrader:
         self.open_positions = {}
         self.flatness_cache = {}
         self.decided_today = set()
+
+    async def _send_telegram_message(self, message):
+        """Send message to Telegram - mirrors premarket_top20_monitor.py's approach."""
+        if not self.telegram_bot or not self.telegram_chat_id:
+            return
+        try:
+            await self.telegram_bot.send_message(
+                self.telegram_chat_id,
+                message,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+        except Exception as e:
+            logger.error(f"❌ Failed to send Telegram message: {e}")
+            try:
+                plain_message = message.replace('*', '').replace('`', '')
+                await self.telegram_bot.send_message(
+                    self.telegram_chat_id,
+                    plain_message,
+                    disable_web_page_preview=True
+                )
+            except Exception as e2:
+                logger.error(f"❌ Failed to send plain text message too: {e2}")
+
+    def _notify(self, message):
+        if not self.telegram_bot:
+            return
+        try:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self._send_telegram_message(message))
+        except Exception as e:
+            logger.warning(f"⚠️  Telegram notification failed: {e}")
 
     def _get_flatness(self, ticker: str, today_et: date):
         if ticker not in self.flatness_cache:
@@ -234,6 +279,10 @@ class LiveTrader:
             premarket_low_so_far = min(b.low for b in minute_bars if b.ts <= spike_bar.ts)
             self.open_positions[ticker] = (spike_bar, premarket_low_so_far)
             logger.info(f"📈 OPENED {ticker} @ ${spike_bar.close:.2f} ({spike_bar.ts.strftime('%H:%M')} ET)")
+            self._notify(
+                f"🟢 *BUY* `{ticker}`\n"
+                f"Entry: ${spike_bar.close:.2f} @ {spike_bar.ts.strftime('%H:%M')} ET"
+            )
 
         for ticker in list(self.open_positions.keys()):
             entry_bar, premarket_low_so_far = self.open_positions[ticker]
@@ -249,6 +298,15 @@ class LiveTrader:
                 marker = '✅' if trade['profit_loss'] > 0 else '❌'
                 logger.info(f"📉 CLOSED {ticker} {marker} {trade['profit_pct']:+.1f}% "
                             f"[{trade['exit_reason']}]")
+                self._notify(
+                    f"🔴 *SELL* `{ticker}` {marker}\n"
+                    f"Exit: ${trade['exit_price']:.2f}  P/L: {trade['profit_pct']:+.1f}% "
+                    f"(${trade['profit_loss']:+.2f})\n"
+                    # exit_reason is UPPER_SNAKE_CASE (e.g. RANGE_DRAWDOWN_NO_RECOVERY) -
+                    # underscores break Telegram's legacy Markdown parser (read as
+                    # unclosed italics), so swap them for spaces before sending.
+                    f"Reason: {trade['exit_reason'].replace('_', ' ')}"
+                )
 
     def run(self):
         logger.info(f"🚀 flat_spike live paper trader started (data-dir={self.data_dir})")
