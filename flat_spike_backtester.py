@@ -260,6 +260,8 @@ def run_backtest(args):
                     continue
                 if spike_bar.close < args.min_entry_price:
                     continue
+                if spike_bar.close >= args.max_entry_price:
+                    continue
                 if not strategy.has_sufficient_liquidity(premarket_bars, spike_bar,
                                                            min_avg_dollar_vol=args.min_dollar_vol):
                     continue
@@ -336,6 +338,8 @@ def parse_arguments():
     parser.add_argument('--trailing-minutes', type=int, default=strategy.TRAILING_RECOVERY_MINUTES)
     parser.add_argument('--min-entry-price', type=float, default=strategy.MIN_ENTRY_PRICE,
                          help='Skip candidates whose entry price is below this (default: %(default)s)')
+    parser.add_argument('--max-entry-price', type=float, default=strategy.MAX_ENTRY_PRICE,
+                         help='Skip candidates whose entry price is at/above this (default: %(default)s)')
     parser.add_argument('--min-dollar-vol', type=float, default=strategy.MIN_PRE_ENTRY_DOLLAR_VOL,
                          help='Skip candidates whose avg $ volume/min before entry is below this '
                               '(default: %(default)s)')

@@ -15,6 +15,8 @@ Strategy:
     already elevated at the 4:00am premarket open, and not a 9:30 gap.
   - Entry price must be at/above MIN_ENTRY_PRICE - sub-$5 tickers backtested far
     worse (real, volume-backed reversals, not just illiquid noise) than $5+ ones.
+  - Entry price must be below MAX_ENTRY_PRICE - keeps position sizing sane and
+    stays within the strategy's backtested $5-$20 range.
   - Average dollar volume per minute in the premarket bars strictly before entry
     must be at/above MIN_PRE_ENTRY_DOLLAR_VOL - a spike made of thin, sparse prints
     isn't backed by real buying interest and tends to snap back immediately.
@@ -47,6 +49,7 @@ MARKET_OPEN_ET = dt_time(9, 30)
 MARKET_CLOSE_ET = dt_time(16, 0)
 PREMARKET_END_ET = dt_time(9, 20)
 MIN_ENTRY_PRICE = 5.0
+MAX_ENTRY_PRICE = 20.0
 MIN_PRE_ENTRY_DOLLAR_VOL = 12000.0
 
 RANGE_DRAWDOWN_PCT = 5.0

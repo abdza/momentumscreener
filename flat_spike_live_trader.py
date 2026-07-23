@@ -274,6 +274,10 @@ class LiveTrader:
                 logger.info(f"⏭️  {ticker}: spike at ${spike_bar.close:.2f} < "
                             f"MIN_ENTRY_PRICE ${strategy.MIN_ENTRY_PRICE}, skipping")
                 continue
+            if spike_bar.close >= strategy.MAX_ENTRY_PRICE:
+                logger.info(f"⏭️  {ticker}: spike at ${spike_bar.close:.2f} >= "
+                            f"MAX_ENTRY_PRICE ${strategy.MAX_ENTRY_PRICE}, skipping")
+                continue
             if not strategy.has_sufficient_liquidity(minute_bars, spike_bar):
                 logger.info(f"⏭️  {ticker}: spike found but pre-entry liquidity too thin, skipping")
                 continue
