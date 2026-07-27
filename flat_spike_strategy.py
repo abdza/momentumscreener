@@ -28,6 +28,12 @@ Strategy:
         the retracement is scaled by how wide the day's range has been instead
         of a fixed percentage of price, so a stock that's already run further
         gets more room before triggering)
+      * price reaches HARD_STOP_RANGE_PCT of the day's range below the peak -
+        immediate exit, no recovery timer. The timer above is there to ride out
+        noise; past this floor the move isn't noise, and waiting the clock out
+        is how a position ends up 30% underwater still "recovering". Tested on
+        bar lows, so a break that happens inside a single minute still exits on
+        that bar.
       * PREMARKET_END_ET (9:20am ET) - force-close before the regular session
         opens, since this strategy only holds during the premarket hour
       * end of regular session (force-close - a backtest-only safety net,
@@ -53,7 +59,15 @@ MAX_ENTRY_PRICE = 20.0
 MIN_PRE_ENTRY_DOLLAR_VOL = 12000.0
 
 RANGE_DRAWDOWN_PCT = 5.0
-TRAILING_RECOVERY_MINUTES = 20
+TRAILING_RECOVERY_MINUTES = 10
+
+# Hard floor under the recovery timer, as a % of the day's range below the peak.
+# Breaching RANGE_DRAWDOWN_PCT starts a TRAILING_RECOVERY_MINUTES clock to give a
+# pullback time to reclaim the high, but on its own that clock will sit through an
+# outright collapse - a position can be 30% underwater and still "waiting to
+# recover" (LGHL 2026-07-27). A give-back this deep is a failed move rather than a
+# pause, so cut it immediately however much of the clock is left. None disables it.
+HARD_STOP_RANGE_PCT = 60.0
 
 POSITION_SIZE = 100.0
 INITIAL_BALANCE = 10000.0
@@ -191,7 +205,8 @@ def check_exit(position: OpenPosition, bar: Bar,
                 range_drawdown_pct: float = RANGE_DRAWDOWN_PCT,
                 trailing_recovery_minutes: int = TRAILING_RECOVERY_MINUTES,
                 market_close_et: dt_time = MARKET_CLOSE_ET,
-                premarket_end_et: dt_time = PREMARKET_END_ET):
+                premarket_end_et: dt_time = PREMARKET_END_ET,
+                hard_stop_range_pct: Optional[float] = HARD_STOP_RANGE_PCT):
     """
     Apply one new bar to an open position and report whether it triggers an exit.
     Mutates position.peak/drawdown_started_at in place so it can be called once
@@ -210,18 +225,45 @@ def check_exit(position: OpenPosition, bar: Bar,
         position.drawdown_started_at = None  # a fresh peak clears any running recovery clock
 
     if bar.low <= position.premarket_low_so_far:
-        return (bar.ts, position.premarket_low_so_far, 'STOP_PREMARKET_LOW')
+        # A resting stop at premarket_low_so_far fills at the stop price - unless the
+        # bar already opened below it, in which case the market gapped through and the
+        # fill is the open. Pricing this at the stop unconditionally would hide every
+        # gap-down loss.
+        return (bar.ts, min(position.premarket_low_so_far, bar.open), 'STOP_PREMARKET_LOW')
 
     day_range = position.peak - position.premarket_low_so_far
     drawdown_level = position.peak - (range_drawdown_pct / 100) * day_range
+
+    # "Sold off very badly" - a give-back this deep is a failed reload, not a pause,
+    # so cut it rather than spend the recovery clock on it. Checked before the timer
+    # and on bar.low rather than bar.close, so a break that happens entirely inside
+    # one minute still exits on that bar.
+    if hard_stop_range_pct is not None:
+        hard_stop_level = position.peak - (hard_stop_range_pct / 100) * day_range
+        if bar.low <= hard_stop_level:
+            # Fills like a resting stop: at the level, or at the open if the bar
+            # already gapped through it. On a violent one-bar break the real fill
+            # would be worse - minute bars can't show where inside the bar it
+            # traded, so this stays the optimistic end of the range.
+            return (bar.ts, min(hard_stop_level, bar.open), 'HARD_STOP_RANGE_FLOOR')
+
     if bar.low <= drawdown_level:
         if position.drawdown_started_at is None:
             position.drawdown_started_at = bar.ts
         elapsed_minutes = (bar.ts - position.drawdown_started_at).total_seconds() / 60
         if elapsed_minutes >= trailing_recovery_minutes:
-            return (bar.ts, drawdown_level, 'RANGE_DRAWDOWN_NO_RECOVERY')
-    elif position.drawdown_started_at is not None and bar.close >= drawdown_level:
-        position.drawdown_started_at = None  # recovered before the timer expired
+            # Fill at this bar, NOT at drawdown_level: the level was breached
+            # trailing_recovery_minutes ago and the signal only fires now, so the
+            # level is a stale price by construction. Pricing the exit there
+            # reported profits on positions that had since collapsed (LGHL
+            # 2026-07-27: exit booked at $3.375 while the stock traded $2.25).
+            return (bar.ts, bar.close, 'RANGE_DRAWDOWN_NO_RECOVERY')
+    # No weaker reset than a new high. Recovery means reclaiming the top - handled
+    # above, where a new peak clears drawdown_started_at. Clearing the clock merely
+    # for trading back above drawdown_level let a position chop sideways under its
+    # high indefinitely, restarting the clock on every dip and never exiting on it:
+    # the "did the volume actually show up" question the timer exists to answer only
+    # gets a yes when the high is taken out.
 
     if bar.ts.time() >= premarket_end_et:
         return (bar.ts, bar.close, 'PREMARKET_END_FORCE_CLOSE')
@@ -266,7 +308,8 @@ def replay_to_exit(ticker: str, entry_bar: Bar, premarket_low_so_far: float,
                     range_drawdown_pct: float = RANGE_DRAWDOWN_PCT,
                     trailing_recovery_minutes: int = TRAILING_RECOVERY_MINUTES,
                     market_close_et: dt_time = MARKET_CLOSE_ET,
-                    premarket_end_et: dt_time = PREMARKET_END_ET):
+                    premarket_end_et: dt_time = PREMARKET_END_ET,
+                    hard_stop_range_pct: Optional[float] = HARD_STOP_RANGE_PCT):
     """
     Replay bars_from_entry (ascending, starting at-or-before entry_bar) through
     check_exit(). Unlike simulate_trade, this does NOT force a close just because
@@ -280,7 +323,7 @@ def replay_to_exit(ticker: str, entry_bar: Bar, premarket_low_so_far: float,
         if bar.ts <= position.entry_time:
             continue
         exit_info = check_exit(position, bar, range_drawdown_pct, trailing_recovery_minutes,
-                                market_close_et, premarket_end_et)
+                                market_close_et, premarket_end_et, hard_stop_range_pct)
         if exit_info:
             return position, exit_info
     return position, None
@@ -292,7 +335,8 @@ def simulate_trade(ticker: str, entry_bar: Bar, premarket_low_so_far: float,
                     range_drawdown_pct: float = RANGE_DRAWDOWN_PCT,
                     trailing_recovery_minutes: int = TRAILING_RECOVERY_MINUTES,
                     market_close_et: dt_time = MARKET_CLOSE_ET,
-                    premarket_end_et: dt_time = PREMARKET_END_ET) -> dict:
+                    premarket_end_et: dt_time = PREMARKET_END_ET,
+                    hard_stop_range_pct: Optional[float] = HARD_STOP_RANGE_PCT) -> dict:
     """
     Replay bars from entry onward (bars_from_entry must be sorted ascending and
     start at-or-after entry_bar, continuing through the regular session so a trade
@@ -305,7 +349,7 @@ def simulate_trade(ticker: str, entry_bar: Bar, premarket_low_so_far: float,
     position, exit_info = replay_to_exit(ticker, entry_bar, premarket_low_so_far, bars_from_entry,
                                           position_size, range_drawdown_pct,
                                           trailing_recovery_minutes, market_close_et,
-                                          premarket_end_et)
+                                          premarket_end_et, hard_stop_range_pct)
     if exit_info is None:
         last_bar = max(bars_from_entry, key=lambda b: b.ts, default=entry_bar)
         exit_info = (last_bar.ts, last_bar.close, 'EOD_FORCE_CLOSE')
