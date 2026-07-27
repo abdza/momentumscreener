@@ -9,6 +9,12 @@ so "which finds movers sooner" is answered with timestamps rather than argument.
 Reads pretop20/screener_*.json for the incumbent side, which the already-running
 premarket_top20_monitor.py writes ~once a minute. It does not touch the monitor.
 
+SUPERSEDED for routine use by analyze_candidate_sources.py. The monitor now runs
+the stream itself and tags records with their source, so discovery lag is readable
+straight from its snapshots - and since Alpaca permits one market-data websocket
+per account, running this while the monitor is up will fail on the connection.
+Stop the monitor first if you want the standalone A/B.
+
 IMPORTANT: start this at 04:00 ET, together with the monitor. A late start makes
 the comparison meaningless in the incumbent's favour - the monitor will have been
 accumulating candidates since the premarket open while the stream begins with an

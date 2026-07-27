@@ -24,6 +24,12 @@ from telegram import Bot
 
 from tradingview_screener import Query
 
+try:
+    from alpaca_stream_screener import StreamScreener
+    STREAM_SCREENER_AVAILABLE = True
+except ImportError:
+    STREAM_SCREENER_AVAILABLE = False
+
 # Alpaca imports for real-time price/volume data
 try:
     from alpaca.data.historical import StockHistoricalDataClient
@@ -64,6 +70,14 @@ CANDLE_SPIKE_RATIO_THRESHOLD = 3.0
 CANDLE_SPIKE_BASELINE_BUCKETS = 6  # up to 1 hour of prior candles
 CANDLE_SPIKE_MIN_BASELINE_BUCKETS = 2  # need some history to avoid noise
 CANDLE_SPIKE_MIN_BARS_IN_BUCKET = 3  # ignore just-started/mostly-empty buckets
+
+# Live candidate source: a wildcard minute-bar subscription (alpaca_stream_screener),
+# which unlike the TradingView scanner (delayed_streaming_900 for this account) has
+# no delay. Added alongside the scanner rather than replacing it - the scanner still
+# supplies sector/exchange metadata and covers the stream's cold start at 04:00,
+# when its table is still filling.
+STREAM_MIN_CHANGE_PCT = 5.0
+STREAM_MIN_DOLLAR_VOL = 100_000.0
 
 class PremarketTop20Monitor:
     def __init__(self, telegram_bot_token=None, telegram_chat_id=None):
@@ -107,6 +121,11 @@ class PremarketTop20Monitor:
         # Alpaca price cache to avoid excessive API calls
         self.alpaca_price_cache = {}  # {symbol: {'price': float, 'volume': int, 'timestamp': datetime}}
         self.alpaca_price_cache_duration = 60  # Cache prices for 1 minute
+
+        # Live bar-stream candidate source; started by run_continuous (a single
+        # scan has no time to accumulate a table, and Alpaca permits only one
+        # market-data websocket per account).
+        self.stream_screener = None
 
         # Initialize Alpaca client for real-time market data
         self.alpaca_client = None
@@ -505,6 +524,52 @@ class PremarketTop20Monitor:
             return False
         return True
 
+    def start_stream_screener(self):
+        """Begin the wildcard bar subscription used for live candidate discovery."""
+        if self.stream_screener is not None or not STREAM_SCREENER_AVAILABLE:
+            if not STREAM_SCREENER_AVAILABLE:
+                logger.warning("⚠️  alpaca_stream_screener unavailable - candidate discovery "
+                                "falls back to the delayed TradingView scanner alone")
+            return
+        try:
+            self.stream_screener = StreamScreener()
+            self.stream_screener.start()
+        except Exception as e:
+            self.stream_screener = None
+            logger.warning(f"⚠️  Could not start bar stream ({e}) - candidate discovery "
+                            f"falls back to the delayed TradingView scanner alone")
+
+    def stop_stream_screener(self):
+        if self.stream_screener is not None:
+            try:
+                self.stream_screener.stop()
+            except Exception:
+                pass
+            self.stream_screener = None
+
+    def _get_stream_candidates(self):
+        """Live movers from the bar stream, as minimal records for the merge.
+
+        Only 'name' and 'source' are set; _update_prices_with_alpaca fills price
+        and premarket fields afterwards, exactly as for scanner records.
+        """
+        if self.stream_screener is None:
+            return []
+        try:
+            cands = self.stream_screener.candidates(
+                min_change_pct=STREAM_MIN_CHANGE_PCT,
+                min_dollar_volume=STREAM_MIN_DOLLAR_VOL)
+        except Exception as e:
+            logger.warning(f"⚠️  bar-stream candidate query failed: {e}")
+            return []
+        out = []
+        for c in cands:
+            if not self._is_common_stock_symbol(c['symbol']):
+                continue
+            out.append({'name': c['symbol'], 'sector': '', 'exchange': '',
+                        'source': 'alpaca_stream'})
+        return out
+
     def _detect_candle_spikes(self, symbols):
         """
         Flag symbols whose latest 10-minute premarket candle (high-low range) is
@@ -643,11 +708,26 @@ class PremarketTop20Monitor:
             if added_from_change:
                 logger.info(f"📈 Added {added_from_change} early movers from change-sorted query")
 
+            # Tertiary: live movers from the bar stream. The TradingView scanner
+            # is 15 minutes delayed for this account, so a ticker spiking now only
+            # enters its rankings ~15 minutes late; the stream sees it on the bar.
+            stream_candidates = self._get_stream_candidates()
+            added_from_stream = 0
+            for record in stream_candidates:
+                symbol = record.get('name')
+                if symbol and symbol not in seen_symbols:
+                    seen_symbols.add(symbol)
+                    merged.append(record)
+                    added_from_stream += 1
+
+            if added_from_stream:
+                logger.info(f"📡 Added {added_from_stream} live movers from the bar stream")
+
             # Candle-spike detection: check a broader candidate pool (not just the
             # merged top-20/top-gainers) so an abnormal 10-min range can promote a
             # ticker into the watch list before its volume/change rank would.
             record_lookup = {}
-            for record in volume_records[:60] + change_records[:60]:
+            for record in volume_records[:60] + change_records[:60] + stream_candidates:
                 symbol = record.get('name')
                 if symbol and symbol not in record_lookup:
                     record_lookup[symbol] = record
@@ -1005,6 +1085,7 @@ class PremarketTop20Monitor:
         logger.info("Press Ctrl+C to stop")
 
         scan_count = 0
+        self.start_stream_screener()
 
         try:
             while True:
@@ -1022,6 +1103,8 @@ class PremarketTop20Monitor:
         except KeyboardInterrupt:
             logger.info("\n👋 Monitoring stopped by user")
             sys.exit(0)
+        finally:
+            self.stop_stream_screener()
 
 def main():
     parser = argparse.ArgumentParser(
