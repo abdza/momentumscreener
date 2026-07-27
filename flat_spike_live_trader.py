@@ -16,9 +16,30 @@ backtester uses (is_flat_before, find_spike_start, has_sufficient_liquidity,
 replay_to_exit) - so live behavior can never quietly drift from backtested
 behavior.
 
+Besides those system-found entries, the daemon also listens on Telegram for
+manually declared positions: `/b TICKER [price]` tells it "I'm in this one", and
+from then on it watches that ticker with the *same* exit rules (premarket-low
+stop, range trailing stop, 9:20 force close) and messages when to sell. These are
+tracked separately from system trades - open ones in <data-dir>/manual_positions.json
+(so a restart mid-session doesn't lose them, since unlike system entries they
+can't be re-derived from market data), closed ones in <data-dir>/manual_trades.json
+(kept out of trade_history.json so they don't skew the strategy's own stats).
+
+The Telegram listener lives here rather than in flush_spike_live_trader.py - the
+two daemons run over the same window and share one bot token, and Telegram only
+allows one getUpdates consumer per token. The exit rules are shared code
+(flush_spike_strategy re-exports flat_spike's check_exit/replay_to_exit), so a
+manual position is watched identically either way.
+
 Usage:
     python flat_spike_live_trader.py
     python flat_spike_live_trader.py --data-dir momentum_data/flat_spike_live_trades
+
+Telegram commands (accepted only from TELEGRAM_CHAT_ID):
+    /b TICKER [price]   track a position you entered yourself (price defaults to last print)
+    /s TICKER           stop tracking it now and record the trade
+    /positions          list what's currently being watched
+    /help               command reference
 """
 
 import argparse
@@ -46,6 +67,9 @@ from alpaca.data.enums import DataFeed
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+# httpx logs every request at INFO - with a getUpdates poll every few seconds that
+# buries the trade log, and each line contains the bot token in the URL.
+logging.getLogger('httpx').setLevel(logging.WARNING)
 
 ET_TZ = pytz.timezone('America/New_York')
 LOCAL_TZ = pytz.timezone('Asia/Kuala_Lumpur')  # matches the machine that writes pretop20/
@@ -54,6 +78,27 @@ PID_FILE = '/tmp/flat_spike_live.pid'
 SCAN_INTERVAL_SECONDS = 60
 MIN_CANDIDATE_PCT = 5.0  # noise floor for the pretop20 shortlist, matches the backtester's default
 DAILY_LOOKBACK_DAYS = strategy.FLAT_LOOKBACK_DAYS * 3 + 10  # calendar days, matches the backtester
+
+MANUAL_POSITIONS_FILENAME = 'manual_positions.json'
+MANUAL_TRADES_FILENAME = 'manual_trades.json'
+# Seconds each getUpdates call holds the connection open waiting for a command.
+# The waiting doubles as the pause between scans, so commands land within
+# ~TELEGRAM_POLL_TIMEOUT_SECONDS instead of at the next scan boundary.
+TELEGRAM_POLL_TIMEOUT_SECONDS = 20
+
+HELP_TEXT = (
+    "📱 *flat\\_spike live trader*\n\n"
+    "• `/b TICKER [price]` - track a position you bought yourself; I'll tell you when "
+    "the exit rules say to sell. Price defaults to the last premarket print.\n"
+    "• `/s TICKER` - stop tracking and record the trade at the current price\n"
+    "• `/positions` - list what's being watched right now\n"
+    "• `/help` - this message\n\n"
+    "Exit rules (same ones the system uses): price back to today's premarket low, "
+    f"a pullback off the peak worth {strategy.RANGE_DRAWDOWN_PCT:.0f}% of the day's range "
+    f"that doesn't recover within {strategy.TRAILING_RECOVERY_MINUTES} minutes, or "
+    f"{strategy.PREMARKET_END_ET.strftime('%H:%M')} ET force close.\n\n"
+    "Example: `/b AAPL` or `/b AAPL 12.34`"
+)
 
 
 def _call_with_retry(fn, *args, max_retries=3, base_delay=2.0, **kwargs):
@@ -174,26 +219,89 @@ class LiveTrader:
             logger.warning("⚠️  No Telegram credentials found (TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID) - "
                             "trade notifications disabled")
 
+        # One long-lived loop for every Telegram call: the bot's HTTP client binds
+        # to the loop it first runs on, so it can't be shared across fresh loops.
+        self._loop = asyncio.new_event_loop()
+        self._telegram_update_offset = None
+
         self.pretop20_dir = pretop20_dir
         self.data_dir = data_dir
         self.trade_file = data_dir / 'trade_history.json'
+        self.manual_trade_file = data_dir / MANUAL_TRADES_FILENAME
+        self.manual_positions_file = data_dir / MANUAL_POSITIONS_FILENAME
         data_dir.mkdir(parents=True, exist_ok=True)
-        self.trades = self._load_existing_trades()
+        self.trades = self._read_json(self.trade_file, [])
+        self.manual_trades = self._read_json(self.manual_trade_file, [])
 
         self.today = None  # reset per-day state lazily in scan_once
         self.open_positions = {}   # ticker -> Bar (entry_bar) + premarket_low_so_far, tracked as tuple
+        self.manual_positions = {}  # same shape, for user-declared positions (/b TICKER)
         self.flatness_cache = {}   # ticker -> (flat_ok, baseline_close)
         self.decided_today = set()  # tickers with a final entry/reject decision for today
 
-    def _load_existing_trades(self):
-        if self.trade_file.exists():
-            with open(self.trade_file, 'r', encoding='utf-8') as f:
+    @staticmethod
+    def _read_json(path: Path, default):
+        if not path.exists():
+            return default
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        return []
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f"⚠️  Could not read {path}: {e}")
+            return default
 
     def _save_trades(self):
         with open(self.trade_file, 'w', encoding='utf-8') as f:
             json.dump(self.trades, f, indent=2)
+
+    def _save_manual_trades(self):
+        with open(self.manual_trade_file, 'w', encoding='utf-8') as f:
+            json.dump(self.manual_trades, f, indent=2)
+
+    def _save_manual_positions(self):
+        """Persist open manual positions on every change. A system entry can be
+        rebuilt from market data after a restart; a manual one only exists because
+        the user said so, so it has to survive on disk."""
+        payload = {
+            'date': self.today.isoformat() if self.today else None,
+            'positions': {
+                ticker: {
+                    'ts': entry_bar.ts.isoformat(),
+                    'open': entry_bar.open,
+                    'high': entry_bar.high,
+                    'low': entry_bar.low,
+                    'close': entry_bar.close,
+                    'volume': entry_bar.volume,
+                    'premarket_low_so_far': premarket_low,
+                }
+                for ticker, (entry_bar, premarket_low) in self.manual_positions.items()
+            },
+        }
+        try:
+            with open(self.manual_positions_file, 'w', encoding='utf-8') as f:
+                json.dump(payload, f, indent=2)
+        except OSError as e:
+            logger.warning(f"⚠️  Could not save manual positions: {e}")
+
+    def _load_manual_positions(self, today_et: date):
+        """Restore manual positions written by an earlier run of the same session.
+        Anything left over from a previous day is dropped - this strategy is
+        premarket-only, so a stale position has nothing left to exit into."""
+        payload = self._read_json(self.manual_positions_file, {})
+        if not isinstance(payload, dict) or payload.get('date') != today_et.isoformat():
+            return {}
+        restored = {}
+        for ticker, record in (payload.get('positions') or {}).items():
+            try:
+                bar = Bar(ts=datetime.fromisoformat(record['ts']), open=float(record['open']),
+                          high=float(record['high']), low=float(record['low']),
+                          close=float(record['close']), volume=float(record.get('volume', 0.0)))
+                restored[ticker] = (bar, float(record['premarket_low_so_far']))
+            except (KeyError, TypeError, ValueError) as e:
+                logger.warning(f"⚠️  Skipping unreadable manual position for {ticker}: {e}")
+        if restored:
+            logger.info(f"↩️  Restored {len(restored)} manual position(s): {', '.join(sorted(restored))}")
+        return restored
 
     def _reset_for_new_day(self, today_et: date):
         logger.info(f"📅 New trading day: {today_et}")
@@ -201,6 +309,7 @@ class LiveTrader:
         self.open_positions = {}
         self.flatness_cache = {}
         self.decided_today = set()
+        self.manual_positions = self._load_manual_positions(today_et)
 
     async def _send_telegram_message(self, message):
         """Send message to Telegram - mirrors premarket_top20_monitor.py's approach."""
@@ -230,10 +339,195 @@ class LiveTrader:
         if not self.telegram_bot:
             return
         try:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(self._send_telegram_message(message))
+            self._loop.run_until_complete(self._send_telegram_message(message))
         except Exception as e:
             logger.warning(f"⚠️  Telegram notification failed: {e}")
+
+    # ---------------------------------------------------------------- commands
+
+    def _drain_pending_updates(self):
+        """Acknowledge whatever piled up while the daemon was down without acting on
+        it. A '/b TICKER' sent hours ago refers to a price the user saw then, and
+        this strategy's positions don't survive the session anyway."""
+        if not self.telegram_bot:
+            return
+        try:
+            # offset=-1 returns only the most recent update; stepping past it marks
+            # the whole backlog as seen.
+            updates = self._loop.run_until_complete(
+                self.telegram_bot.get_updates(offset=-1, timeout=0, allowed_updates=['message']))
+        except Exception as e:
+            logger.warning(f"⚠️  Could not drain pending Telegram updates: {e}")
+            return
+        if updates:
+            self._telegram_update_offset = updates[-1].update_id + 1
+            logger.info(f"📭 Skipped {len(updates)} stale Telegram update(s) from before startup")
+
+    def _poll_telegram_commands(self, timeout_seconds: int):
+        """Long-poll Telegram once for user commands. Blocks up to timeout_seconds
+        server-side, so callers can use it in place of a plain sleep."""
+        try:
+            updates = self._loop.run_until_complete(self.telegram_bot.get_updates(
+                offset=self._telegram_update_offset,
+                timeout=timeout_seconds,
+                allowed_updates=['message'],
+            ))
+        except Exception as e:
+            # A 409 Conflict here means something else is polling the same bot token.
+            logger.warning(f"⚠️  Telegram getUpdates failed: {e}")
+            time.sleep(5)  # don't hammer the API while it's unhappy
+            return
+
+        for update in updates or []:
+            self._telegram_update_offset = update.update_id + 1
+            message = update.message
+            if not message or not message.text:
+                continue
+            if str(message.chat_id) != str(self.telegram_chat_id):
+                logger.info(f"🚫 Ignoring message from unauthorized chat {message.chat_id}")
+                continue
+            logger.info(f"📱 Command: {message.text!r}")
+            try:
+                self._handle_command(message.text.strip())
+            except Exception as e:
+                logger.warning(f"⚠️  Error handling command {message.text!r}: {e}")
+                self._notify(f"⚠️ Couldn't handle that command: {e}")
+
+    def _handle_command(self, text: str):
+        parts = text.split()
+        if not parts:
+            return
+        command = parts[0].lower().split('@')[0]  # '/b@somebot' in group chats
+        args = parts[1:]
+        if command in ('/b', '/buy'):
+            self._cmd_buy(args)
+        elif command in ('/s', '/sell'):
+            self._cmd_sell(args)
+        elif command in ('/p', '/positions'):
+            self._cmd_positions()
+        elif command in ('/help', '/start'):
+            self._notify(HELP_TEXT)
+        # Anything else is ignored on purpose - this chat also carries alerts from
+        # the other trackers, and answering their commands would just be noise.
+
+    @staticmethod
+    def _parse_ticker(raw: str):
+        ticker = raw.upper().lstrip('$')
+        if not ticker.isalpha() or len(ticker) > 5:
+            return None
+        return ticker
+
+    def _cmd_buy(self, args):
+        if not args:
+            self._notify("⚠️ Usage: `/b TICKER [price]` - e.g. `/b AAPL` or `/b AAPL 12.34`")
+            return
+        ticker = self._parse_ticker(args[0])
+        if not ticker:
+            self._notify(f"⚠️ `{args[0]}` doesn't look like a ticker symbol.")
+            return
+
+        entry_price = None
+        if len(args) > 1:
+            try:
+                entry_price = float(args[1])
+            except ValueError:
+                self._notify(f"⚠️ `{args[1]}` isn't a valid price.")
+                return
+            if entry_price <= 0:
+                self._notify("⚠️ Entry price must be greater than zero.")
+                return
+
+        if ticker in self.manual_positions:
+            held_bar, _ = self.manual_positions[ticker]
+            self._notify(f"ℹ️ Already tracking {ticker} from ${held_bar.close:.2f}. "
+                         f"Send `/s {ticker}` first if you want to re-enter at a new price.")
+            return
+        if ticker in self.open_positions:
+            self._notify(f"ℹ️ The system is already in {ticker} - you'll get the SELL alert "
+                         f"for it on the same rules.")
+            return
+
+        today_et = datetime.now(ET_TZ).date()
+        bars = fetch_premarket_minute_bars(self.client, ticker, today_et)
+        if not bars:
+            self._notify(f"⚠️ No premarket bars for {ticker} today, so there's nothing to watch it "
+                         f"against. Check the symbol, or try again once it prints.")
+            return
+
+        last_bar = bars[-1]
+        if entry_price is None:
+            entry_price = last_bar.close
+        # Only ts and close matter downstream (check_exit skips bars at/before the
+        # entry time), so a flat synthetic bar at the user's price is enough.
+        entry_bar = Bar(ts=last_bar.ts, open=entry_price, high=entry_price, low=entry_price,
+                        close=entry_price, volume=last_bar.volume)
+        premarket_low_so_far = min(b.low for b in bars if b.ts <= entry_bar.ts)
+
+        self.manual_positions[ticker] = (entry_bar, premarket_low_so_far)
+        self._save_manual_positions()
+        logger.info(f"👤 MANUAL OPEN {ticker} @ ${entry_price:.2f} "
+                    f"({entry_bar.ts.strftime('%H:%M')} ET)")
+        self._notify(
+            f"👤 *TRACKING* [{ticker}](https://www.tradingview.com/chart/?symbol={ticker})\n"
+            f"Entry: ${entry_price:.2f} @ {entry_bar.ts.strftime('%H:%M')} ET\n"
+            f"Stop: premarket low ${premarket_low_so_far:.2f}\n"
+            f"Watching for the sell signal on the usual rules - `/s {ticker}` to stop."
+        )
+
+    def _cmd_sell(self, args):
+        if not args:
+            self._notify("⚠️ Usage: `/s TICKER` - e.g. `/s AAPL`")
+            return
+        ticker = self._parse_ticker(args[0])
+        if not ticker or ticker not in self.manual_positions:
+            tracked = ', '.join(sorted(self.manual_positions)) or 'none'
+            self._notify(f"⚠️ Not tracking `{args[0]}`. Currently tracking: {tracked}")
+            return
+
+        entry_bar, premarket_low_so_far = self.manual_positions[ticker]
+        today_et = datetime.now(ET_TZ).date()
+        bars = fetch_premarket_minute_bars(self.client, ticker, today_et)
+        position, exit_info = strategy.replay_to_exit(ticker, entry_bar, premarket_low_so_far, bars)
+        if exit_info is None:
+            # No rule fired - close at the latest print. max() keeps the exit from
+            # landing before entry when the user sells inside the same minute bar.
+            last_bar = bars[-1] if bars else entry_bar
+            exit_info = (max(last_bar.ts, entry_bar.ts), last_bar.close, 'MANUAL_SELL')
+        self._close_manual_position(ticker, position, exit_info)
+
+    def _cmd_positions(self):
+        lines = []
+        for ticker, (entry_bar, premarket_low) in sorted(self.manual_positions.items()):
+            lines.append(f"👤 {ticker} @ ${entry_bar.close:.2f} "
+                         f"({entry_bar.ts.strftime('%H:%M')} ET, stop ${premarket_low:.2f})")
+        for ticker, (entry_bar, premarket_low) in sorted(self.open_positions.items()):
+            lines.append(f"🤖 {ticker} @ ${entry_bar.close:.2f} "
+                         f"({entry_bar.ts.strftime('%H:%M')} ET, stop ${premarket_low:.2f})")
+        if not lines:
+            self._notify("📭 No open positions right now.")
+            return
+        self._notify("📋 *Open positions*\n" + "\n".join(lines))
+
+    def _close_manual_position(self, ticker, position, exit_info):
+        trade = strategy.build_trade_result(position, *exit_info)
+        trade['alert_type'] = 'manual'
+        self.manual_trades.append(trade)
+        self._save_manual_trades()
+        del self.manual_positions[ticker]
+        self._save_manual_positions()
+        marker = '✅' if trade['profit_pct'] > 0 else '❌'
+        logger.info(f"👤 MANUAL CLOSED {ticker} {marker} {trade['profit_pct']:+.1f}% "
+                    f"[{trade['exit_reason']}]")
+        self._notify(
+            f"🔴 *SELL* 👤 [{ticker}](https://www.tradingview.com/chart/?symbol={ticker}) {marker}\n"
+            f"Exit: ${trade['exit_price']:.2f} (entry ${trade['entry_price']:.2f})  "
+            f"P/L: {trade['profit_pct']:+.1f}%\n"
+            # exit_reason is UPPER_SNAKE_CASE - underscores break Telegram's legacy
+            # Markdown parser (read as unclosed italics), so swap them for spaces.
+            f"Reason: {trade['exit_reason'].replace('_', ' ')}"
+        )
+
+    # ------------------------------------------------------------------- scan
 
     def _get_flatness(self, ticker: str, today_et: date):
         if ticker not in self.flatness_cache:
@@ -314,14 +608,47 @@ class LiveTrader:
                     f"Reason: {trade['exit_reason'].replace('_', ' ')}"
                 )
 
+        # Manual positions run through the same replay/exit path as system ones -
+        # only the way they were opened differs.
+        for ticker in list(self.manual_positions.keys()):
+            entry_bar, premarket_low_so_far = self.manual_positions[ticker]
+            bars = fetch_premarket_minute_bars(self.client, ticker, today_et)
+            if not bars:
+                continue
+            position, exit_info = strategy.replay_to_exit(ticker, entry_bar, premarket_low_so_far, bars)
+            if exit_info is not None:
+                self._close_manual_position(ticker, position, exit_info)
+
+    def _wait_for_next_scan(self):
+        """Pause between scans. With Telegram configured the wait is spent
+        long-polling for commands, so a /b lands within seconds instead of at the
+        next scan boundary."""
+        if not self.telegram_bot:
+            time.sleep(SCAN_INTERVAL_SECONDS)
+            return
+        deadline = time.monotonic() + SCAN_INTERVAL_SECONDS
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining < 1:
+                if remaining > 0:
+                    time.sleep(remaining)
+                return
+            self._poll_telegram_commands(int(min(TELEGRAM_POLL_TIMEOUT_SECONDS, remaining)))
+
     def run(self):
         logger.info(f"🚀 flat_spike live paper trader started (data-dir={self.data_dir})")
+        self._drain_pending_updates()
         while True:
             try:
                 self.scan_once()
             except Exception as e:
                 logger.warning(f"⚠️  Scan error: {e}")
-            time.sleep(SCAN_INTERVAL_SECONDS)
+            try:
+                self._wait_for_next_scan()
+            except Exception as e:
+                # Never let the command listener take the trading loop down with it.
+                logger.warning(f"⚠️  Command listener error: {e}")
+                time.sleep(SCAN_INTERVAL_SECONDS)
 
 
 def parse_arguments():
