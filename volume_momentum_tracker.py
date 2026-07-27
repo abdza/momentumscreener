@@ -1756,7 +1756,24 @@ class VolumeMomentumTracker:
         time_since_last = (datetime.now() - last_alert_time).total_seconds()
         
         return time_since_last < cooldown_duration
-    
+
+    def has_been_notified_today(self, ticker):
+        """True if a Telegram alert for this ticker has already gone out today.
+
+        A running ticker re-qualifies on every scan and used to generate a message
+        each time (worst observed: 147 messages for one ticker in a session), so
+        only the first alert per ticker per day is delivered. Derived from
+        telegram_last_sent rather than a separate flag so it survives a mid-session
+        restart (that dict is persisted) and resets on its own each new day.
+        """
+        last_sent = self.telegram_last_sent.get(ticker)
+        if not last_sent:
+            return False
+        try:
+            return datetime.fromisoformat(last_sent).date() == datetime.now().date()
+        except (ValueError, TypeError):
+            return False
+
     def get_sector_adjusted_thresholds(self, sector, base_relative_volume=3.0, base_price_change=10.0):
         """Apply sector-specific threshold adjustments"""
         config = self.sector_config.get(sector, self.sector_config['default'])
@@ -2117,7 +2134,10 @@ class VolumeMomentumTracker:
             logger.error(f"❌ Failed to send hourly list_flat notification: {e}")
 
     def _send_telegram_alert(self, ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=None, float_shares=None):
-        """Send Telegram alert for high-frequency ticker or immediate big spike with rate limiting and news headlines with timestamps"""
+        """Send Telegram alert for high-frequency ticker or immediate big spike with rate limiting and news headlines with timestamps.
+
+        Delivers at most one message per ticker per day (see has_been_notified_today);
+        repeats are still recorded in telegram_alerts_sent.jsonl, just not sent."""
         if not self.telegram_bot or not self.telegram_chat_id:
             return
 
@@ -2194,7 +2214,21 @@ class VolumeMomentumTracker:
             pattern_analysis = self._analyze_winning_patterns(
                 current_price, change_pct, relative_volume, sector, primary_alert_type
             )
-            
+
+            # One Telegram message per ticker per day - the first alert goes out,
+            # every later one for the same ticker is silenced. Everything above
+            # still ran (counters, paper trading, pattern analysis) and the alert
+            # is still written to telegram_alerts_sent.jsonl below, so end-of-day
+            # analysis sees exactly what it saw before; only the chat message is
+            # skipped. News/VIX aren't fetched since nothing will display them.
+            if self.has_been_notified_today(ticker):
+                logger.info(f"🔕 SUPPRESSED: {ticker} ({change_pct:+.1f}%, {alert_count} alerts) - "
+                            f"already notified today, logging only")
+                self._log_telegram_alert_sent(ticker, alert_count, current_price, change_pct, volume,
+                                               relative_volume, sector, alert_types, is_immediate_spike,
+                                               pattern_analysis, paper_trade_info=paper_trade_info)
+                return
+
             # Get recent news headlines
             logger.info(f"Fetching recent news for {ticker}...")
             recent_news = self._get_recent_news(ticker, max_headlines=3)
@@ -3672,6 +3706,7 @@ class VolumeMomentumTracker:
             logger.info(f"📱 Alert threshold: 3+ alerts per ticker")
             logger.info(f"🚨 Immediate alerts: ≥{self.immediate_spike_threshold:.0f}% price spikes (no waiting!)")
             logger.info(f"📱 Rate limiting: {self.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
+            logger.info("🔕 Delivery cap: 1 message per ticker per day (repeats are logged, not sent)")
             logger.info("⏰ Hourly list_flat notifications: ✅ ENABLED")
             logger.info("📰 Recent headlines (last 3 days) with timestamps will be included in alerts")
             logger.info("📊 Relative volume information included in alerts")
@@ -3920,8 +3955,9 @@ class VolumeMomentumTracker:
             test_message = (
                 "🧪 Test message from Volume Momentum Tracker\n\n"
                 "📊 If you see this, Telegram notifications are working correctly!\n\n"
-                "📱 Notifications will be sent for every alert of tickers with 3+ total alerts "
-                "(rate limited to once per 30 minutes per ticker).\n\n"
+                "📱 Notifications are sent for tickers with 3+ total alerts, capped at "
+                "one message per ticker per day (later alerts for the same ticker are "
+                "still logged for analysis, just not sent).\n\n"
                 f"🚨 IMMEDIATE ALERTS: Price spikes ≥{self.immediate_spike_threshold:.0f}% bypass the 3-alert rule!\n\n"
                 "📰 Recent headlines (last 3 days) with timestamps will be included automatically.\n\n"
                 "📊 Relative volume information is now included in all alerts."
@@ -4134,6 +4170,7 @@ def main():
             print(f"📱 Alert threshold: 3+ alerts per ticker")
             print(f"🚨 IMMEDIATE alerts: ≥{args.immediate_threshold:.0f}% price spikes (no waiting required!)")
             print(f"📱 Rate limiting: {tracker.telegram_notification_interval/60:.0f} minutes between notifications per ticker")
+            print("🔕 Delivery cap: 1 message per ticker per day (repeats are logged, not sent)")
         else:
             print("📱 Telegram notifications: ❌ DISABLED")
             print("📰 News headlines: ❌ DISABLED (requires Telegram)")
