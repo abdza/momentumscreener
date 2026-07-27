@@ -27,9 +27,7 @@ from tradingview_screener import Query
 # Alpaca imports for real-time price/volume data
 try:
     from alpaca.data.historical import StockHistoricalDataClient
-    from alpaca.data.historical.screener import ScreenerClient
-    from alpaca.data.requests import (StockBarsRequest, StockLatestTradeRequest,
-                                      MostActivesRequest, MarketMoversRequest)
+    from alpaca.data.requests import StockBarsRequest, StockLatestTradeRequest
     from alpaca.data.timeframe import TimeFrame
     from alpaca.data.enums import DataFeed
     ALPACA_AVAILABLE = True
@@ -66,15 +64,6 @@ CANDLE_SPIKE_RATIO_THRESHOLD = 3.0
 CANDLE_SPIKE_BASELINE_BUCKETS = 6  # up to 1 hour of prior candles
 CANDLE_SPIKE_MIN_BASELINE_BUCKETS = 2  # need some history to avoid noise
 CANDLE_SPIKE_MIN_BARS_IN_BUCKET = 3  # ignore just-started/mostly-empty buckets
-
-# Alpaca screener candidate source: the TradingView scanner serves this
-# account 15-minute delayed data (update_mode: delayed_streaming_900), so a
-# ticker spiking now won't crack TradingView's volume/change rankings until
-# ~15 minutes later. Alpaca's screener endpoints are real-time and close
-# that gap by feeding extra candidates into the merge.
-ALPACA_SCREENER_TOP = 50        # how many gainers/most-actives to request
-ALPACA_GAINER_MIN_CHANGE = 10.0  # only take gainers up at least this %
-ALPACA_MOST_ACTIVES_KEEP = 20    # most-active-by-volume symbols to keep
 
 class PremarketTop20Monitor:
     def __init__(self, telegram_bot_token=None, telegram_chat_id=None):
@@ -121,7 +110,6 @@ class PremarketTop20Monitor:
 
         # Initialize Alpaca client for real-time market data
         self.alpaca_client = None
-        self.alpaca_screener_client = None
         if ALPACA_AVAILABLE:
             try:
                 api_key = os.environ.get('APCA_API_KEY_ID')
@@ -129,7 +117,6 @@ class PremarketTop20Monitor:
 
                 if api_key and api_secret:
                     self.alpaca_client = StockHistoricalDataClient(api_key, api_secret)
-                    self.alpaca_screener_client = ScreenerClient(api_key, api_secret)
                     logger.info("✅ Alpaca market data client initialized successfully")
                 else:
                     logger.warning("⚠️  Alpaca API keys not found in environment. Set APCA_API_KEY_ID and APCA_API_SECRET_KEY")
@@ -518,63 +505,6 @@ class PremarketTop20Monitor:
             return False
         return True
 
-    def _get_alpaca_screener_candidates(self):
-        """
-        Fetch real-time candidate tickers from Alpaca's screener endpoints:
-        top gainers by % change and most-active by volume.
-
-        These records only carry 'name' (no TradingView premarket fields);
-        the Alpaca price overlay fills in real prices/volume afterwards, and
-        get_top20_by_premarket_volume backfills the premarket_* fields from
-        that so the chart and notifications can render them.
-
-        Returns:
-            List of minimal record dicts, gainers first.
-        """
-        if not self.alpaca_screener_client:
-            return []
-
-        candidates = []
-        seen = set()
-
-        def add_symbols(symbols):
-            added = 0
-            for symbol in symbols:
-                if symbol in seen or not self._is_common_stock_symbol(symbol):
-                    continue
-                seen.add(symbol)
-                candidates.append({
-                    'name': symbol,
-                    'sector': '',
-                    'exchange': '',
-                    'source': 'alpaca_screener',
-                })
-                added += 1
-            return added
-
-        gainer_count = 0
-        try:
-            movers = self.alpaca_screener_client.get_market_movers(
-                MarketMoversRequest(top=ALPACA_SCREENER_TOP))
-            gainer_count = add_symbols(
-                m.symbol for m in movers.gainers
-                if (m.percent_change or 0) >= ALPACA_GAINER_MIN_CHANGE)
-        except Exception as e:
-            logger.warning(f"⚠️  Alpaca market-movers fetch failed: {e}")
-
-        active_count = 0
-        try:
-            actives = self.alpaca_screener_client.get_most_actives(
-                MostActivesRequest(by='volume', top=ALPACA_SCREENER_TOP))
-            active_count = add_symbols(
-                a.symbol for a in actives.most_actives[:ALPACA_MOST_ACTIVES_KEEP])
-        except Exception as e:
-            logger.warning(f"⚠️  Alpaca most-actives fetch failed: {e}")
-
-        if candidates:
-            logger.info(f"⚡ Alpaca screener candidates: {gainer_count} gainers, {active_count} most-active")
-        return candidates
-
     def _detect_candle_spikes(self, symbols):
         """
         Flag symbols whose latest 10-minute premarket candle (high-low range) is
@@ -713,27 +643,11 @@ class PremarketTop20Monitor:
             if added_from_change:
                 logger.info(f"📈 Added {added_from_change} early movers from change-sorted query")
 
-            # Tertiary: real-time movers from Alpaca's screener. TradingView
-            # scanner data is 15-min delayed for this account, so a spike only
-            # enters its rankings ~15 minutes late (e.g. UBXG on 2026-07-14
-            # spiked at 8:59 ET but ranked at 9:15 ET); Alpaca catches it live.
-            alpaca_candidates = self._get_alpaca_screener_candidates()
-            added_from_alpaca = 0
-            for record in alpaca_candidates:
-                symbol = record.get('name')
-                if symbol and symbol not in seen_symbols:
-                    seen_symbols.add(symbol)
-                    merged.append(record)
-                    added_from_alpaca += 1
-
-            if added_from_alpaca:
-                logger.info(f"⚡ Added {added_from_alpaca} real-time movers from Alpaca screener")
-
             # Candle-spike detection: check a broader candidate pool (not just the
             # merged top-20/top-gainers) so an abnormal 10-min range can promote a
             # ticker into the watch list before its volume/change rank would.
             record_lookup = {}
-            for record in volume_records[:60] + change_records[:60] + alpaca_candidates:
+            for record in volume_records[:60] + change_records[:60]:
                 symbol = record.get('name')
                 if symbol and symbol not in record_lookup:
                     record_lookup[symbol] = record
@@ -765,16 +679,11 @@ class PremarketTop20Monitor:
             # Overlay real-time price/change/volume from Alpaca
             merged = self._update_prices_with_alpaca(merged)
 
-            # Alpaca-screener candidates carry no TradingView premarket fields;
-            # fill them from the overlay so the chart (which needs numeric
-            # premarket_change/premarket_volume) and notifications render them.
-            # Drop candidates with no premarket activity today - the Alpaca
-            # screener can return the previous session's movers early on.
+            # Fill any missing premarket fields from the Alpaca overlay so the
+            # chart (which needs numeric premarket_change/premarket_volume) and
+            # notifications can render every record.
             filled = []
             for record in merged:
-                if record.get('source') == 'alpaca_screener':
-                    if record.get('alpaca_premarket_change') is None or not record.get('alpaca_premarket_volume'):
-                        continue
                 if record.get('premarket_change') is None and record.get('alpaca_premarket_change') is not None:
                     record['premarket_change'] = record['alpaca_premarket_change']
                 if not record.get('premarket_volume') and record.get('alpaca_premarket_volume'):
