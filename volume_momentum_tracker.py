@@ -115,6 +115,16 @@ ALPACA_GAINER_MIN_CHANGE = 10.0  # only take gainers up at least this %
 ALPACA_MOST_ACTIVES_KEEP = 20    # most-active-by-volume symbols to keep
 ALPACA_MAX_PRICE = 20.0          # match the manual price < $20 filter
 
+# The $20 ceiling is an *admission* gate, not an eviction rule. A ticker is
+# admitted the first time we see it under $20 and then stays tracked for the
+# rest of the trading day even if it runs well past $20 — those runners are
+# exactly the moves worth watching. Without this, DFNS (2026-07-28) fell off
+# at 09:45 ET, 15 minutes after the open, purely because TradingView's delayed
+# feed rolled over from the $13.10 prior close to the real ~$26 print.
+# TradingView's close can be up to 15 minutes stale, so admission prefers
+# Alpaca's previous close / open — the price the ticker *started* the day at.
+STICKY_PREFILTER_HEADROOM = 4.0  # keep TV rows up to 4x the cap for re-gating
+
 def get_float_shares_value(data, key='float_shares_outstanding'):
     """
     Helper function to properly extract float shares value, handling NaN and None cases
@@ -182,6 +192,11 @@ class VolumeMomentumTracker:
         # Alpaca price cache to avoid excessive API calls
         self.alpaca_price_cache = {}  # {symbol: {'price': float, 'volume': int, 'timestamp': datetime}}
         self.alpaca_price_cache_duration = 60  # Cache prices for 1 minute
+
+        # Symbols admitted under the $20 gate today; they stay tracked for the
+        # rest of the session regardless of how far they run. Reset on date roll.
+        self.tracked_symbols = set()
+        self.tracked_symbols_date = None
 
         # Initialize Alpaca client for real-time market data
         self.alpaca_client = None
@@ -2870,6 +2885,57 @@ class VolumeMomentumTracker:
             return False
         return True
 
+    def _tracked_today(self):
+        """Sticky admission set for the current trading day (cleared on roll)."""
+        today = datetime.now().date()
+        if self.tracked_symbols_date != today:
+            self.tracked_symbols = set()
+            self.tracked_symbols_date = today
+        return self.tracked_symbols
+
+    def _entry_price(self, record):
+        """
+        The price the ticker *started* the day at, used for the $20 admission
+        gate. Prefers Alpaca's previous close and open over TradingView's
+        'close', which is up to 15 minutes stale and during the first quarter
+        hour of the session still carries the prior day's settled row.
+        """
+        for key in ('alpaca_previous_close', 'alpaca_open', 'alpaca_price'):
+            value = record.get(key)
+            if isinstance(value, (int, float)) and value > 0:
+                return value
+        close = record.get('close')
+        return close if isinstance(close, (int, float)) and close > 0 else None
+
+    def _apply_price_gate(self, records):
+        """
+        Admit new symbols whose starting price is under $20 and keep every
+        symbol already admitted today, no matter its current price. Marks kept
+        records with 'sticky' so downstream consumers can tell a runner that
+        outgrew the cap from a fresh sub-$20 candidate.
+        """
+        if records is None:
+            return records
+
+        tracked = self._tracked_today()
+        kept = []
+        for record in records:
+            name = record.get('name')
+            if name in tracked:
+                record['sticky'] = True
+                kept.append(record)
+                continue
+            entry = self._entry_price(record)
+            if entry is not None and entry < ALPACA_MAX_PRICE:
+                if name:
+                    tracked.add(name)
+                record['sticky'] = False
+                kept.append(record)
+
+        sticky_count = sum(1 for r in kept if r.get('sticky'))
+        logger.info(f"Price gate: {len(kept)} tracked ({sticky_count} held above ${ALPACA_MAX_PRICE:.0f} from earlier admission)")
+        return kept
+
     def _add_alpaca_screener_candidates(self, records):
         """
         Append real-time candidate tickers from Alpaca's screener endpoints
@@ -2906,10 +2972,11 @@ class VolumeMomentumTracker:
         try:
             movers = self.alpaca_screener_client.get_market_movers(
                 MarketMoversRequest(top=ALPACA_SCREENER_TOP))
+            tracked = self._tracked_today()
             gainer_count = add_symbols(
                 m.symbol for m in movers.gainers
                 if (m.percent_change or 0) >= ALPACA_GAINER_MIN_CHANGE
-                and (m.price or 0) < ALPACA_MAX_PRICE)
+                and ((m.price or 0) < ALPACA_MAX_PRICE or m.symbol in tracked))
         except Exception as e:
             logger.warning(f"⚠️  Alpaca market-movers fetch failed: {e}")
 
@@ -2931,8 +2998,9 @@ class VolumeMomentumTracker:
         Backfill TradingView-shaped fields on Alpaca-screener candidates from
         the Alpaca price overlay so the chart (which needs numeric close/
         volume/change_from_open) and downstream consumers can render them.
-        Drops candidates with no Alpaca data or that fail the price < $20
-        filter applied to the TradingView records.
+        Drops candidates with no Alpaca data. The $20 check is left to
+        _apply_price_gate() so a candidate already admitted today survives even
+        after it runs past the cap.
         """
         if records is None:
             return records
@@ -2941,7 +3009,7 @@ class VolumeMomentumTracker:
         for record in records:
             if record.get('source') == 'alpaca_screener':
                 price = record.get('alpaca_price')
-                if not price or price >= ALPACA_MAX_PRICE or not record.get('alpaca_volume'):
+                if not price or not record.get('alpaca_volume'):
                     continue
                 record['close'] = price
                 record['volume'] = record['alpaca_volume']
@@ -2982,23 +3050,32 @@ class VolumeMomentumTracker:
                     all_records = df_data.to_dict('records')
                     logger.info(f"Retrieved {len(all_records)} total records")
 
-                    # Manual filtering for price < $20 and no OTC
+                    # Cheap prefilter to bound the Alpaca batch: drop OTC, keep
+                    # anything already tracked today, plus TradingView rows with
+                    # enough headroom that Alpaca might still gate them in. The
+                    # real $20 admission gate runs after the Alpaca overlay,
+                    # since TradingView's close is up to 15 minutes stale.
+                    tracked = self._tracked_today()
+                    prefilter_cap = ALPACA_MAX_PRICE * STICKY_PREFILTER_HEADROOM
                     filtered_records = []
                     for record in all_records:
                         price = record.get('close', 999)
-                        exchange = record.get('exchange', '').upper()
+                        exchange = (record.get('exchange') or '').upper()
+                        if exchange == 'OTC':
+                            continue
 
-                        if price < 20 and exchange != 'OTC':
+                        if record.get('name') in tracked or price < prefilter_cap:
                             filtered_records.append(record)
 
                         # Stop when we have enough filtered records
                         if len(filtered_records) >= limit:
                             break
 
-                    logger.info(f"After filtering (price < $20, no OTC): {len(filtered_records)} records")
+                    logger.info(f"After prefilter (price < ${prefilter_cap:.0f} or already tracked, no OTC): {len(filtered_records)} records")
                     filtered_records = self._add_alpaca_screener_candidates(filtered_records)
                     filtered_records = self._update_prices_with_alpaca(filtered_records)
                     filtered_records = self._finalize_alpaca_candidates(filtered_records)
+                    filtered_records = self._apply_price_gate(filtered_records)
                     return filtered_records
                 else:
                     logger.error(f"Unexpected data format: {type(df_data)}")
@@ -3025,13 +3102,17 @@ class VolumeMomentumTracker:
                         all_records = df_data.to_dict('records')
                         logger.info(f"Retrieved {len(all_records)} records with simplified query")
 
-                        # Manual filtering
+                        # Manual filtering (same two-stage gate as the main query)
+                        tracked = self._tracked_today()
+                        prefilter_cap = ALPACA_MAX_PRICE * STICKY_PREFILTER_HEADROOM
                         filtered_records = []
                         for record in all_records:
                             price = record.get('close', 999)
-                            exchange = record.get('exchange', '').upper()
+                            exchange = (record.get('exchange') or '').upper()
+                            if exchange == 'OTC':
+                                continue
 
-                            if price < 20 and exchange != 'OTC':
+                            if record.get('name') in tracked or price < prefilter_cap:
                                 filtered_records.append(record)
 
                             if len(filtered_records) >= limit:
@@ -3041,6 +3122,7 @@ class VolumeMomentumTracker:
                         filtered_records = self._add_alpaca_screener_candidates(filtered_records)
                         filtered_records = self._update_prices_with_alpaca(filtered_records)
                         filtered_records = self._finalize_alpaca_candidates(filtered_records)
+                        filtered_records = self._apply_price_gate(filtered_records)
                         return filtered_records
 
             except Exception as e2:

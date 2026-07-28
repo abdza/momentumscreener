@@ -260,6 +260,15 @@ canvas { width: 100% !important; }
   vertical-align: 1px;
 }
 
+.stale-tag {
+  display: block;
+  color: #6e7681;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-top: 1px;
+}
+
 .empty-msg {
   padding: 40px 20px;
   text-align: center;
@@ -468,6 +477,19 @@ function pmPrice(item) {
   return typeof item.alpaca_price === 'number' ? item.alpaca_price : item.close;
 }
 
+// Same story for volume: TradingView's `volume` is the delayed cumulative
+// figure, and in the first 15 minutes of the session it is still yesterday's
+// *final* total (DFNS showed a frozen 78.86M on 2026-07-28 while Alpaca had
+// 11.4M). Reading it raw made "Vol % of total" jump around purely because the
+// denominator collapsed when the feed rolled over, so prefer Alpaca here too.
+function pmVolume(item) {
+  return typeof item.alpaca_volume === 'number' ? item.alpaca_volume : (item.volume || 0);
+}
+
+function numOr(v, fallback) {
+  return typeof v === 'number' && isFinite(v) ? v : fallback;
+}
+
 // ── Acceleration (sudden incline) detection ─────────────────────────────────
 // Compares the ticker's last two change-from-open readings against the pair
 // before that. If the most recent jump is much bigger than the previous one
@@ -511,7 +533,7 @@ function calcConsistency(snaps) {
   // Track all close values seen per ticker to detect frozen prices
   const closeValues = {};
 
-  snaps.forEach(snap => {
+  snaps.forEach((snap, si) => {
     snap.data.forEach((item, i) => {
       const n = item.name;
       if (!map[n]) {
@@ -523,31 +545,31 @@ function calcConsistency(snaps) {
           rankSum: 0,
           maxVol: 0,
           latestVol: 0,
-          latestChange: 0,
+          latestChange: null,
           latestClose: 0,
-          latestRank: null
+          latestRank: null,
+          latestSnap: null
         };
         closeValues[n] = new Set();
       }
       map[n].count++;
       map[n].rankSum += (i + 1);
-      if (item.volume > map[n].maxVol) map[n].maxVol = item.volume;
+      const v = pmVolume(item);
+      if (v > map[n].maxVol) map[n].maxVol = v;
       const p = pmPrice(item);
       if (p > 0) closeValues[n].add(p);
+
+      // "Latest" means last *seen*, not "present in the final snapshot".
+      // Keying off the final snapshot left every ticker that had already
+      // dropped out reading 0.00%, which sorted them all to the bottom of
+      // "Latest Chg from Open" as if they were flat rather than stale.
+      map[n].latestVol = v;
+      map[n].latestChange = pmChange(item);
+      map[n].latestClose = p;
+      map[n].latestRank = i + 1;
+      map[n].latestSnap = si;
     });
   });
-
-  const last = snaps[snaps.length - 1];
-  if (last) {
-    last.data.forEach((item, i) => {
-      if (map[item.name]) {
-        map[item.name].latestVol = item.volume;
-        map[item.name].latestChange = pmChange(item);
-        map[item.name].latestClose = pmPrice(item);
-        map[item.name].latestRank = i + 1;
-      }
-    });
-  }
 
   // Only include tickers with at least 2 snaps AND whose close price actually moved
   // (frozen = same close across all appearances — stale screener data)
@@ -566,7 +588,9 @@ function sortRankCache() {
     switch (rankSort) {
       case 'avgRank':      return a.avgRank - b.avgRank;
       case 'latestVol':    return b.latestVol - a.latestVol;
-      case 'latestChange': return b.latestChange - a.latestChange;
+      // latestChange is null when the ticker never reported a usable reading;
+      // sort those to the bottom instead of letting null coerce to 0.
+      case 'latestChange': return (numOr(b.latestChange, -Infinity)) - (numOr(a.latestChange, -Infinity));
       case 'count':        return b.count - a.count;
       default:             return b.pct - a.pct || a.avgRank - b.avgRank;
     }
@@ -624,7 +648,7 @@ function resetHidden() {
 // ── Chart ─────────────────────────────────────────────────────────────────────
 
 function snapVolTotals() {
-  return snapshots.map(snap => snap.data.reduce((s, d) => s + d.volume, 0));
+  return snapshots.map(snap => snap.data.reduce((s, d) => s + pmVolume(d), 0));
 }
 
 // First known close for a ticker, for close-mode normalization
@@ -647,7 +671,7 @@ function tickerDataset(t, color, snapTotals) {
     const entry = snap.data[idx];
     let y;
     if (mode === 'close')   y = base ? (pmPrice(entry) - base) / base * 100 : null;
-    else if (mode === 'volume') y = entry.volume;
+    else if (mode === 'volume') y = pmVolume(entry);
     else if (mode === 'change') y = pmChange(entry);
     else y = idx + 1; // rank
     return { x: snap.timestamp, y };
@@ -657,8 +681,8 @@ function tickerDataset(t, color, snapTotals) {
     if (idx === -1) return 2;
     const total = snapTotals[si];
     if (!total) return 2;
-    const volPct = snap.data[idx].volume / total * 100;
-    return Math.max(2, volPct * 0.5);
+    const volPct = pmVolume(snap.data[idx]) / total * 100;
+    return Math.max(2, Math.min(9, 2 + Math.sqrt(volPct) * 1.8));
   });
   return {
     label: t.name,
@@ -770,13 +794,14 @@ function rebuild() {
               const entry = snap.data.find(d => d.name === ticker);
               if (!entry) return [];
               const rank = snap.data.indexOf(entry) + 1;
-              const totalVol = snap.data.reduce((s, d) => s + d.volume, 0);
-              const pct = totalVol > 0 ? (entry.volume / totalVol * 100).toFixed(2) : '—';
-              const chg = pmChange(entry);
-              const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+              const vol = pmVolume(entry);
+              const totalVol = snap.data.reduce((s, d) => s + pmVolume(d), 0);
+              const pct = totalVol > 0 ? (vol / totalVol * 100).toFixed(2) : '—';
+              const chg = numOr(pmChange(entry), null);
+              const chgStr = chg === null ? '—' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
               return [
                 ` Close   : $${pmPrice(entry).toFixed(4)}`,
-                ` Volume  : ${fmtVol(entry.volume)} (${entry.volume.toLocaleString()})`,
+                ` Volume  : ${fmtVol(vol)} (${vol.toLocaleString()})`,
                 ` Vol %   : ${pct}% of total`,
                 ` Chg/Open: ${chgStr}`,
                 ` Rank    : #${rank}`,
@@ -827,11 +852,17 @@ function renderSidebar() {
     const inChart = !hidden.has(t.name);
     const color = inChart ? colorMap[t.name] : '#444';
     const isMuted = !inChart;
-    const chg = t.latestChange;
-    const chgClass = chg > 0 ? 'green' : chg < 0 ? 'red' : 'gray';
-    const chgStr = chg !== 0
-      ? (chg > 0 ? '+' : '') + chg.toFixed(2) + '%'
-      : '0.00%';
+    const chg = numOr(t.latestChange, null);
+    const chgClass = chg === null ? 'gray' : chg > 0 ? 'green' : chg < 0 ? 'red' : 'gray';
+    const chgStr = chg === null
+      ? '—'
+      : (chg > 0 ? '+' : '') + chg.toFixed(2) + '%';
+    // The reading is the ticker's last *seen* value; if that wasn't the most
+    // recent snapshot, mark it so a stale number can't pass for a live one.
+    const isStale = t.latestSnap !== null && t.latestSnap < snapshots.length - 1;
+    const staleTag = isStale
+      ? `<span class="stale-tag" title="Last seen ${snapshots.length - 1 - t.latestSnap} snapshot(s) ago at ${new Date(snapshots[t.latestSnap].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}">last seen</span>`
+      : '';
     const barWidth = ((t.count / maxCount) * 100).toFixed(1);
     const accel = accelCache[t.name];
     const accelBadge = accel ? `<span class="accel-badge" title="Accelerating: latest move +${accel.lastDiff.toFixed(2)}pp vs +${accel.prevDiff.toFixed(2)}pp before">🚀 surge</span>` : '';
@@ -847,7 +878,7 @@ function renderSidebar() {
         </div>
       </div>
       <div class="ticker-meta">
-        <div class="change-pct ${chgClass}">${chgStr}</div>
+        <div class="change-pct ${chgClass}">${chgStr}${staleTag}</div>
         <div class="meta-sub">${t.count}/${snapshots.length} snaps</div>
         <div class="meta-sub">avg #${t.avgRank.toFixed(1)}</div>
       </div>
