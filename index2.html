@@ -6,6 +6,10 @@
 <title>Market Hour Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<!-- hammer must load before the zoom plugin: it's what gives the plugin
+     drag-to-pan and pinch-to-zoom (wheel zoom works without it) -->
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -61,6 +65,17 @@ h1 { font-size: 15px; color: #58a6ff; white-space: nowrap; }
   background: #1f6feb;
   color: #fff;
 }
+
+.zoom-btn {
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.zoom-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 
 label { font-size: 12px; color: #8b949e; }
 
@@ -346,6 +361,7 @@ canvas { width: 100% !important; }
     <input type="number" id="topN" value="10" min="1" max="20" onchange="onTopNChange()">
     <label>tickers</label>
     <input type="date" id="dateSelect" onchange="onDateChange()">
+    <button class="zoom-btn" id="btnResetZoom" onclick="resetChartZoom()" title="Back to the full session" hidden>⤡ Reset zoom</button>
   </div>
 </div>
 
@@ -441,12 +457,23 @@ function buildSessionLabel(sess, idx, total) {
   return (idx === total - 1) ? `Current: ${label}` : `Prev: ${label}`;
 }
 
+// Options are reconciled rather than re-written: the labels carry a live
+// snapshot count, so rebuilding innerHTML on every poll closed the dropdown
+// under the user each time a new snapshot landed.
 function populateSessionSelect() {
   const sel = document.getElementById('sessionSelect');
-  sel.innerHTML = sessions.map((s, i) =>
-    `<option value="${i}">${buildSessionLabel(s, i, sessions.length)}</option>`
-  ).join('');
-  sel.value = sessionIdx;
+  while (sel.options.length > sessions.length) sel.remove(sel.options.length - 1);
+  sessions.forEach((s, i) => {
+    let opt = sel.options[i];
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.value = String(i);
+      sel.appendChild(opt);
+    }
+    const label = buildSessionLabel(s, i, sessions.length);
+    if (opt.textContent !== label) opt.textContent = label;
+  });
+  if (sel.value !== String(sessionIdx)) sel.value = String(sessionIdx);
 }
 
 function applySession() {
@@ -641,8 +668,33 @@ function resetHidden() {
     if (i >= topN) hidden.add(t.name);
   });
   applyHiddenOverrides();
+  knownTickers = new Set(rankCache.map(t => t.name));
   soloedName = null;
   preSoloHidden = null;
+}
+
+// Tickers we've already decided a visibility for. Anything the screener turns up
+// later has no entry in `hidden`, which used to mean it appeared on the chart
+// unasked — even mid-solo, where a stray line broke the isolation the user set
+// up. New arrivals get the same default a fresh load would have given them.
+let knownTickers = new Set();
+
+function classifyNewTickers() {
+  const topN = getTopN();
+  const overrides = loadHiddenOverrides();
+  rankCache.forEach((t, i) => {
+    if (knownTickers.has(t.name)) return;
+    knownTickers.add(t.name);
+    const shouldHide = typeof overrides[t.name] === 'boolean' ? overrides[t.name] : i >= topN;
+    // While soloing, the decision applies to the state we'll restore on un-solo;
+    // the live hidden-set stays "everything but the soloed ticker".
+    const target = soloedName ? preSoloHidden : hidden;
+    if (target) {
+      if (shouldHide) target.add(t.name);
+      else target.delete(t.name);
+    }
+    if (soloedName) hidden.add(t.name);
+  });
 }
 
 // ── Chart ─────────────────────────────────────────────────────────────────────
@@ -749,16 +801,20 @@ function yAxisConfig() {
   };
 }
 
-function rebuild() {
-  if (!snapshots.length) return;
-  const datasets = buildDatasets();
+// The chart instance is created once and then mutated in place. Tearing it down
+// and rebuilding on every 30s poll threw away everything the user had on screen
+// — the hovered/soloed ticker, an open tooltip, the in-flight animation — so the
+// only thing that still forces a fresh instance is a mode switch, which changes
+// the y-axis type and is a deliberate click anyway.
+let chartMode = null;   // the mode the live chart instance was built for
 
+function createChart() {
   if (chart) { chart.destroy(); chart = null; }
 
   const ctx = document.getElementById('chart').getContext('2d');
   chart = new Chart(ctx, {
     type: 'line',
-    data: { datasets },
+    data: { datasets: buildDatasets() },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -771,6 +827,28 @@ function rebuild() {
       },
       plugins: {
         legend: { display: false },
+        // Wheel/pinch zooms, plain drag pans, shift+drag rubber-bands a region.
+        // The plugin refuses to pan while the drag modifier is held, so the two
+        // never fight, and it swallows the click that ends a drag/pan so those
+        // gestures don't fall through to the open-in-TradingView handler.
+        // No `limits` on purpose: the data keeps growing, and clamping to the
+        // range as it stood when you zoomed would trap you behind new snapshots.
+        zoom: {
+          pan: { enabled: true, mode: 'xy', threshold: 10, onPanComplete: syncZoomBtn },
+          zoom: {
+            wheel: { enabled: true, speed: 0.08 },
+            pinch: { enabled: true },
+            drag: {
+              enabled: true,
+              modifierKey: 'shift',
+              backgroundColor: 'rgba(88,166,255,0.15)',
+              borderColor: '#58a6ff',
+              borderWidth: 1
+            },
+            mode: 'xy',
+            onZoomComplete: syncZoomBtn
+          }
+        },
         tooltip: {
           backgroundColor: '#161b22',
           borderColor: '#30363d',
@@ -825,50 +903,65 @@ function rebuild() {
       }
     }
   });
+  chartMode = mode;
+}
 
+function rebuild() {
+  if (!snapshots.length) return;
+  if (!chart || chartMode !== mode) {
+    createChart();
+  } else {
+    chart.data.datasets = buildDatasets();
+    // Mid hover-solo, applyHoverSolo() re-hides the other lines immediately
+    // below — animating them in first just to hide them reads as a flash.
+    chart.update(hoverSoloName ? 'none' : undefined);
+  }
   applyHoverSolo();
+  syncZoomBtn();
+}
+
+// ── Zoom ──────────────────────────────────────────────────────────────────────
+// The plugin writes the zoomed min/max straight into the chart's scale config,
+// so a zoom survives the in-place chart.update() the poll does — new snapshots
+// stream in underneath without yanking the view back to the full session.
+
+function resetChartZoom() {
+  if (chart && chart.resetZoom) chart.resetZoom();
+  syncZoomBtn();
+}
+
+// Guarded on the plugin's own methods so a CDN hiccup degrades to "no zoom"
+// rather than taking the rest of the page down with it.
+function syncZoomBtn() {
+  const btn = document.getElementById('btnResetZoom');
+  if (btn) btn.hidden = !chart || !chart.isZoomedOrPanned || !chart.isZoomedOrPanned();
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-function renderSidebar() {
-  const list = document.getElementById('tickerList');
+// Rows are reconciled by ticker name rather than re-written wholesale with
+// innerHTML. A poll used to replace every row, which reset the list's scroll
+// position and silently dropped the row the cursor was sitting on (its
+// mouseleave never fired, so hover-solo got stuck on a dead element).
+const rowEls = new Map();   // ticker name → its <div class="ticker-row">
 
-  if (!rankCache.length) {
-    list.innerHTML = '<div class="empty-msg">No data for this date.</div>';
-    return;
-  }
+function rowInnerHTML(t, color, maxCount) {
+  const chg = numOr(t.latestChange, null);
+  const chgClass = chg === null ? 'gray' : chg > 0 ? 'green' : chg < 0 ? 'red' : 'gray';
+  const chgStr = chg === null
+    ? '—'
+    : (chg > 0 ? '+' : '') + chg.toFixed(2) + '%';
+  // The reading is the ticker's last *seen* value; if that wasn't the most
+  // recent snapshot, mark it so a stale number can't pass for a live one.
+  const isStale = t.latestSnap !== null && t.latestSnap < snapshots.length - 1;
+  const staleTag = isStale
+    ? `<span class="stale-tag" title="Last seen ${snapshots.length - 1 - t.latestSnap} snapshot(s) ago at ${new Date(snapshots[t.latestSnap].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}">last seen</span>`
+    : '';
+  const barWidth = ((t.count / maxCount) * 100).toFixed(1);
+  const accel = accelCache[t.name];
+  const accelBadge = accel ? `<span class="accel-badge" title="Accelerating: latest move +${accel.lastDiff.toFixed(2)}pp vs +${accel.prevDiff.toFixed(2)}pp before">🚀 surge</span>` : '';
 
-  const maxCount = rankCache[0]?.count || 1;
-
-  // Build color map: assign colors in order of visible tickers
-  const colorMap = {};
-  let colorIdx = 0;
-  rankCache.forEach(t => {
-    if (!hidden.has(t.name)) colorMap[t.name] = COLORS[colorIdx++ % COLORS.length];
-  });
-
-  list.innerHTML = rankCache.map((t, i) => {
-    const inChart = !hidden.has(t.name);
-    const color = inChart ? colorMap[t.name] : '#444';
-    const isMuted = !inChart;
-    const chg = numOr(t.latestChange, null);
-    const chgClass = chg === null ? 'gray' : chg > 0 ? 'green' : chg < 0 ? 'red' : 'gray';
-    const chgStr = chg === null
-      ? '—'
-      : (chg > 0 ? '+' : '') + chg.toFixed(2) + '%';
-    // The reading is the ticker's last *seen* value; if that wasn't the most
-    // recent snapshot, mark it so a stale number can't pass for a live one.
-    const isStale = t.latestSnap !== null && t.latestSnap < snapshots.length - 1;
-    const staleTag = isStale
-      ? `<span class="stale-tag" title="Last seen ${snapshots.length - 1 - t.latestSnap} snapshot(s) ago at ${new Date(snapshots[t.latestSnap].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}">last seen</span>`
-      : '';
-    const barWidth = ((t.count / maxCount) * 100).toFixed(1);
-    const accel = accelCache[t.name];
-    const accelBadge = accel ? `<span class="accel-badge" title="Accelerating: latest move +${accel.lastDiff.toFixed(2)}pp vs +${accel.prevDiff.toFixed(2)}pp before">🚀 surge</span>` : '';
-
-    return `
-    <div class="ticker-row${isMuted ? ' muted' : ''}" onclick="toggleTicker('${t.name}')" onmouseenter="hoverSolo('${t.name}')" onmouseleave="hoverSoloEnd()">
+  return `
       <div class="dot" style="background:${color}"></div>
       <div class="ticker-info">
         <div class="ticker-name">${t.name}${accelBadge}</div>
@@ -882,9 +975,55 @@ function renderSidebar() {
         <div class="meta-sub">${t.count}/${snapshots.length} snaps</div>
         <div class="meta-sub">avg #${t.avgRank.toFixed(1)}</div>
       </div>
-      <button class="solo-btn${t.name === soloedName ? ' active' : ''}" title="Show only this ticker" onclick="soloTicker(event, '${t.name}')">1</button>
-    </div>`;
-  }).join('');
+      <button class="solo-btn${t.name === soloedName ? ' active' : ''}" title="Show only this ticker" onclick="soloTicker(event, '${t.name}')">1</button>`;
+}
+
+function renderSidebar() {
+  const list = document.getElementById('tickerList');
+
+  if (!rankCache.length) {
+    list.innerHTML = '<div class="empty-msg">No data for this date.</div>';
+    rowEls.clear();
+    return;
+  }
+  if (!rowEls.size) list.innerHTML = '';   // drop the "no data" placeholder
+
+  const maxCount = rankCache[0]?.count || 1;
+
+  // Build color map: assign colors in order of visible tickers
+  const colorMap = {};
+  let colorIdx = 0;
+  rankCache.forEach(t => {
+    if (!hidden.has(t.name)) colorMap[t.name] = COLORS[colorIdx++ % COLORS.length];
+  });
+
+  const order = rankCache.map(t => {
+    let el = rowEls.get(t.name);
+    if (!el) {
+      el = document.createElement('div');
+      el.addEventListener('click', () => toggleTicker(t.name));
+      el.addEventListener('mouseenter', () => hoverSolo(t.name));
+      el.addEventListener('mouseleave', () => hoverSoloEnd());
+      rowEls.set(t.name, el);
+    }
+    const inChart = !hidden.has(t.name);
+    const cls = 'ticker-row' + (inChart ? '' : ' muted');
+    if (el.className !== cls) el.className = cls;
+    const html = rowInnerHTML(t, inChart ? colorMap[t.name] : '#444', maxCount);
+    // Only touch the DOM when the row's contents actually changed, so a poll
+    // that moves one ticker leaves the other rows (and their :hover) alone.
+    if (el._html !== html) { el.innerHTML = html; el._html = html; }
+    return el;
+  });
+
+  rowEls.forEach((el, name) => {
+    if (!order.includes(el)) { el.remove(); rowEls.delete(name); }
+  });
+
+  // Re-seat only the rows whose position changed; the rest keep their nodes.
+  order.forEach((el, i) => {
+    if (list.children[i] !== el) list.insertBefore(el, list.children[i] || null);
+  });
 }
 
 // ── Status bar ────────────────────────────────────────────────────────────────
@@ -910,21 +1049,24 @@ function startPolling() {
       const data = await apiFetch(`/markethour/api/data?date=${today}`);
       allSnapshots = data;
       const newSessions = detectSessions(allSnapshots);
-      // If a new session appeared, switch to it; otherwise stay on current
-      if (newSessions.length !== sessions.length) {
-        sessions = newSessions;
+      const switched = newSessions.length !== sessions.length;
+      sessions = newSessions;
+      if (switched) {
+        // A new session began — that's a genuinely different view, so start it
+        // from the topN default rather than carrying the old one's selection.
         sessionIdx = sessions.length - 1;
         populateSessionSelect();
+        applySession();
       } else {
-        sessions = newSessions;
         populateSessionSelect();
+        snapshots = sessions[sessionIdx] || [];
+        rankCache = calcConsistency(snapshots);
+        accelCache = calcAccel(snapshots);
+        sortRankCache();
+        classifyNewTickers();
+        rebuild();
+        renderSidebar();
       }
-      snapshots = sessions[sessionIdx] || [];
-      rankCache = calcConsistency(snapshots);
-      accelCache = calcAccel(snapshots);
-      sortRankCache();
-      rebuild();
-      renderSidebar();
     }
     updateStatus();
   }, 30000);
@@ -980,6 +1122,10 @@ function hoverSolo(name) {
 }
 
 function applyHoverSolo() {
+  // A poll can drop the ticker being hovered out of the rankings entirely; its
+  // row disappears without ever firing mouseleave, so let go of it here rather
+  // than leave every dataset hidden behind a ticker that no longer exists.
+  if (hoverSoloName && !rankCache.some(r => r.name === hoverSoloName)) hoverSoloName = null;
   if (!chart || !hoverSoloName) return;
   chart.data.datasets = chart.data.datasets.filter(ds => !ds._hoverTemp);
   const inChart = chart.data.datasets.some(ds => ds.label === hoverSoloName);
@@ -1082,9 +1228,10 @@ async function init() {
   applySession();
   updateStatus();
 
+  // No periodic location.reload() here: the 30s poll already folds new
+  // snapshots into the live chart, and reloading threw away the user's
+  // selection/zoom mid-session for no gain.
   if (currentDate === today) startPolling();
-
-  setInterval(() => location.reload(), 120000);
 }
 
 init();
