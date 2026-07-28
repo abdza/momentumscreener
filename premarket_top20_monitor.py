@@ -453,6 +453,7 @@ class PremarketTop20Monitor:
                 minute_bars_data = self.alpaca_client.get_stock_bars(minute_bars_request)
 
                 today = end_time.date()
+                et_today = datetime.now(ET_TZ).date()
 
                 for symbol in symbols_to_fetch:
                     cache_entry = {'timestamp': current_time, 'price': None, 'previous_close': None, 'premarket_volume': None}
@@ -463,9 +464,15 @@ class PremarketTop20Monitor:
                     if daily_bars_data and hasattr(daily_bars_data, 'data') and symbol in daily_bars_data.data:
                         symbol_daily_bars = daily_bars_data.data[symbol]
                         if symbol_daily_bars:
-                            if len(symbol_daily_bars) >= 2:
-                                cache_entry['previous_close'] = float(symbol_daily_bars[-2].close)
-                            elif len(symbol_daily_bars) == 1:
+                            # Pick the last bar from a session before today rather than
+                            # indexing [-2]: Alpaca has not opened today's daily bar yet
+                            # during premarket, so [-2] would be two sessions back and
+                            # double-count yesterday's move.
+                            prior_bars = [b for b in symbol_daily_bars
+                                          if b.timestamp.astimezone(ET_TZ).date() < et_today]
+                            if prior_bars:
+                                cache_entry['previous_close'] = float(prior_bars[-1].close)
+                            else:
                                 cache_entry['previous_close'] = float(symbol_daily_bars[-1].close)
 
                     if minute_bars_data and hasattr(minute_bars_data, 'data') and symbol in minute_bars_data.data:

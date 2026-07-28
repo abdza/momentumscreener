@@ -56,6 +56,7 @@ from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 import logging
+import pytz
 import pandas as pd
 from collections import defaultdict
 
@@ -101,6 +102,8 @@ logger = logging.getLogger(__name__)
 
 # PID file path
 PID_FILE = "/tmp/screener.pid"
+
+ET_TZ = pytz.timezone('America/New_York')
 
 # Alpaca screener candidate source: the TradingView scanner serves this
 # account 15-minute delayed data (update_mode: delayed_streaming_900), so a
@@ -2761,6 +2764,35 @@ class VolumeMomentumTracker:
                 )
                 bars_data = self.alpaca_client.get_stock_bars(bars_request)
 
+                et_today = datetime.now(ET_TZ).date()
+
+                # Alpaca only opens today's daily bar once the regular session starts,
+                # so before 9:30 ET the last daily bar is still yesterday's. For those
+                # symbols pull today's minute bars instead - they sum to the same total
+                # the daily bar will eventually report (extended hours included).
+                symbols_missing_today = []
+                for symbol in symbols_to_fetch:
+                    symbol_bars = bars_data.data.get(symbol) if (bars_data and hasattr(bars_data, 'data')) else None
+                    if not symbol_bars or symbol_bars[-1].timestamp.astimezone(ET_TZ).date() != et_today:
+                        symbols_missing_today.append(symbol)
+
+                today_minute_volume = {}
+                if symbols_missing_today:
+                    minute_request = StockBarsRequest(
+                        symbol_or_symbols=symbols_missing_today,
+                        timeframe=TimeFrame.Minute,
+                        start=ET_TZ.localize(datetime(et_today.year, et_today.month, et_today.day)),
+                        end=datetime.now(ET_TZ),
+                        feed=DataFeed.SIP
+                    )
+                    minute_data = self.alpaca_client.get_stock_bars(minute_request)
+                    if minute_data and hasattr(minute_data, 'data'):
+                        for symbol, minute_bars in minute_data.data.items():
+                            today_minute_volume[symbol] = sum(
+                                b.volume for b in minute_bars
+                                if b.timestamp.astimezone(ET_TZ).date() == et_today
+                            )
+
                 for symbol in symbols_to_fetch:
                     cache_entry = {'timestamp': current_time, 'price': None, 'volume': None, 'previous_close': None, 'open': None}
 
@@ -2770,11 +2802,25 @@ class VolumeMomentumTracker:
                     if bars_data and hasattr(bars_data, 'data') and symbol in bars_data.data:
                         symbol_bars = bars_data.data[symbol]
                         if symbol_bars:
-                            cache_entry['volume'] = int(symbol_bars[-1].volume)
-                            cache_entry['open'] = float(symbol_bars[-1].open)
-                            if len(symbol_bars) >= 2:
-                                cache_entry['previous_close'] = float(symbol_bars[-2].close)
-                            elif len(symbol_bars) == 1:
+                            todays_bar = (symbol_bars[-1]
+                                          if symbol_bars[-1].timestamp.astimezone(ET_TZ).date() == et_today
+                                          else None)
+                            if todays_bar is not None:
+                                cache_entry['volume'] = int(todays_bar.volume)
+                                cache_entry['open'] = float(todays_bar.open)
+                            elif symbol in today_minute_volume:
+                                # Premarket: 'open' stays unset because the daily open is
+                                # the 9:30 ET print, which has not happened yet.
+                                cache_entry['volume'] = int(today_minute_volume[symbol])
+                            # Pick the last bar from a session before today rather than
+                            # indexing [-2]: Alpaca has not opened today's daily bar yet
+                            # during premarket, so [-2] would be two sessions back and
+                            # double-count yesterday's move.
+                            prior_bars = [b for b in symbol_bars
+                                          if b.timestamp.astimezone(ET_TZ).date() < et_today]
+                            if prior_bars:
+                                cache_entry['previous_close'] = float(prior_bars[-1].close)
+                            else:
                                 cache_entry['previous_close'] = float(symbol_bars[-1].close)
 
                     self.alpaca_price_cache[symbol] = cache_entry
