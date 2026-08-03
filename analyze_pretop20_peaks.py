@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pretop20")
+ET_TZ = "America/New_York"
+LOCAL_TZ = "Asia/Kuala_Lumpur"  # what pre-switchover snapshots were stamped in
 
 
 def load_all():
@@ -26,7 +28,12 @@ def load_all():
             d = json.load(open(f))
         except (json.JSONDecodeError, OSError):
             continue
+        # Snapshots written before the ET switchover carry a naive local
+        # timestamp; newer ones are tz-aware ET. Normalize so the column has a
+        # single dtype and 'date' means the ET trading date either way.
         ts = pd.Timestamp(d["timestamp"])
+        ts = ts.tz_localize(LOCAL_TZ) if ts.tzinfo is None else ts
+        ts = ts.tz_convert(ET_TZ)
         total_vol = sum(r.get("premarket_volume") or 0 for r in d["data"])
         for r in d["data"]:
             rows.append(

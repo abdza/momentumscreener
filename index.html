@@ -540,8 +540,15 @@ function calcAccel(snaps) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+// ET, matching how the screener buckets its snapshot files. Neither UTC nor the
+// browser's local date works: both roll over mid-session for a US market.
+const ET_DATE_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+const ET_TIME_FMT = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit'
+});
+
 function todayStr() {
-  return new Date().toISOString().slice(0,10).replace(/-/g,'');
+  return ET_DATE_FMT.format(new Date()).replace(/-/g, '');
 }
 
 function fmtDate(d) {
@@ -1140,10 +1147,10 @@ function renderSidebar() {
 
 function updateStatus() {
   const el = document.getElementById('status');
-  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const now = ET_TIME_FMT.format(new Date());
   const isToday = currentDate === todayStr();
   const dot = isToday ? '<span class="live-dot"></span>' : '';
-  el.innerHTML = `${dot}${isToday ? 'Live · ' : ''}Updated ${now} · ${snapshots.length} snapshots`;
+  el.innerHTML = `${dot}${isToday ? 'Live · ' : ''}Updated ${now} ET · ${snapshots.length} snapshots`;
 }
 
 // ── Polling ───────────────────────────────────────────────────────────────────

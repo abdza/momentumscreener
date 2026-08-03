@@ -9,11 +9,33 @@ import json
 import os
 import glob
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from urllib.parse import urlparse, parse_qs
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PRETOP20_DIR = os.path.join(BASE_DIR, 'pretop20')
 MOMENTUM_DIR = os.path.join(BASE_DIR, 'momentum_data')
+
+# Snapshot filenames are stamped in ET so one trading session lands in one date
+# bucket (local midnight here is 12:00 ET, which used to split a session in two).
+ET_TZ = ZoneInfo('America/New_York')
+
+
+def today_et():
+    return datetime.now(ET_TZ).strftime('%Y%m%d')
+
+
+def ts_from_filename(basename):
+    """Naive ET wall-clock ISO string parsed out of a *_YYYYMMDD_HHMMSS.* name.
+
+    Deliberately naive: the dashboards feed this straight to `new Date(...)`,
+    which reads an offset-less string as browser-local time and so prints the ET
+    wall clock as-is. Chart.js' date-fns adapter can't render a fixed timezone,
+    so carrying the offset here would push every axis label back to MYT.
+    """
+    parts = os.path.splitext(basename)[0].split('_')
+    d, t = parts[-2], parts[-1]
+    return f'{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}'
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -29,10 +51,10 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/pretop20/api/dates':
             self._serve_json(self._pretop20_dates())
         elif path == '/pretop20/api/data':
-            date = params.get('date', [datetime.now().strftime('%Y%m%d')])[0]
+            date = params.get('date', [today_et()])[0]
             self._serve_json(self._pretop20_data(date))
         elif path == '/pretop20/api/latest':
-            date = params.get('date', [datetime.now().strftime('%Y%m%d')])[0]
+            date = params.get('date', [today_et()])[0]
             self._serve_json(self._pretop20_latest(date))
 
         # ── markethour ────────────────────────────────────────────────────────
@@ -41,10 +63,10 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/markethour/api/dates':
             self._serve_json(self._markethour_dates())
         elif path == '/markethour/api/data':
-            date = params.get('date', [datetime.now().strftime('%Y%m%d')])[0]
+            date = params.get('date', [today_et()])[0]
             self._serve_json(self._markethour_data(date))
         elif path == '/markethour/api/latest':
-            date = params.get('date', [datetime.now().strftime('%Y%m%d')])[0]
+            date = params.get('date', [today_et()])[0]
             self._serve_json(self._markethour_latest(date))
 
         else:
@@ -95,6 +117,10 @@ class Handler(BaseHTTPRequestHandler):
                     snap = json.load(fp)
                 curr_data = snap.get('data')
                 if curr_data != prev_data:
+                    # The on-disk 'timestamp' is a tz-aware ET string (older files
+                    # are naive local); the dashboard wants plain ET wall clock,
+                    # so serve the filename-derived one instead.
+                    snap['timestamp'] = ts_from_filename(os.path.basename(f))
                     snapshots.append(snap)
                     prev_data = curr_data
             except Exception:
@@ -122,9 +148,7 @@ class Handler(BaseHTTPRequestHandler):
         prev_data = None
         for f in files:
             try:
-                parts = os.path.basename(f).replace('.json', '').split('_')
-                d, t = parts[2], parts[3]
-                ts = f'{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}'
+                ts = ts_from_filename(os.path.basename(f))
                 with open(f) as fp:
                     raw = fp.read().replace('NaN', 'null').replace('Infinity', 'null')
                 curr_data = json.loads(raw)

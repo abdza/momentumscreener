@@ -3724,8 +3724,11 @@ class VolumeMomentumTracker:
 
     def run_single_scan(self):
         """Run a single scan and compare with previous data"""
-        timestamp = datetime.now()
-        logger.info(f"Starting scan cycle at {timestamp.strftime('%H:%M:%S')}")
+        # ET, not local: raw_data_/alerts_ filenames bucket by the date part, and
+        # local midnight in Asia/Kuala_Lumpur lands at 12:00 ET - mid-session -
+        # which used to split one trading day across two files.
+        timestamp = datetime.now(ET_TZ)
+        logger.info(f"Starting scan cycle at {timestamp.strftime('%H:%M:%S')} ET")
 
         try:
             # Get current data

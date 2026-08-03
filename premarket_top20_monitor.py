@@ -795,12 +795,14 @@ class PremarketTop20Monitor:
     def _log_screener_data(self, screener_data):
         """Log the screener data downloaded from TradingView"""
         try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            log_file = LOG_DIR / f"screener_{timestamp}.json"
+            # ET, not local: these filenames bucket by the date part, and local
+            # midnight (Asia/Kuala_Lumpur) falls at 12:00 ET, mid-session.
+            now_et = datetime.now(ET_TZ)
+            log_file = LOG_DIR / f"screener_{now_et.strftime('%Y%m%d_%H%M%S')}.json"
 
             with open(log_file, 'w') as f:
                 json.dump({
-                    'timestamp': datetime.now().isoformat(),
+                    'timestamp': now_et.isoformat(),
                     'count': len(screener_data),
                     'data': screener_data
                 }, f, indent=2)
@@ -1010,11 +1012,11 @@ class PremarketTop20Monitor:
     def _log_notification(self, message, success=True, format='markdown', error=None):
         """Log the notification sent to Telegram"""
         try:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            log_file = LOG_DIR / f"notification_{timestamp}.txt"
+            now_et = datetime.now(ET_TZ)
+            log_file = LOG_DIR / f"notification_{now_et.strftime('%Y%m%d_%H%M%S')}.txt"
 
             with open(log_file, 'w') as f:
-                f.write(f"Timestamp: {datetime.now().isoformat()}\n")
+                f.write(f"Timestamp: {now_et.isoformat()}\n")
                 f.write(f"Success: {success}\n")
                 f.write(f"Format: {format}\n")
                 if error:
