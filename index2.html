@@ -174,6 +174,43 @@ canvas { width: 100% !important; }
 }
 .show-all-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 
+.sidebar-search {
+  position: relative;
+  padding: 6px 10px;
+  background: #0d1117;
+  border-bottom: 1px solid #30363d;
+  flex-shrink: 0;
+}
+
+.sidebar-search input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #010409;
+  border: 1px solid #30363d;
+  border-radius: 5px;
+  color: #c9d1d9;
+  font-size: 12px;
+  padding: 5px 24px 5px 8px;
+  outline: none;
+}
+.sidebar-search input:focus { border-color: #58a6ff; }
+.sidebar-search input::placeholder { color: #6e7681; }
+
+.search-clear {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #6e7681;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.search-clear:hover { color: #c9d1d9; }
+
 .ticker-list {
   overflow-y: auto;
   flex: 1;
@@ -381,6 +418,12 @@ canvas { width: 100% !important; }
         <option value="count">Appearances</option>
       </select>
       <button class="show-all-btn" onclick="showAllTickers()">Show All</button>
+    </div>
+    <div class="sidebar-search">
+      <input type="text" id="tickerSearch" placeholder="Search ticker or sector…"
+             autocomplete="off" spellcheck="false"
+             oninput="onTickerSearch()" onkeydown="onTickerSearchKey(event)">
+      <button class="search-clear" id="searchClear" onclick="clearTickerSearch()" title="Clear (Esc)" hidden>✕</button>
     </div>
     <div class="ticker-list" id="tickerList"></div>
   </div>
@@ -985,26 +1028,50 @@ function rowInnerHTML(t, color, maxCount) {
       <button class="solo-btn${t.name === soloedName ? ' active' : ''}" title="Show only this ticker" onclick="soloTicker(event, '${t.name}')">1</button>`;
 }
 
+// Search filter. Purely a view over the sidebar: it narrows which rows are
+// listed, never which lines are plotted, so a ticker that fell out of the top-N
+// can be found by name and clicked back into the chart without disturbing the
+// rest of the selection.
+let tickerFilter = '';
+
+function filteredRanks() {
+  if (!tickerFilter) return rankCache;
+  return rankCache.filter(t =>
+    t.name.toLowerCase().includes(tickerFilter) ||
+    (t.sector || '').toLowerCase().includes(tickerFilter));
+}
+
+function listPlaceholder(list, msg) {
+  list.innerHTML = `<div class="empty-msg">${msg}</div>`;
+  rowEls.clear();
+}
+
 function renderSidebar() {
   const list = document.getElementById('tickerList');
 
   if (!rankCache.length) {
-    list.innerHTML = '<div class="empty-msg">No data for this date.</div>';
-    rowEls.clear();
+    listPlaceholder(list, 'No data for this date.');
     return;
   }
-  if (!rowEls.size) list.innerHTML = '';   // drop the "no data" placeholder
+
+  const ranks = filteredRanks();
+  if (!ranks.length) {
+    listPlaceholder(list, 'No ticker matches this search.');
+    return;
+  }
+  if (!rowEls.size) list.innerHTML = '';   // drop the placeholder
 
   const maxCount = rankCache[0]?.count || 1;
 
-  // Build color map: assign colors in order of visible tickers
+  // Build color map: assign colors in order of visible tickers. Off the full
+  // ranking, not the filtered view, so a row's dot keeps matching its line.
   const colorMap = {};
   let colorIdx = 0;
   rankCache.forEach(t => {
     if (!hidden.has(t.name)) colorMap[t.name] = COLORS[colorIdx++ % COLORS.length];
   });
 
-  const order = rankCache.map(t => {
+  const order = ranks.map(t => {
     let el = rowEls.get(t.name);
     if (!el) {
       el = document.createElement('div');
@@ -1157,6 +1224,26 @@ function hoverSoloEnd() {
   chart.data.datasets = chart.data.datasets.filter(ds => !ds._hoverTemp);
   chart.data.datasets.forEach(ds => { ds.hidden = false; });
   chart.update('none');
+}
+
+// Filtering removes rows from the DOM without their mouseleave ever firing, so
+// let go of any hover-solo first rather than strand the chart on a dead row.
+function onTickerSearch() {
+  tickerFilter = document.getElementById('tickerSearch').value.trim().toLowerCase();
+  document.getElementById('searchClear').hidden = !tickerFilter;
+  if (hoverSoloName) hoverSoloEnd();
+  renderSidebar();
+}
+
+function onTickerSearchKey(evt) {
+  if (evt.key === 'Escape') clearTickerSearch();
+}
+
+function clearTickerSearch() {
+  const box = document.getElementById('tickerSearch');
+  box.value = '';
+  box.focus();
+  onTickerSearch();
 }
 
 function showAllTickers() {
