@@ -1,5 +1,5 @@
-tradingview-screener
-rookiepy
+# tradingview-screener and rookiepy are only needed by the dormant
+# premarket_momentum_tracker.py; the active trackers are pure Alpaca now.
 pandas
 schedule
 python-telegram-bot

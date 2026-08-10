@@ -1,0 +1,10634 @@
+{
+"AAC.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AACB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AACBU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AACG": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"AACI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AACO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AADX": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"AAL": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"AAME": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AAPD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AAPG": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AARD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AAUM": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ABAT": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"ABCL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ABEV": {
+"exchange": "NYSE",
+"sector": "Consumer Non-Durables"
+},
+"ABOS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ABR": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ABR/PD": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ABR/PE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ABSI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ABTC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ABTS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ABVC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ABVE": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"ABVX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ABXB": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ACA": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"ACAA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ACAAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ACAD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ACCL": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"ACCS": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"ACEP": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ACGC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ACHR": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"ACMR": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ACN": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"ACNT": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"ACOG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ACON": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ACP/PA": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"ACRS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ACTU": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ADAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ADACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ADBU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ADCT": {
+"exchange": "NYSE",
+"sector": "Health Technology"
+},
+"ADGM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ADIL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ADIV": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ADSE": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ADSLF": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"ADT": {
+"exchange": "NYSE",
+"sector": "Commercial Services"
+},
+"ADTX": {
+"exchange": "OTC",
+"sector": "Health Technology"
+},
+"ADVB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ADXN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AEAQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AEAQU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AEC": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"AEG": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AEI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AEMD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AEMS": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"AERO": {
+"exchange": "NYSE",
+"sector": "Transportation"
+},
+"AERT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AES": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"AESPU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AEYE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AFRI": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"AFRU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"AG": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"AGCC": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"AGMH": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AGNC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AGQI": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"AGRZ": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"AGX": {
+"exchange": "NYSE",
+"sector": "Industrial Services"
+},
+"AHG": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"AHL/PD": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AHL/PE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AHMA": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"AHT": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AHT/PD": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AHT/PF": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AHT/PG": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AHT/PH": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AIAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AIB": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"AIBZ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AIDX": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"AIFA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"AIFF": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AIFU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AIHS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AIIA": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AIIA.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AIIO": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"AIIR": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"AIM": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"AIMD": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"AIOS": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"AIRG": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"AIRJ": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"AIRTP": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"AIVC": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"AIXC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AIXI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AKA": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"AKAN": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"AKBA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ALAR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ALBT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ALDF": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ALDFU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ALEC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ALF": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ALFUU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ALIS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ALISU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ALIT": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"ALLO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ALLR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ALM": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"ALOT": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"ALOV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ALP": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ALPS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ALT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ALTG": {
+"exchange": "NYSE",
+"sector": "Distribution Services"
+},
+"ALUB": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ALUB.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ALXO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ALZN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AMA": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AMAN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AMAX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"AMBO": {
+"exchange": "AMEX",
+"sector": "Consumer Services"
+},
+"AMBR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AMC": {
+"exchange": "NYSE",
+"sector": "Consumer Services"
+},
+"AMCI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AMDD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AMIX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AMKL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"AMOD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AMPG": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"AMPU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"AMPX": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"AMRN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AMS": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"AMSS": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"AMST": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AMTD": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AMTX": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"AMZD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AMZE": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"ANGH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ANGO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ANSC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ANSCU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ANTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ANY": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AOUT": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"AP": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"APAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"APGE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"APLD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"APLX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"APLZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"APM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"APMCU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"APOG": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"APUS": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"APVO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"APWC": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"APXT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"APXTU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AQB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AQMS": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"AQWA": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ARAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ARAY": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ARBK": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ARCI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ARCIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ARCT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ARDX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AREN": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"ARI": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ARKD": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ARKR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"ARKT": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ARL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ARM": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"ARMG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ARMP": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"ARTC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ARTCU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ARTV": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ASB/PF": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ASBP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ASPCU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ASPD": {
+"exchange": "OTC",
+"sector": "Finance"
+},
+"ASTC": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"ASTG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ASTN": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ASTX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ASTY": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ASUP": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ASX": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"ASYS": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ATAI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ATHE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ATHR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ATIIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ATLN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ATNM": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"ATOS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ATPC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ATXG": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"AUC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AUID": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"AUR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AURE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AUTL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AUUD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"AVAL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"AVAT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AVAV": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"AVD": {
+"exchange": "NYSE",
+"sector": "Process Industries"
+},
+"AVEX": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"AVGU": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AVGX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AVL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AVS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AVTR": {
+"exchange": "NYSE",
+"sector": "Health Technology"
+},
+"AVX": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"AVXL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"AVXX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"AWX": {
+"exchange": "AMEX",
+"sector": "Industrial Services"
+},
+"AXG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AXIA/PC": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"AXINU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"AXTI": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"AXTL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"AXTU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"AXTX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"AZI": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"AZTR": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"AZUL": {
+"exchange": "AMEX",
+"sector": "Transportation"
+},
+"B": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"BABU": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"BAC/PE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BACC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BACCU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BAER": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"BANL": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"BAOS": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"BARK": {
+"exchange": "NYSE",
+"sector": "Process Industries"
+},
+"BATL": {
+"exchange": "AMEX",
+"sector": "Energy Minerals"
+},
+"BAVA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BAYA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BB": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"BBAI": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"BBAX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BBCP": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"BBD": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BBJP": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BBLG": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BBN": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"BBOT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BBYY": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"BCAB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BCARU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BCDA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BCHT": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"BCSS": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BCSS.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BCYC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BDCI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BDCIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BDCX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BDCZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BDMD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BDRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BDSX": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"BDVG": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BE": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"BEAG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BEAGU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BEAT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BEBE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BEEM": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"BEEP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BEG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"BEGS": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BEP/PA": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"BEPH": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BEPI": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BESS": {
+"exchange": "AMEX",
+"sector": "Producer Manufacturing"
+},
+"BETZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BEX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BEZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BFAP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BFJA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BFJL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BFLY": {
+"exchange": "NYSE",
+"sector": "Health Technology"
+},
+"BFOC": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BGDE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BGI": {
+"exchange": "AMEX",
+"sector": "Retail Trade"
+},
+"BGL": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"BGLC": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"BGLD": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BGM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BGMS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BHAV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BHAVU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BHC": {
+"exchange": "NYSE",
+"sector": "Health Technology"
+},
+"BHFAM": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BHR": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BHR/PB": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BHR/PD": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BHST": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"BHV": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"BHYP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BIAF": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BIDG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"BIII.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BILI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BIP/PA": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"BIRD": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"BITK": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BITO": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BITU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BITX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BIVI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BIXI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BIXIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BIYA": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"BJDX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BKCPF": {
+"exchange": "OTC",
+"sector": "Finance"
+},
+"BKD": {
+"exchange": "NYSE",
+"sector": "Health Services"
+},
+"BKHA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BKHAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BLFS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BLIN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BLNE": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"BLNK": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"BLRK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BLRKU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BLRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BLUW": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BLUWU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BLZE": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"BLZR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BLZRU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BMGL": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"BMHL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BML/PH": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BML/PL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BMM": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"BMNR": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BMNU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BMNZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BNAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BNBX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BNC": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"BNGO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BNKK": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BNRG": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"BNZI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BOF": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"BOH/PA": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BOLD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BOLT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BON": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BOOM": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"BOT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"BOTZ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"BOXL": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"BOXX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BPAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BPACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BPI": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BPRO": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BPYPM": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BPYPN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BQ": {
+"exchange": "AMEX",
+"sector": "Retail Trade"
+},
+"BRAG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BRAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BRF": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BRIA": {
+"exchange": "AMEX",
+"sector": "Distribution Services"
+},
+"BRID": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"BRKHU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BRNS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BRTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"BSAA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BSET": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"BSSP": {
+"exchange": "OTC",
+"sector": "Distribution Services"
+},
+"BTBT": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"BTCC": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BTCL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BTCS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BTCT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BTCZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"BTDR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BTE": {
+"exchange": "NYSE",
+"sector": "Energy Minerals"
+},
+"BTG": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"BTGO": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"BTMD": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"BTOC": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"BTOG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"BTQ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BTTC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BUDA": {
+"exchange": "AMEX",
+"sector": "Consumer Non-Durables"
+},
+"BULL": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"BURU": {
+"exchange": "AMEX",
+"sector": "Electronic Technology"
+},
+"BUUU": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"BVC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BVFL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BWIN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BWIV": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BWIV.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"BWOW": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"BYAH": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"BYFC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"BYND": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"CABR": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CADL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CAG": {
+"exchange": "NYSE",
+"sector": "Consumer Non-Durables"
+},
+"CALC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CAMP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CAN": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"CANF": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"CANG": {
+"exchange": "NYSE",
+"sector": "Distribution Services"
+},
+"CAPS": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"CAQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CAQUU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CARD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CARE": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CAST": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CBIO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CBRG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CBRL": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"CBRZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CBTJ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CBTL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CBTO": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CBTY": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CBXL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CCAQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CCC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CCEL": {
+"exchange": "AMEX",
+"sector": "Transportation"
+},
+"CCG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CCHH": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"CCII": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CCIIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CCIX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CCM": {
+"exchange": "NYSE",
+"sector": "Health Services"
+},
+"CCO": {
+"exchange": "NYSE",
+"sector": "Commercial Services"
+},
+"CCSB": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"CCTG": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"CCUP": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CCXI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CCXIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CDE": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"CDLX": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CDR/PC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"CDT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CDTG": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"CEFD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CEFZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CELU": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CELZ": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CENN": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"CEPF": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CEPO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CEPS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CEPV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CERY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CETX": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"CETY": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"CEW": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CGBL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CGC": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"CGCTU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CGEM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CGO": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"CGTL": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"CGTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CHA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"CHAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CHCI": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"CHEC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CHNL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CHNR": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"CHNU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CHOW": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"CHPG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CHR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CHSN": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"CHTR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"CHWY": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"CIA": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"CIBR": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"CIEG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CIFG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"CIG": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"CIG.C": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"CIIT": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"CING": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CINT": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"CIRC": {
+"exchange": "NASDAQ",
+"sector": ""
+},
+"CISO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CISS": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"CITR": {
+"exchange": "AMEX",
+"sector": "Industrial Services"
+},
+"CJMB": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"CKX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CLAR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"CLB": {
+"exchange": "NYSE",
+"sector": "Energy Minerals"
+},
+"CLBR": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"CLBR.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"CLDI": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"CLF": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"CLGN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CLIK": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CLLS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CLPR": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"CLPS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CLPT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CLRO": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"CLSK": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CLST": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CLSZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CLVT": {
+"exchange": "NYSE",
+"sector": "Commercial Services"
+},
+"CLWT": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"CLYM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CMCM": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"CMCSA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"CMCT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CMGG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"CMII": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CMIIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CMMB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CMND": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"CMTL": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"CNDT": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CNET": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CNEY": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"CNF": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"CNH": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"CNSP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CNTB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CNTN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CNTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CNTY": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"CNVS": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"CNXU": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"COCH": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CODA": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"CODX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"COHH": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"COHX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"COIO": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CONL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"COOT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"COPL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"COPZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CORD": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"COSM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"COTY": {
+"exchange": "NYSE",
+"sector": "Consumer Non-Durables"
+},
+"CPAC": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"CPHC": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"CPHI": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"CPII": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CPNG": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"CPNX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CPOP": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CPSH": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"CQTM": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CRAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CRAN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CRBU": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CRCG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"CRDD": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CRDF": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CRDL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CRDU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CRDX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CRE": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CREG": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"CREX": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CRGO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CRIS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CRMG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"CRMT": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"CRPT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CRVO": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"CRVS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CRWU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"CRXP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CSAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CSAN": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"CSBR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CSPI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CTAA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CTGO": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"CTKB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CTM": {
+"exchange": "AMEX",
+"sector": "Process Industries"
+},
+"CTMX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CTNM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CTNT": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"CTOR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CTRM": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"CTSO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CTW": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CTWO": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CUB": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"CUBWU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CULP": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"CUPR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CURV": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"CURX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CUSD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"CV": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CVGI": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"CVKD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"CVRD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"CWAN": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"CWD": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CXAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CXDO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CXIIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"CYATY": {
+"exchange": "OTC",
+"sector": "Producer Manufacturing"
+},
+"CYCU": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"CYPH": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"DAIC": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"DAMD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"DAPP": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"DBCA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DBGI": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"DBI": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"DBRG/PH": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"DBRG/PI": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"DBRG/PJ": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"DC": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"DCGO": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"DCOM/P": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"DCOY": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"DCX": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"DDC": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"DDFD": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DDFF": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DDFJ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DDFM": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DDFN": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DDTJ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DEMZ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"DETRF": {
+"exchange": "OTC",
+"sector": "Miscellaneous"
+},
+"DETX": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"DEVS": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"DEVSF": {
+"exchange": "OTC",
+"sector": "Commercial Services"
+},
+"DFDV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DFLI": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"DFNS": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"DFSC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"DFTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"DGICB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DGIPF": {
+"exchange": "OTC",
+"sector": "Consumer Services"
+},
+"DGNX": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DGXX": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DH": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DHLX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"DIAL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"DIBS": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"DINRF": {
+"exchange": "OTC",
+"sector": "Producer Manufacturing"
+},
+"DISO": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"DJTU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DKI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DLHC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"DLO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DLPN": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"DLR/PL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"DLTH": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"DLXY": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"DMAA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DMII": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DNMX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DNN": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"DOC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"DOGZ": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"DOJE": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DOMH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DOMO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DOYU": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"DRAM": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DRAY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"DRCT": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"DRDB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DRIP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"DRNL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"DSAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DSACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DSC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DSM": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"DSS": {
+"exchange": "AMEX",
+"sector": "Commercial Services"
+},
+"DSX": {
+"exchange": "NYSE",
+"sector": "Transportation"
+},
+"DSY": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"DTCX": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DTI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DTIL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"DTSQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DTSQU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DTSS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DTST": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DUKR": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"DUO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"DV": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"DVAL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"DVDN": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"DVLT": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"DWTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"DX": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"DXC": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"DXF": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"DXLG": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"DXST": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"DXYZ": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"DYNC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DYOR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"DZZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EAF": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"EBON": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"ECHX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ECOR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ECX": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"EDBL": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"EDHL": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"EDSA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"EDTK": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"EDZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EEE": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"EEIQ": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"EFOI": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"EFU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EGG": {
+"exchange": "AMEX",
+"sector": "Commercial Services"
+},
+"EGHA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"EGHAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"EHCC": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"EHGO": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"EHTH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"EIKN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"EJH": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"EKG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ELAB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ELALF": {
+"exchange": "OTC",
+"sector": "Transportation"
+},
+"ELBM": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"ELC": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"ELE": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"ELME": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ELMT": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ELOG": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"ELOX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ELPC": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"ELPW": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ELSE": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"ELTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ELUT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ELVN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ELWT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"EMBC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"EMBR": {
+"exchange": "OTC",
+"sector": "Consumer Services"
+},
+"EMPD": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"ENGN": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"ENGS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"ENHA": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ENLV": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ENPH": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ENRD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ENSC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ENTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ENVB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"EOSE": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"EOSU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"EP": {
+"exchange": "AMEX",
+"sector": "Energy Minerals"
+},
+"EPC": {
+"exchange": "NYSE",
+"sector": "Consumer Non-Durables"
+},
+"EPOW": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"EPSM": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"EQ": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"EQH/PA": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"EQH/PC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"EQS": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"EQX": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"ERBB": {
+"exchange": "OTC",
+"sector": "Process Industries"
+},
+"ERNA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"EROC": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"ESK": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ESLA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ESPR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ET": {
+"exchange": "NYSE",
+"sector": "Industrial Services"
+},
+"ETFT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ETHA": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ETHD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ETHT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ETHU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ETRL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ETS": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"ETSS.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ETTY": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ETU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"EUM": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EURK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"EURKU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"EUVX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"EVAC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"EVGN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"EVMN": {
+"exchange": "NYSE",
+"sector": "Health Technology"
+},
+"EVMT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"EVMU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EVNT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EVOX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"EVTV": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"EWQ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EWTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"EWV": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EWY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"EWZS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"EXFY": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"EXOZ": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"EZGO": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"EZPZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"EZRA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"F": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"FA": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"FABC": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"FAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FACT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FACTU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FALN": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"FAMI": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"FBGL": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"FBL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"FBLG": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"FBYD": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"FBYY": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"FCEL": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"FCHL": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"FCNCP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FCRS": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"FCRS.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"FCUV": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"FDRX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"FDSB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FDTX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"FEAM": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"FEBO": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"FEED": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"FENC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"FENG": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"FERA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FERAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FFAI": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"FGBI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FGII": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FGIIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FGL": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"FGMC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FGMCU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FGRU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"FHN/PF": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"FIAX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"FIEE": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"FIG": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"FIGX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FINW": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FISN": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"FITB/PK": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"FJIKY": {
+"exchange": "OTC",
+"sector": "Producer Manufacturing"
+},
+"FLD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"FLNC": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"FLNT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"FLQM": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"FLWS": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"FLYE": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"FLYT": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"FLZH": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"FMACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FMFC": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"FMN": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"FMQQ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"FMTM": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"FMY": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"FNGR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"FNMA": {
+"exchange": "OTC",
+"sector": "Finance"
+},
+"FNRN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FOCL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"FOFO": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"FONR": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"FORR": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"FOSL": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"FOTO": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"FOXX": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"FRD": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"FRGT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FRMI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FRSH": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"FRST": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FRSX": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"FRT/PC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"FRTT": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"FRVO": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"FSEA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FSIG": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"FSML": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"FSP": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"FTEK": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"FTFT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FTH": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"FTHAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FTHM": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"FTHY": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"FTLF": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"FTMU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"FTRI": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"FTRK": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"FTW": {
+"exchange": "NYSE",
+"sector": "Energy Minerals"
+},
+"FULC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"FULTP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FUND": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"FUSB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FUSE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"FVAV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FVN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FVNNU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FXACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"FXHO": {
+"exchange": "NASDAQ",
+"sector": ""
+},
+"GAB/PG": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"GAIA": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"GALT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GANX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GBAB": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"GBCS": {
+"exchange": "OTC",
+"sector": "Finance"
+},
+"GCDT": {
+"exchange": "AMEX",
+"sector": "Industrial Services"
+},
+"GCGRU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GCL": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GCTK": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GDC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GDEV": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GDHG": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"GDIV": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"GDLNF": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"GDOG": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GDTC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GDTRF": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"GDXD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GDXU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GEG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GEL": {
+"exchange": "NYSE",
+"sector": "Process Industries"
+},
+"GELS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GEND": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GENK": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"GENM": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GENT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GENW": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GERN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GETY": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"GF": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"GFAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GGB": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"GGLS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"GGN/PB": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GGT/PG": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"GGZ": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"GHXIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GIBO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GIFT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GIGM": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GIII": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"GIPR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GITS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GIW": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GIX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GJST": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"GLBS": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"GLDG": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"GLE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GLED": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"GLED.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"GLGDF": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"GLMD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GLOO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GLWG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"GLX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"GLXG": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"GME": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"GMEU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"GMEX": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"GMHS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GMM": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GNEMF": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"GNLN": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"GNPX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GNS": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"GNSS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"GNT": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"GNTA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GOCO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GOGO": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"GORO": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"GOSS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GOVX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GPAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GPACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GPAT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GPATU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GPMT": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"GPMT/PA": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"GPUS": {
+"exchange": "AMEX",
+"sector": "Producer Manufacturing"
+},
+"GPUS/PD": {
+"exchange": "AMEX",
+"sector": "Producer Manufacturing"
+},
+"GRAB": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"GRAF": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"GRAN": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"GRCE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GREE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GRF": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"GRI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GRID": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"GRML": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"GRNQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GRO": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"GRRR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GRWG": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"GS/PC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"GSRF": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GSRVU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GSUN": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"GT": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"GTAO": {
+"exchange": "OTC",
+"sector": "Miscellaneous"
+},
+"GTEN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GTIM": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"GTN.A": {
+"exchange": "NYSE",
+"sector": "Consumer Services"
+},
+"GUACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"GURE": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"GUTS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"GV": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"GVH": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"GWAV": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"GWH": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"GXAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"GYGC": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"GYRE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HAIN": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"HAO": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"HAUS": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"HBAN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HBANP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HBB": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"HBTC": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"HCAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HCAI": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"HCAT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"HCIC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HCMA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HCMAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HCTI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"HCWB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HCWC": {
+"exchange": "AMEX",
+"sector": "Retail Trade"
+},
+"HDLB": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"HDRN": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"HELP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HEPS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"HERZ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"HFBL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HFFG": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"HFSP": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"HGBL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HHS": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"HIHO": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"HIND": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HIPS": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"HITI": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"HIVE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"HKIT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"HKPD": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"HL": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"HLN": {
+"exchange": "NYSE",
+"sector": "Health Technology"
+},
+"HLP": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"HLXC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HMH": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"HMR": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"HOFT": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"HONAV": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"HONG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"HOOZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"HOUR": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"HOWL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HPAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"HPE": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"HPP/PC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"HQ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"HQI": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"HRTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HSAI": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"HSCS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HSPT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HTCO": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"HTCR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"HTLM": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"HTZ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HUBC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"HUDI": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"HUIZ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HUMA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HUN": {
+"exchange": "NYSE",
+"sector": "Process Industries"
+},
+"HURC": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"HVIIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HVMC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HWH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"HXHX": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"HYFM": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"HYIN": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"HYPG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"HYPR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"HYSA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"HYTI": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"HYTLF": {
+"exchange": "OTC",
+"sector": "Energy Minerals"
+},
+"IACO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IACOU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IACQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IACQU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IAE": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"IAUX": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"IBAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IBG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"IBIO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IBIT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"IBO": {
+"exchange": "AMEX",
+"sector": "Electronic Technology"
+},
+"IBRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IBX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ICCM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ICMB": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ICON": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"ICPY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ICSH": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ICU": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IDACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IDAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"IDV": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"IEAG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IEAGU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IEF": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"IETH": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"IEUR": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"IFBD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"IFLN": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"IFRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IGAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IGSB": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"IH": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"IHD": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"IHT": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"ILAG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"ILLR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ILLU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ILPT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IMCC": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"IMMP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IMNN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IMOS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"IMRA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"IMST": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"IMTE": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"IMVT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"INAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"INACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"INCR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"INDI": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"INDP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"INEO": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"INFH": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"INFQ": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"INFU": {
+"exchange": "AMEX",
+"sector": "Commercial Services"
+},
+"INFY": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"INHD": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"INLF": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"INLX": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"INM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"INMB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"INMD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"INN/PE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"INQQ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"INTC": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"INTJ": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"INTT": {
+"exchange": "AMEX",
+"sector": "Electronic Technology"
+},
+"INTW": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"INTZ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"INV": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"INVE": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"INVZ": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"IONR": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"IONZ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"IOR": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"IOTR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"IOVA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IPCX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IPDN": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"IPEX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IPFX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IPFXU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IPHA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IPSC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IPST": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"IPVVU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IPW": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"IPWR": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"IQST": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"IRAB": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"IRD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IRDM": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"IRE": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"IREG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"IREX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"IREZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"IRHO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"IRVH": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ISBG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ISPR": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ITHA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ITOC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ITP": {
+"exchange": "AMEX",
+"sector": "Process Industries"
+},
+"ITRG": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"ITUB": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"IVA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"IVDA": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"IVF": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"IVOL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"IWM": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"IZM": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"JACK": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"JACS": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"JACS.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"JAGU": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"JAGX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"JANX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"JATT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"JBDI": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"JBLU": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"JCSE": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"JELD": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"JEM": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"JENA": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"JF": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"JFB": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"JFIN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"JFU": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"JG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"JHAC": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"JHS": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"JL": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"JLHL": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"JMM": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"JOBX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"JOBY": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"JPST": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"JRSH": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"JSPR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"JUNS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"JVA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"JWEL": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"JXG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"JYD": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"JYNT": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"JZ": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"JZXN": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"KALA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"KAPA": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"KARD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"KBAB": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"KBDU": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"KBONU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KBSX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KCCA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"KCHV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KDK": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"KEEL": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"KEEX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"KELYB": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"KFFB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KFII": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KFIIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KIDZ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"KIM/PL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"KIM/PM": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"KJD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"KLAR": {
+"exchange": "NYSE",
+"sector": "Commercial Services"
+},
+"KLRA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"KLXE": {
+"exchange": "NASDAQ",
+"sector": "Energy Minerals"
+},
+"KMCA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"KMRK": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"KNDI": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"KNG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"KNOW": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"KNRX": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"KOID": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"KOOL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"KORE": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"KORU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"KOS": {
+"exchange": "NYSE",
+"sector": "Energy Minerals"
+},
+"KOYN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KOYNU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KPET.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"KPTI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"KRAQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KRAQU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KREF/PA": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"KRKR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"KRSP": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"KRSP.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"KRWX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"KSCP": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"KTCC": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"KTEC": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"KTTA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"KTUP": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"KTWO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KURE": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"KUST": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"KVAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KVACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KVUE": {
+"exchange": "NYSE",
+"sector": "Consumer Non-Durables"
+},
+"KVYO": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"KWM": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"KXIN": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"KYNB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LAB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LABD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"LABT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LABX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"LAC": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"LACG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"LAES": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"LAKE": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"LASE": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"LATA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LATAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LBGJ": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"LBRDA": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"LBRDK": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"LBRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LBTYB": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"LCCCU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LCFY": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"LCID": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"LCNB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LCTX": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"LCUT": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"LDSF": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"LEDS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"LEE": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"LEGO": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"LEGT": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"LEGT.U": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"LEUX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"LFAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LFS": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"LFT": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"LFVN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LFWD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LGCL": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"LGHL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LGHT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"LGO": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"LGPS": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"LGVN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LHAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"LHSW": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"LICN": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"LIDR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"LILKV": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"LIMN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LINT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"LION": {
+"exchange": "NYSE",
+"sector": "Consumer Services"
+},
+"LIQT": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"LITS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LITU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"LITX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"LITZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"LIXT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LKSP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LMFA": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"LMNX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"LNAI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LNKS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"LNSR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LNZA": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"LOBO": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"LOCL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"LOFF": {
+"exchange": "AMEX",
+"sector": ""
+},
+"LOKV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LOKVU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LPA": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"LPAA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LPBB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LPCV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LPRO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"LPSN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"LQD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"LRCU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"LRE": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LRHC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LRMR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LSAK": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"LSE": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"LSH": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"LSTA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LTCC": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"LTRN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LTTI": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"LUCD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LUD": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"LULG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"LUNG": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LUNL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"LUNR": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"LVLU": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"LVWR": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"LWAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"LWLG": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"LXEH": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"LXRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LYEL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"LYFT": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"LYG": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"LYRA": {
+"exchange": "OTC",
+"sector": "Health Technology"
+},
+"LZB": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"LZMH": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"MAAS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MACIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MAIA": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"MAMO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MARA": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MARPS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MASK": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MB": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"MBAI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MBAV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MBAVU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MBB": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MBBC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MBGL": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"MBINN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MBIO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MBRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MBVI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MCAHU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MCDIF": {
+"exchange": "OTC",
+"sector": "Industrial Services"
+},
+"MCHI": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MCHU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"MCHX": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"MCN": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"MCRB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MCRP": {
+"exchange": "AMEX",
+"sector": "Producer Manufacturing"
+},
+"MDCX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MDEV": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"MDIA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"MDLK": {
+"exchange": "OTC",
+"sector": "Finance"
+},
+"MDRR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MDXH": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MEGL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MEHA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MENS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MESH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MESHU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MET/PF": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"METCB": {
+"exchange": "NASDAQ",
+"sector": "Energy Minerals"
+},
+"METD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"METOF": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"METU": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MEVO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MEVOU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MFI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MFIG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MFIN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MFLX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MFM": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"MFUT": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"MGIH": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"MGLD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MGN": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"MGRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MGYR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MHH": {
+"exchange": "AMEX",
+"sector": "Commercial Services"
+},
+"MHIG": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MHIP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MHNC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"MI": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"MIMI": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"MINE": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"MINT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MITQ": {
+"exchange": "AMEX",
+"sector": "Consumer Durables"
+},
+"MKDW": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"MKLY": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MKLYU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MKSI": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"MKZR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MLAA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MLAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MLACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MLCI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MLEC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"MLSS": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"MLTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MMA": {
+"exchange": "AMEX",
+"sector": "Consumer Services"
+},
+"MMTX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MNDR": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"MNOV": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MNTS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"MNY": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MOBI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MOBX": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"MODD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MOGU": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"MOLN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MPAA": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"MPU": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"MREO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MRLN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MRM": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"MRNO": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"MRT": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"MRVL": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"MRVU": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MS/PO": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"MSAI": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"MSBT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MSC": {
+"exchange": "NYSE",
+"sector": "Consumer Services"
+},
+"MSGY": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"MSLE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MSN": {
+"exchange": "AMEX",
+"sector": "Distribution Services"
+},
+"MSOO": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"MSOS": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MSOX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MSR": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MSS": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"MST": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MSTP": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MSTU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"MSTW": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"MSTX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MSTZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"MSW": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"MTAL.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"MTEK": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"MTEN": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"MTEX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MTNB": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"MTNE.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"MTR": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"MTVA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MU": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"MUD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MULL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MUU": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MUZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MUZE": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MVIS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"MVLL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"MWC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MWG": {
+"exchange": "AMEX",
+"sector": "Distribution Services"
+},
+"MWYN": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"MXC": {
+"exchange": "AMEX",
+"sector": "Energy Minerals"
+},
+"MXCT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"MXE": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"MYE": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"MYND": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"MYPS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MYSE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MYSZ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"MYX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MYXXU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"MYY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"MZYX": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"MZZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"NA": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"NAAS": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"NAII": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NAK": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"NAKA": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"NAMI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NAMM": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"NAUT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NAVN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NB": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"NBB": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"NBIG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"NBIL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"NBIYD": {
+"exchange": "OTC",
+"sector": "Consumer Durables"
+},
+"NBIZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"NBP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NBRG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NBRGU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NCEL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NCEW": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"NCIQ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"NCL": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"NCLH": {
+"exchange": "NYSE",
+"sector": "Consumer Services"
+},
+"NCPL": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"NCRA": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"NCT": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"NDEKY": {
+"exchange": "OTC",
+"sector": "Electronic Technology"
+},
+"NDRA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NEBX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"NEHI": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"NEO": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"NEON": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"NEOV": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"NERD": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"NERV": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NEUP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NEXA": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"NEXR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"NFE": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"NFGC": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"NFLW": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"NGCG": {
+"exchange": "OTC",
+"sector": "Consumer Non-Durables"
+},
+"NGIF": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"NHIC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NHICU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NHIVU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NHP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NIM": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"NINE": {
+"exchange": "AMEX",
+"sector": "Industrial Services"
+},
+"NIO": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"NIPG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NIVF": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"NIXX": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"NMG": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"NMI": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"NMP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NMRA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NMS": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"NMTC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NNBR": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"NNDM": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"NNNN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NNOX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NODK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NOEM": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NOK": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"NOTV": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"NOWL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"NPAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NPACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NPCE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NPPXF": {
+"exchange": "OTC",
+"sector": "Communications"
+},
+"NPT": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"NRIX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NRSN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NRT": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"NSRX": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"NTCL": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NTHI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NTIC": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"NTRP": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NTRSO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NTWK": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NTWO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NTZ": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"NU": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"NUAI": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"NUCL": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"NUG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"NUVB": {
+"exchange": "NYSE",
+"sector": "Health Technology"
+},
+"NUVL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NUWE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NVD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"NVDA": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"NVDX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"NVNI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"NVNO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NVPS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"NVTS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"NVTX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"NVVE": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"NVX": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"NWAX": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"NWAX.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"NWGL": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"NWL": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"NWTG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"NXB": {
+"exchange": "AMEX",
+"sector": "Retail Trade"
+},
+"NXGL": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"NXL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NXTC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"NXTS": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"NXTT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NXXT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"NYC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"NYXH": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"OABI": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"OACC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OBA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OBAI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"OBIO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"OBTC": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"OCC": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"OCG": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"OCGN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"OCS": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"ODD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ODHY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ODYS": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"OESX": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"OFAL": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"OGCP": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"OGEN": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"OGSP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"OIM": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OIMAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OIO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OKLL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"OKUR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"OLOX": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"OLPX": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"OLVI": {
+"exchange": "OTC",
+"sector": "Electronic Technology"
+},
+"OM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"OMEX": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"OMH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ONCH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ONCHU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ONCO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ONCY": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ONDG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ONDL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ONDS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"ONDU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ONEG": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"ONFO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ONG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"ONL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"ONMD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ONX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"OPAD": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"OPAL": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"OPBK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OPEN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OPHC": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"OPP/PB": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"OPP/PC": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"OPTH": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"OPTT": {
+"exchange": "AMEX",
+"sector": "Producer Manufacturing"
+},
+"OPTU": {
+"exchange": "NYSE",
+"sector": "Communications"
+},
+"OPTX": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"ORBS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ORBX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ORCS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ORCU": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ORIQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ORIQU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ORIS": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"ORKA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ORKT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ORLA": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"ORLG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"ORMP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ORO": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"OTAI.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"OTGA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OTGAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OTGL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"OTLK": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"OTLY": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"OVID": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"OWL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"OWNB": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"OWNS": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"OXBR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"OYSE": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PAAU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"PACH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PACHU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PAII": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PAII.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PALD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"PALI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PALL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PALO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PALOU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PASG": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PASW": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"PATH": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"PAVM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PAVS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PAYO": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"PBCRF": {
+"exchange": "OTC",
+"sector": "Finance"
+},
+"PBHC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PBI/PB": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"PBK": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"PBLS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PBM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PBR": {
+"exchange": "NYSE",
+"sector": "Energy Minerals"
+},
+"PCAP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PCAPU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PCCE": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PCG": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"PCG/PD": {
+"exchange": "AMEX",
+"sector": "Utilities"
+},
+"PCG/PE": {
+"exchange": "AMEX",
+"sector": "Utilities"
+},
+"PCG/PG": {
+"exchange": "AMEX",
+"sector": "Utilities"
+},
+"PCGG": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PCLA": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"PCR": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PCSA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PCSC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PCT": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"PCTTU": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"PDC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"PDDL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"PEB/PE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PEB/PG": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PEB/PH": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PECE": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PED": {
+"exchange": "AMEX",
+"sector": "Energy Minerals"
+},
+"PETS": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"PETZ": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"PEW": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"PFAI": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"PFF": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"PFFL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PFSA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PGAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PGACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PHGE": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"PICS": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"PIM": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"PLAG": {
+"exchange": "AMEX",
+"sector": "Consumer Non-Durables"
+},
+"PLBL": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"PLBY": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"PLCE": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"PLMK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PLOW": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"PLRZ": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PLSM": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"PLTD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"PLUG": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"PLUN.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PLYX": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"PLYY": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"PMAX": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"PMEC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"PMI": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"PMN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PMNT": {
+"exchange": "AMEX",
+"sector": "Retail Trade"
+},
+"PMT/PC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PMTR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PMTRU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PN": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"PNBK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"POAS": {
+"exchange": "AMEX",
+"sector": "Electronic Technology"
+},
+"POCI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"POEL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"POET": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"POLA": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"POLE": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"POM": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"PONO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"POWW": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"PPBT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PPCB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PQDI": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PRAA": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"PRAY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PRFX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PRHI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PRLD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PROK": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PRQR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PRSO": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"PRTA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PRTH": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"PRZO": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"PSA/PF": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PSA/PG": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PSA/PI": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PSA/PJ": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PSA/PL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PSA/PN": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PSA/PP": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PSA/PR": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"PSIG": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"PSLV": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PSQ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"PSQH": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"PSTV": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PTACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PTIR": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"PTLE": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"PTN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PULM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"PURR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"PVL": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"PW": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"PW/PA": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"PWRL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"PXLW": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"PYXS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"QADR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"QADRU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"QAT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"QBTZ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"QCML": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"QCMU": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"QDEL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"QETAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"QETH": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"QH": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"QID": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"QIDX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"QIS": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"QLD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"QLEP.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"QNC": {
+"exchange": "AMEX",
+"sector": "Electronic Technology"
+},
+"QNCX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"QNRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"QQQD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"QQQI": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"QRED": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"QRED.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"QRHC": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"QS": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"QSEA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"QSEAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"QSOL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"QSU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"QTEX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"QTI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"QTRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"QUBT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"QUCY": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"QUMS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"QURE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"QXL": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"QXO": {
+"exchange": "NYSE",
+"sector": "Distribution Services"
+},
+"QYLD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"RAAQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RAC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"RACC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RAIL": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"RAIN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RAM": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"RAY": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"RAYA": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"RBKB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RBNE": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"RC/PE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"RCAT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RCAX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"RCKT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RCON": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"RCT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RDAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RDAG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RDCM": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RDGT": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"RDHL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RDIV": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"RDNW": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"RDW": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"RDWU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"RDZN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"REBN": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"RECT": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"REE": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"REED": {
+"exchange": "AMEX",
+"sector": "Consumer Non-Durables"
+},
+"REFR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"REK": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"RENT": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"REPL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RETO": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"REW": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"RFAI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RFAIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RFAM": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RFAMU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RFL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"RGC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RGNT": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"RGNX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RGTI": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"RGTZ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"RHTX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"RIBB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RIBBU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RIG": {
+"exchange": "NYSE",
+"sector": "Industrial Services"
+},
+"RILYL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RIME": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"RISE": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"RITR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RIVN": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"RJET": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"RKDA": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"RKLX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"RKLZ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"RKT": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"RKTO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RLAY": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RLYB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RMAX": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"RMBI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RMCF": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"RMSG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RMTI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RNAC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RNAZ": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RNGT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RNTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ROC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ROKU": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ROLR": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"ROMA": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"RPAY": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"RPGL": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RPHS": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"RPID": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"RPT": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"RQI": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"RR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"RREV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RSBT": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"RSBY": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"RTACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RTB": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RUBI": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"RUM": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RUN": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"RVMD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RVNL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"RVSB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"RVSN": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"RWM": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"RXD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"RXRX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RXT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RYDE": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"RYET": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"RYOJ": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"RZLT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"RZLV": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SAAQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SAAQU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SABS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SAC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SACH": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"SAFX": {
+"exchange": "NASDAQ",
+"sector": "Energy Minerals"
+},
+"SAGT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SAGU": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SANG": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SANM": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SATG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SATL": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SATO": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SBC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"SBET": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"SBEV": {
+"exchange": "AMEX",
+"sector": "Health Services"
+},
+"SBFM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SBS": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"SBXD": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SBXE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SBXE.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SCAG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"SCE/PG": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SCE/PL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SCII": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SCKT": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SCNI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SCNX": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"SCPQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SCPQU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SDA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"SDEV": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"SDGR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SDHI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SDOT": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"SDST": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"SECZ": {
+"exchange": "NYSE",
+"sector": ""
+},
+"SEDG": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"SEER": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SEGG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"SELX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SEM": {
+"exchange": "NYSE",
+"sector": "Health Services"
+},
+"SENS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SER": {
+"exchange": "AMEX",
+"sector": "Commercial Services"
+},
+"SEVN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SFHG": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"SFWL": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"SGC": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"SGLY": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"SGOV": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"SGRP": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"SH": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SHAZ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SHFS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SHMD": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SHPH": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SHRT": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SHWDF": {
+"exchange": "OTC",
+"sector": "Process Industries"
+},
+"SHY": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SICP": {
+"exchange": "OTC",
+"sector": "Finance"
+},
+"SIDU": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SIEB": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SIGA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SIGIP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SIJ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SILC": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SILO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SINT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SIVEF": {
+"exchange": "OTC",
+"sector": "Electronic Technology"
+},
+"SIVR": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SJ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SJNK": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SKIL": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"SKIN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SKM": {
+"exchange": "NYSE",
+"sector": "Communications"
+},
+"SKYA": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SKYQ": {
+"exchange": "NASDAQ",
+"sector": "Energy Minerals"
+},
+"SKYX": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SLAI": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"SLBT": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"SLDB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SLE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SLGB": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"SLMT": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"SLN": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"SLND": {
+"exchange": "AMEX",
+"sector": "Industrial Services"
+},
+"SLNG": {
+"exchange": "NASDAQ",
+"sector": "Energy Minerals"
+},
+"SLNH": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SLNHP": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SLON": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SLP": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SLQD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SLQT": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SLS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SLSN": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"SLV": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SLXN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SMCI": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SMCL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SMCX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SMCZ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SMHB": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SMJF": {
+"exchange": "AMEX",
+"sector": "Producer Manufacturing"
+},
+"SMR": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"SMRT": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"SMSI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SMST": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SMTK": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SMU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SMUP": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SMX": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SMXT": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"SMZ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SNAG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SNAP": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"SNBR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"SND": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"SNDG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SNDQ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SNDU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SNDX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SNFCA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SNGX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SNK": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SNOA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SNSE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SNTG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SNWV": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SNXX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SNYR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SOAR": {
+"exchange": "AMEX",
+"sector": "Transportation"
+},
+"SOBR": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SOC": {
+"exchange": "NYSE",
+"sector": "Energy Minerals"
+},
+"SOCA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SOEZ": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SOFI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SOGP": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SOLC": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SOLT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SONM": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SOPH": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SORNU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SOS": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"SOUL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SOUL.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"SOUN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SOWG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"SOXL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SOXQ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SOXS": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SPAL": {
+"exchange": "CBOE",
+"sector": ""
+},
+"SPAX": {
+"exchange": "AMEX",
+"sector": ""
+},
+"SPCE": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"SPCF": {
+"exchange": "AMEX",
+"sector": ""
+},
+"SPCG": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SPCH": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SPCL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SPCM": {
+"exchange": "CBOE",
+"sector": ""
+},
+"SPCQ": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SPCU": {
+"exchange": "CBOE",
+"sector": ""
+},
+"SPCX": {
+"exchange": "NASDAQ",
+"sector": "Communications"
+},
+"SPDN": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SPEG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SPH": {
+"exchange": "NYSE",
+"sector": "Distribution Services"
+},
+"SPHL": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"SPKL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SPKLU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SPMC": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"SPPL": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SPRC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SPRO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SPRU": {
+"exchange": "NYSE",
+"sector": "Utilities"
+},
+"SPRY": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SPTS": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SPTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SPWH": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"SPWR": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"SPXS": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SPXU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SQFT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SQQQ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SRFM": {
+"exchange": "NYSE",
+"sector": "Transportation"
+},
+"SRI": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"SRTS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SRXH": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"SSAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SSACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SSBI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SSEA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SSEAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SSII": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SSM": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"SSO": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SSPC": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SSS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"SST": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"SSTI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SSTK": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"SSVFF": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"STAK": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"STEK": {
+"exchange": "OTC",
+"sector": "Health Technology"
+},
+"STEX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"STFS": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"STG": {
+"exchange": "NYSE",
+"sector": "Commercial Services"
+},
+"STI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"STIM": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"STIP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"STKE": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"STKH": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"STLA": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"STLU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"STSM": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"STTK": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"STXL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"STXT": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"STXU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"STXX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SUGP": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"SUIG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SUIL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"SUJA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"SUMA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SUMAU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SUNE": {
+"exchange": "NASDAQ",
+"sector": "Industrial Services"
+},
+"SUNS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SURG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SURI": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"SUUN": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"SVAC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SVACU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SVAQ": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SVAQU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SVCC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SVCO": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SVIV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"SVRE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"SVRN": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"SWBI": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SWVL": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"SXTC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SXTP": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SYNA": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"SYNX": {
+"exchange": "AMEX",
+"sector": "Electronic Technology"
+},
+"SYRE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"SZZL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"T/PA": {
+"exchange": "NYSE",
+"sector": "Communications"
+},
+"TACH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TACHU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TACO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TACOU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TANH": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"TAOP": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TARA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TAVI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TBH": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TBJL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"TC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"TCBS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TCRT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TDIC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"TDOG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TDOT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TDS/PV": {
+"exchange": "NYSE",
+"sector": "Communications"
+},
+"TDTH": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"TDWD": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TDWDU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TE": {
+"exchange": "NYSE",
+"sector": "Producer Manufacturing"
+},
+"TEAD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TECH": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TECS": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TELO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TENX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TESL": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TEUP": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"TFC/PI": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"TFFI": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TFJL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"TGB": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"TGE": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"TGHL": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TGL": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"THCH": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"THH": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"THQ": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"THYP": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TII": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"TIL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TIPX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TISI": {
+"exchange": "NYSE",
+"sector": "Commercial Services"
+},
+"TJGC": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"TKNO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TLNC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TLNCU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TLPH": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TLT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TLX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TLYS": {
+"exchange": "NYSE",
+"sector": "Retail Trade"
+},
+"TMDE": {
+"exchange": "AMEX",
+"sector": "Distribution Services"
+},
+"TME": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"TMF": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TMHC": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"TMS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TMTS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TMVE": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TMYY": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TNA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TNET": {
+"exchange": "NYSE",
+"sector": "Commercial Services"
+},
+"TNGX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TNMG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TNON": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"TOMZ": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"TONX": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TOON": {
+"exchange": "AMEX",
+"sector": "Consumer Services"
+},
+"TOP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TOPP": {
+"exchange": "AMEX",
+"sector": "Transportation"
+},
+"TOPS": {
+"exchange": "AMEX",
+"sector": "Transportation"
+},
+"TOVX": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"TOXR": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"TOYO": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"TPCS": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"TPET": {
+"exchange": "AMEX",
+"sector": "Energy Minerals"
+},
+"TPRY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TPST": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TQQQ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TQQY": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TRAD": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"TRAD.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"TRAW": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TRGS": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TRIB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TRIP": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"TRNR": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"TRON": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"TRSG": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"TRT": {
+"exchange": "AMEX",
+"sector": "Producer Manufacturing"
+},
+"TRTX/PC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"TRUG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TSDD": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TSLG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TSLL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TSLO": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"TSLQ": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TSSI": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TSXD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TTAN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TTD": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TTOP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TTXD": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TTXU": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TURB": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"TUYA": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"TVA": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TVAI": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TVGN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TVRD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TWAV": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"TWG": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"TWLV": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"TWO": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"TXBC": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"TXMD": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"TXRH": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"TXTM": {
+"exchange": "OTC",
+"sector": "Health Technology"
+},
+"TXXH": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TXXS": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"TYA": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"TYGO": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"TZA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"UA": {
+"exchange": "NYSE",
+"sector": "Consumer Non-Durables"
+},
+"UAA": {
+"exchange": "NYSE",
+"sector": "Consumer Non-Durables"
+},
+"UAC": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"UAC.U": {
+"exchange": "AMEX",
+"sector": "Finance"
+},
+"UBXG": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"UCAR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"UCL": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"UCTX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"UEC": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"UECG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"UFG": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"UFI": {
+"exchange": "NYSE",
+"sector": "Process Industries"
+},
+"UK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"UMAL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"UMC": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"UNCY": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"UOKAF": {
+"exchange": "OTC",
+"sector": "Consumer Services"
+},
+"UP": {
+"exchange": "NYSE",
+"sector": "Transportation"
+},
+"UPAR": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"UPC": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"UPSG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"UPXI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"USBC": {
+"exchange": "AMEX",
+"sector": "Electronic Technology"
+},
+"USDE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"USFR": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"USPX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"UTSI": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"UUUG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"UUUU": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"UVIX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"UWMC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"UXIN": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"UXRP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"UYSC": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"UZX": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"VACI.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"VALE": {
+"exchange": "NYSE",
+"sector": "Non-Energy Minerals"
+},
+"VALG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"VANI": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VATE": {
+"exchange": "NYSE",
+"sector": "Industrial Services"
+},
+"VAVX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"VBIO": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VBNK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"VCIG": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"VCIT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"VCX": {
+"exchange": "NYSE",
+"sector": "Miscellaneous"
+},
+"VECA.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"VEEA": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"VEEE": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"VELL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"VENU": {
+"exchange": "AMEX",
+"sector": "Consumer Services"
+},
+"VERU": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VEXC": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"VFF": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"VG": {
+"exchange": "NYSE",
+"sector": "Industrial Services"
+},
+"VGAS": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"VGZ": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"VHC": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"VHCP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"VHCPU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"VHUB": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"VIDA": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"VIOT": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"VIRC": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"VIVK": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"VIVO": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"VIVS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VLN": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"VLTLF": {
+"exchange": "OTC",
+"sector": "Non-Energy Minerals"
+},
+"VMAR": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"VNCE": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"VNET": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"VNME": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"VNO/PL": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"VNO/PM": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"VNO/PN": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"VNO/PO": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"VNRX": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"VNTG": {
+"exchange": "AMEX",
+"sector": "Transportation"
+},
+"VRA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"VRAX": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"VRDN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VRM": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"VRXA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"VSA": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"VSEE": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"VSME": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"VSTD": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"VTAK": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"VTGN": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VVOS": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VWAV": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"VYGR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VYNE": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"VZLA": {
+"exchange": "AMEX",
+"sector": "Non-Energy Minerals"
+},
+"WAFDP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WAFU": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"WAI": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"WALD": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"WAVE": {
+"exchange": "NASDAQ",
+"sector": "Utilities"
+},
+"WBUY": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"WBX": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"WCAP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"WCC": {
+"exchange": "NYSE",
+"sector": "Distribution Services"
+},
+"WCT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"WDCX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"WDH": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"WEN": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"WENC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"WENC.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"WENN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WENNU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WETO": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"WFCF": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"WFF": {
+"exchange": "NASDAQ",
+"sector": "Process Industries"
+},
+"WGRX": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"WHLR": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WHLRP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WHWK": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"WIT": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"WKHS": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"WKSP": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"WLDS": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"WLDU": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"WLII": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WLIIU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WLTH": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"WNW": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"WOK": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"WOLF": {
+"exchange": "NYSE",
+"sector": "Electronic Technology"
+},
+"WORX": {
+"exchange": "OTC",
+"sector": "Technology Services"
+},
+"WPAC": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"WPP": {
+"exchange": "NYSE",
+"sector": "Commercial Services"
+},
+"WPRT": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"WRB/PH": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"WSBK": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WSHP": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"WSR": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"WSTN": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WTF": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WTG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"WTO": {
+"exchange": "NASDAQ",
+"sector": "Electronic Technology"
+},
+"WTTR": {
+"exchange": "NYSE",
+"sector": "Energy Minerals"
+},
+"WU": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"WVVI": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"WXIBF": {
+"exchange": "OTC",
+"sector": "Health Technology"
+},
+"WXM": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"WYFL": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"WYHG": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"WYY": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"WZRD": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"XAIR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"XBNB": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"XBP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"XCBE": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"XCEM": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"XCH": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"XCOM": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"XCUR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"XELB": {
+"exchange": "NASDAQ",
+"sector": "Consumer Non-Durables"
+},
+"XERI": {
+"exchange": "OTC",
+"sector": "Electronic Technology"
+},
+"XFLH": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"XFLH.U": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"XFOR": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"XGN": {
+"exchange": "NASDAQ",
+"sector": "Health Services"
+},
+"XHG": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"XHLD": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"XMAX": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"XNDX": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"XNET": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"XOS": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"XOVR": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"XPEG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"XPEV": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"XPON": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"XRPM": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"XRPR": {
+"exchange": "CBOE",
+"sector": "Miscellaneous"
+},
+"XRPT": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"XRTX": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"XSLL": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"XSLLU": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"XTIA": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"XTLB": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"XTNT": {
+"exchange": "AMEX",
+"sector": "Health Technology"
+},
+"XXII": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"XXRP": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"XXX": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"XYZG": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"YAAS": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"YB": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"YBTY": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"YCY": {
+"exchange": "NYSE",
+"sector": "Finance"
+},
+"YDES": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"YDKG": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"YFFI": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"YFYA": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"YGMZF": {
+"exchange": "OTC",
+"sector": "Transportation"
+},
+"YHC": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"YHGJ": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"YI": {
+"exchange": "NASDAQ",
+"sector": "Distribution Services"
+},
+"YIBO": {
+"exchange": "NASDAQ",
+"sector": "Consumer Durables"
+},
+"YJ": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"YMAT": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"YMM": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"YMT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"YOOV": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"YOUL": {
+"exchange": "NASDAQ",
+"sector": "Miscellaneous"
+},
+"YQ": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"YRD": {
+"exchange": "NYSE",
+"sector": "Technology Services"
+},
+"YSXT": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"YTRA": {
+"exchange": "NASDAQ",
+"sector": "Consumer Services"
+},
+"YXT": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"YYGH": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"YYY": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"YYYM": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ZBAO": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ZCMD": {
+"exchange": "NASDAQ",
+"sector": "Commercial Services"
+},
+"ZCSH": {
+"exchange": "OTC",
+"sector": "Miscellaneous"
+},
+"ZDAI": {
+"exchange": "NASDAQ",
+"sector": "Transportation"
+},
+"ZDGE": {
+"exchange": "AMEX",
+"sector": "Technology Services"
+},
+"ZENA": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ZEPP": {
+"exchange": "NYSE",
+"sector": "Consumer Durables"
+},
+"ZETX": {
+"exchange": "AMEX",
+"sector": "Miscellaneous"
+},
+"ZIONP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ZJK": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ZJYL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ZKIN": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ZKP": {
+"exchange": "NASDAQ",
+"sector": "Finance"
+},
+"ZNB": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ZNTL": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ZONE": {
+"exchange": "AMEX",
+"sector": "Distribution Services"
+},
+"ZOOZ": {
+"exchange": "NASDAQ",
+"sector": "Producer Manufacturing"
+},
+"ZSQR": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ZSTK": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ZTEK": {
+"exchange": "NASDAQ",
+"sector": "Non-Energy Minerals"
+},
+"ZTG": {
+"exchange": "NASDAQ",
+"sector": "Technology Services"
+},
+"ZUMZ": {
+"exchange": "NASDAQ",
+"sector": "Retail Trade"
+},
+"ZURA": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+},
+"ZYBT": {
+"exchange": "NASDAQ",
+"sector": "Health Technology"
+}
+}

@@ -17,6 +17,12 @@ minute close - and keeps a rolling per-symbol table in memory. Ranking is then
 computed locally from that table, so discovery never waits on a third party's
 refresh cycle and the criteria are ours rather than theirs.
 
+Since the TradingView wean it is the *primary* universe source, not a
+supplement: rankings() serves the full volume/change-ranked table both
+trackers build their candidate lists from, and a process started mid-session
+REST-backfills each active symbol's pre-start minute bars so session totals
+(volume, high/low, premarket volume) stay correct across restarts.
+
 Previous closes (needed for premarket % change) come from the snapshots endpoint,
 fetched lazily in batches for symbols that clear a cheap activity pre-filter and
 cached for the session - fetching all ~11k tradable symbols up front would be
@@ -52,7 +58,8 @@ import pytz
 from alpaca.data.enums import DataFeed
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.live.stock import StockDataStream
-from alpaca.data.requests import StockSnapshotRequest
+from alpaca.data.requests import StockBarsRequest, StockSnapshotRequest
+from alpaca.data.timeframe import TimeFrame
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +74,31 @@ BAR_HISTORY_MINUTES = 90
 PREVCLOSE_MIN_DOLLAR_VOL = 25_000.0
 PREVCLOSE_BATCH = 200
 
+# Backfill: a process started mid-session has missed every bar printed before
+# it connected, so per-symbol session totals would undercount. Symbols that
+# clear the activity pre-filter get today's minute bars (from 04:00 ET)
+# REST-fetched once and folded in. Started at/before 04:05 there is nothing to
+# fetch, so backfill is skipped entirely.
+BACKFILL_BATCH = 100
+SESSION_START_HOUR_ET = 4          # extended session opens 04:00 ET
+NO_BACKFILL_BEFORE_ET = (4, 5)     # started by 04:05 -> nothing missed
+
+# US regular session opens 09:30 ET; bars before that are premarket.
+MARKET_OPEN_ET = (9, 30)
+
 # Drop symbols that have gone quiet, so the table does not grow all session.
 STALE_AFTER_MINUTES = 120
 
 
+def _is_premarket_ts(ts):
+    et = ts.astimezone(ET_TZ)
+    return (et.hour, et.minute) < MARKET_OPEN_ET
+
+
 class SymbolState:
     __slots__ = ('symbol', 'first_ts', 'first_open', 'high', 'low', 'last_price',
-                 'last_ts', 'volume', 'dollar_volume', 'bars')
+                 'last_ts', 'volume', 'dollar_volume', 'bars',
+                 'premarket_volume', 'premarket_last', 'backfilled')
 
     def __init__(self, symbol, bar):
         self.symbol = symbol
@@ -87,6 +112,15 @@ class SymbolState:
         self.dollar_volume = float(bar.volume or 0) * float(bar.close)
         self.bars = deque(maxlen=BAR_HISTORY_MINUTES)
         self.bars.append(bar)
+        self.premarket_volume = 0.0
+        self.premarket_last = None
+        self.backfilled = False
+        self._track_premarket(bar)
+
+    def _track_premarket(self, bar):
+        if _is_premarket_ts(bar.timestamp):
+            self.premarket_volume += float(bar.volume or 0)
+            self.premarket_last = float(bar.close)
 
     def update(self, bar):
         px = float(bar.close)
@@ -97,6 +131,37 @@ class SymbolState:
         self.volume += float(bar.volume or 0)
         self.dollar_volume += float(bar.volume or 0) * px
         self.bars.append(bar)
+        self._track_premarket(bar)
+
+    def merge_backfill(self, bars):
+        """Fold in REST-fetched bars from before the stream first saw us.
+
+        Only bars strictly older than the first streamed bar count, so nothing
+        is double-tallied; the rolling deque is rebuilt in chronological order.
+        """
+        older = [b for b in bars if b.timestamp < self.first_ts]
+        self.backfilled = True
+        if not older:
+            return
+        for b in older:
+            vol = float(b.volume or 0)
+            self.volume += vol
+            self.dollar_volume += vol * float(b.close)
+            self.high = max(self.high, float(b.high))
+            self.low = min(self.low, float(b.low))
+            if _is_premarket_ts(b.timestamp):
+                self.premarket_volume += vol
+        # premarket_last must reflect the *latest* premarket print. Every
+        # streamed bar is newer than every backfilled one, so only fill it
+        # from the backfill when no streamed premarket bar has set it.
+        if self.premarket_last is None:
+            pm_older = [b for b in older if _is_premarket_ts(b.timestamp)]
+            if pm_older:
+                self.premarket_last = float(pm_older[-1].close)
+        self.first_ts = older[0].timestamp
+        self.first_open = float(older[0].open)
+        combined = older + list(self.bars)
+        self.bars = deque(combined[-BAR_HISTORY_MINUTES:], maxlen=BAR_HISTORY_MINUTES)
 
 
 class StreamScreener:
@@ -113,6 +178,8 @@ class StreamScreener:
         self._lock = threading.Lock()
         self._prev_close = {}        # symbol -> float, session cache
         self._prevclose_missing = set()
+        self._backfill_done = set()  # symbols whose pre-start bars were fetched
+        self._needs_backfill = False
         self._rest = StockHistoricalDataClient(self.api_key, self.api_secret)
         self._stream = None
         self._thread = None
@@ -149,10 +216,15 @@ class StreamScreener:
             return
         self._running = True
         self.started_at = datetime.now(ET_TZ)
+        # Started after the extended session opened -> we missed bars, so
+        # active symbols need their pre-start minute bars folded in.
+        self._needs_backfill = ((self.started_at.hour, self.started_at.minute)
+                                > NO_BACKFILL_BEFORE_ET)
         self._thread = threading.Thread(target=self._run, daemon=True,
                                         name='alpaca-bar-stream')
         self._thread.start()
-        logger.info("📡 wildcard bar stream started (SIP, all US equities)")
+        logger.info("📡 wildcard bar stream started (SIP, all US equities)"
+                    + (" - will backfill pre-start bars" if self._needs_backfill else ""))
 
     def stop(self):
         self._running = False
@@ -185,6 +257,43 @@ class StreamScreener:
                 else:
                     self._prevclose_missing.add(sym)
 
+    # ---------------------------------------------------------------- backfill
+
+    def _ensure_backfill(self, symbols):
+        """Fold in today's pre-start minute bars for symbols we haven't yet.
+
+        No-op when the stream started with the 04:00 session (nothing missed).
+        Errors mark the batch done anyway: a partially-counted symbol matches
+        the pre-backfill behavior and beats refetching forever.
+        """
+        if not self._needs_backfill:
+            return
+        want = [s for s in symbols if s not in self._backfill_done]
+        if not want:
+            return
+        now_et = datetime.now(ET_TZ)
+        session_start = now_et.replace(hour=SESSION_START_HOUR_ET, minute=0,
+                                       second=0, microsecond=0)
+        for i in range(0, len(want), BACKFILL_BATCH):
+            chunk = want[i:i + BACKFILL_BATCH]
+            self._backfill_done.update(chunk)
+            try:
+                bars = self._rest.get_stock_bars(StockBarsRequest(
+                    symbol_or_symbols=chunk,
+                    timeframe=TimeFrame.Minute,
+                    start=session_start,
+                    feed=self.feed))
+            except Exception as e:
+                logger.warning(f"⚠️  minute-bar backfill failed for {len(chunk)} symbols: {e}")
+                continue
+            data = getattr(bars, 'data', {}) or {}
+            with self._lock:
+                for sym in chunk:
+                    st = self._state.get(sym)
+                    if st is not None and not st.backfilled:
+                        st.merge_backfill(data.get(sym, []))
+        logger.info(f"📼 backfilled pre-start bars for {len(want)} symbols")
+
     # -------------------------------------------------------------- candidates
 
     def _prune(self, now):
@@ -204,6 +313,10 @@ class StreamScreener:
         now = datetime.now(pytz.UTC)
         with self._lock:
             self._prune(now)
+            active = [s for s, st in self._state.items()
+                      if st.dollar_volume >= min_dollar_volume]
+        self._ensure_backfill(active)
+        with self._lock:
             snap = [(st.symbol, st.last_price, st.high, st.low, st.volume,
                      st.dollar_volume, st.last_ts, list(st.bars))
                     for st in self._state.values()
@@ -235,6 +348,66 @@ class StreamScreener:
         for r in out:
             r['candle_spike'] = (r['candle_spike_ratio'] or 0) >= spike_ratio_threshold
         return out
+
+    def rankings(self, min_dollar_volume=PREVCLOSE_MIN_DOLLAR_VOL, sort='volume',
+                 limit=None):
+        """Full ranked table of every active symbol - the TradingView-scanner
+        replacement. Unlike candidates(), applies no % change floor: down
+        movers and flat-but-heavy symbols rank too.
+
+        Each row: symbol, price, previous_close (None if unknown), change_pct
+        (None without a previous close), volume, dollar_volume, change_5min,
+        premarket_volume, premarket_change, high, low, last_bar_ts.
+
+        sort: 'volume' | 'dollar_volume' | 'change' (change sorts the
+        no-prev-close rows last).
+        """
+        now = datetime.now(pytz.UTC)
+        with self._lock:
+            self._prune(now)
+            active = [s for s, st in self._state.items()
+                      if st.dollar_volume >= min_dollar_volume]
+        self._ensure_backfill(active)
+        self._ensure_prev_closes(active)
+
+        rows = []
+        with self._lock:
+            for st in self._state.values():
+                if st.dollar_volume < min_dollar_volume:
+                    continue
+                prev = self._prev_close.get(st.symbol)
+                change_pct = ((st.last_price - prev) / prev * 100) if prev else None
+                pm_change = ((st.premarket_last - prev) / prev * 100) \
+                    if (prev and st.premarket_last is not None) else None
+                bars = st.bars
+                change_5min = None
+                if len(bars) >= 6:
+                    base = float(bars[-6].close)
+                    if base > 0:
+                        change_5min = (st.last_price - base) / base * 100
+                rows.append({
+                    'symbol': st.symbol,
+                    'price': st.last_price,
+                    'previous_close': prev,
+                    'change_pct': change_pct,
+                    'volume': st.volume,
+                    'dollar_volume': st.dollar_volume,
+                    'change_5min': change_5min,
+                    'premarket_volume': st.premarket_volume,
+                    'premarket_change': pm_change,
+                    'high': st.high,
+                    'low': st.low,
+                    'last_bar_ts': st.last_ts,
+                })
+
+        if sort == 'change':
+            rows.sort(key=lambda r: r['change_pct'] if r['change_pct'] is not None else -1e9,
+                      reverse=True)
+        elif sort == 'dollar_volume':
+            rows.sort(key=lambda r: -r['dollar_volume'])
+        else:
+            rows.sort(key=lambda r: -r['volume'])
+        return rows[:limit] if limit else rows
 
     @staticmethod
     def _spike_ratio(bars, bucket_minutes):

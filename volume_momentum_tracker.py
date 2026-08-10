@@ -44,7 +44,6 @@ Command Line Usage:
 
 import json
 import time
-import rookiepy
 import argparse
 import sys
 import os
@@ -60,7 +59,7 @@ import pytz
 import pandas as pd
 from collections import defaultdict
 
-from tradingview_screener import Query
+from symbol_meta import lookup as symbol_meta_lookup
 
 # Alpaca imports for real-time price/volume data
 try:
@@ -80,6 +79,12 @@ try:
     NEWS_ANNOTATOR_AVAILABLE = True
 except ImportError:
     NEWS_ANNOTATOR_AVAILABLE = False
+
+try:
+    from alpaca_stream_screener import StreamScreener
+    STREAM_SCREENER_AVAILABLE = True
+except ImportError:
+    STREAM_SCREENER_AVAILABLE = False
 
 try:
     from paper_trading_system import PaperTradingSystem
@@ -168,7 +173,6 @@ class VolumeMomentumTracker:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.browser = browser
-        self.cookies = self._get_cookies()
 
         # Immediate spike alert threshold
         self.immediate_spike_threshold = immediate_spike_threshold
@@ -233,6 +237,16 @@ class VolumeMomentumTracker:
         # their most recent headline before the raw_data snapshot is written, so
         # the market-hour dashboard can boost/highlight tickers on fresh news.
         self.news_annotator = NewsAnnotator() if NEWS_ANNOTATOR_AVAILABLE else None
+
+        # Wildcard bar stream - the ranked universe source since the TradingView
+        # wean. Started lazily on first scan (one market-data websocket per
+        # Alpaca account, so the premarket monitor must not run concurrently).
+        self.stream_screener = None
+
+        # 10-day average daily volume per symbol, for relative_volume_10d_calc.
+        # Cached per trading day.
+        self._avg_daily_volume = {}
+        self._avg_daily_volume_date = None
 
         if telegram_bot_token and telegram_chat_id:
             try:
@@ -2573,20 +2587,6 @@ class VolumeMomentumTracker:
 
             self._send_telegram_alert(ticker, alert_count, current_price, change_pct, volume, relative_volume, sector, alert_types, is_immediate_spike=False, gap_pct=gap_pct, float_shares=float_shares)
 
-    def _get_cookies(self):
-        """Get cookies from browser using rookiepy"""
-        try:
-            cookies_list = rookiepy.load()
-            cookies = {}
-            for cookie in cookies_list:
-                if 'tradingview.com' in cookie.get('domain', ''):
-                    cookies[cookie['name']] = cookie['value']
-            logger.info(f"Successfully extracted {len(cookies)} cookies")
-            return cookies
-        except Exception as e:
-            logger.error(f"Failed to extract cookies: {e}")
-            return {}
-
     def _load_ticker_counters(self):
         """Load ticker appearance counters from file"""
         counter_file = self.output_dir / "ticker_counters.json"
@@ -3068,6 +3068,8 @@ class VolumeMomentumTracker:
         finalized = []
         for record in records:
             if record.get('source') in ('alpaca_screener', 'news'):
+                # Name-only candidates: without overlay data there is nothing
+                # to show, so they drop out until Alpaca has prints for them.
                 price = record.get('alpaca_price')
                 if not price or not record.get('alpaca_volume'):
                     continue
@@ -3075,121 +3077,158 @@ class VolumeMomentumTracker:
                 record['volume'] = record['alpaca_volume']
                 if record.get('alpaca_change_from_open') is not None:
                     record['change_from_open'] = record['alpaca_change_from_open']
+            elif record.get('source') == 'stream':
+                # Stream rows already carry real close/volume; the overlay just
+                # freshens them (and supplies change_from_open, which the
+                # stream cannot know without the 09:30 open print).
+                if record.get('alpaca_price'):
+                    record['close'] = record['alpaca_price']
+                if record.get('alpaca_volume'):
+                    record['volume'] = record['alpaca_volume']
+                if record.get('alpaca_change_from_open') is not None:
+                    record['change_from_open'] = record['alpaca_change_from_open']
             finalized.append(record)
         return finalized
 
-    def get_volume_screener_data(self, limit=200):
-        """Get small cap data sorted by volume descending"""
+    def _ensure_stream_screener(self):
+        """Start the wildcard bar stream on first use - the sole ranked
+        universe source since the TradingView wean. Alpaca permits one
+        market-data websocket per account, so the premarket monitor must not
+        hold its stream while this tracker is scanning.
+        """
+        if self.stream_screener is not None or not STREAM_SCREENER_AVAILABLE:
+            if not STREAM_SCREENER_AVAILABLE and self.stream_screener is None:
+                logger.error("\u274c alpaca_stream_screener unavailable - no ranked universe")
+            return
         try:
-            # Remove the problematic .where() filters - do manual filtering instead
-            query = (Query()
-                    .select(
-                        'name',                      # Symbol/Name
-                        'relative_volume_10d_calc',  # Relative volume
-                        'volume',                    # Volume (primary sort)
-                        'Value.Traded',             # Price * vol
-                        'change_from_open',         # Change from open %
-                        'change|5',                 # Change %
-                        'close',                    # Price
-                        'float_shares_outstanding', # Float
-                        'premarket_change',         # Pre-market change %
-                        'premarket_volume',         # Pre-market volume
-                        'sector',                   # Sector
-                        'exchange'                  # Exchange
-                    )
-                    .order_by('relative_volume_10d_calc', ascending=False)  # Sort by relative volume descending
-                    .limit(limit * 3))  # Get more data to filter manually
+            self.stream_screener = StreamScreener()
+            self.stream_screener.start()
+            logger.info("\U0001f4e1 Bar stream started - the first scan may be thin while its table fills")
+        except Exception as e:
+            self.stream_screener = None
+            logger.error(f"\u274c Could not start bar stream: {e}")
 
-            logger.info("Fetching volume screener data...")
-            data = query.get_scanner_data(cookies=self.cookies)
+    def stop_stream_screener(self):
+        if self.stream_screener is not None:
+            try:
+                self.stream_screener.stop()
+            except Exception:
+                pass
+            self.stream_screener = None
 
-            # Process the data
-            if isinstance(data, tuple) and len(data) == 2:
-                total_count, df_data = data
-                if hasattr(df_data, 'to_dict'):
-                    all_records = df_data.to_dict('records')
-                    logger.info(f"Retrieved {len(all_records)} total records")
+    def _add_relative_volume(self, records):
+        """Fill relative_volume_10d_calc = today's cumulative volume over the
+        10-day average daily volume (Alpaca daily bars, cached per trading
+        day). Simpler than TradingView's same-time-of-day baseline: early in
+        the session every ratio reads low, but candidates are only compared
+        against each other, so the bias cancels out.
+        """
+        if records is None or not self.alpaca_client:
+            return records
 
-                    # Cheap prefilter to bound the Alpaca batch: drop OTC, keep
-                    # anything already tracked today, plus TradingView rows with
-                    # enough headroom that Alpaca might still gate them in. The
-                    # real $20 admission gate runs after the Alpaca overlay,
-                    # since TradingView's close is up to 15 minutes stale.
-                    tracked = self._tracked_today()
-                    prefilter_cap = ALPACA_MAX_PRICE * STICKY_PREFILTER_HEADROOM
-                    filtered_records = []
-                    for record in all_records:
-                        price = record.get('close', 999)
-                        exchange = (record.get('exchange') or '').upper()
-                        if exchange == 'OTC':
-                            continue
+        today_et = datetime.now(ET_TZ).date()
+        if self._avg_daily_volume_date != today_et:
+            self._avg_daily_volume = {}
+            self._avg_daily_volume_date = today_et
 
-                        if record.get('name') in tracked or price < prefilter_cap:
-                            filtered_records.append(record)
+        need = [r['name'] for r in records
+                if r.get('name') and r['name'].isalpha()
+                and r.get('relative_volume_10d_calc') is None
+                and r['name'] not in self._avg_daily_volume]
+        for i in range(0, len(need), 200):
+            chunk = need[i:i + 200]
+            try:
+                bars = self.alpaca_client.get_stock_bars(StockBarsRequest(
+                    symbol_or_symbols=chunk,
+                    timeframe=TimeFrame.Day,
+                    start=datetime.now() - timedelta(days=20),
+                    feed=DataFeed.SIP))
+            except Exception as e:
+                logger.warning(f"\u26a0\ufe0f  Daily-bar fetch for relative volume failed: {e}")
+                continue
+            data = getattr(bars, 'data', {}) or {}
+            for sym in chunk:
+                vols = [float(b.volume or 0) for b in data.get(sym, [])
+                        if b.timestamp.astimezone(ET_TZ).date() < today_et][-10:]
+                self._avg_daily_volume[sym] = (sum(vols) / len(vols)) if vols else None
 
-                        # Stop when we have enough filtered records
-                        if len(filtered_records) >= limit:
-                            break
+        for r in records:
+            if r.get('relative_volume_10d_calc') is not None:
+                continue
+            avg = self._avg_daily_volume.get(r.get('name'))
+            vol = r.get('alpaca_volume') or r.get('volume') or 0
+            if avg:
+                r['relative_volume_10d_calc'] = vol / avg
+        return records
 
-                    logger.info(f"After prefilter (price < ${prefilter_cap:.0f} or already tracked, no OTC): {len(filtered_records)} records")
-                    filtered_records = self._add_alpaca_screener_candidates(filtered_records)
-                    filtered_records = self._add_news_candidates(filtered_records)
-                    filtered_records = self._update_prices_with_alpaca(filtered_records)
-                    filtered_records = self._finalize_alpaca_candidates(filtered_records)
-                    filtered_records = self._apply_price_gate(filtered_records)
-                    return filtered_records
-                else:
-                    logger.error(f"Unexpected data format: {type(df_data)}")
-                    return None
-            else:
-                logger.error(f"Unexpected response format: {type(data)}")
-                return None
+    def get_volume_screener_data(self, limit=200):
+        """Ranked candidate records from the Alpaca bar stream (previously the
+        TradingView scanner). Stream rows carry live volume/price/change;
+        sector/exchange come from symbol_meta.json, and the Alpaca overlay,
+        relative-volume fill and $20 price gate run exactly as before.
+        """
+        try:
+            self._ensure_stream_screener()
+
+            rows = []
+            if self.stream_screener is not None:
+                try:
+                    rows = self.stream_screener.rankings(limit=limit * 3)
+                except Exception as e:
+                    logger.error(f"\u274c Bar-stream rankings failed: {e}")
+
+            all_records = []
+            for r in rows:
+                if not self._is_common_stock_symbol(r['symbol']):
+                    continue
+                sector, exchange = symbol_meta_lookup(r['symbol'])
+                if exchange.upper() == 'OTC':
+                    continue
+                all_records.append({
+                    'name': r['symbol'],
+                    'relative_volume_10d_calc': None,
+                    'volume': r['volume'],
+                    'Value.Traded': r['dollar_volume'],
+                    'change_from_open': None,   # Alpaca overlay fills this live
+                    'change|5': r['change_5min'],
+                    'close': r['price'],
+                    'float_shares_outstanding': None,  # was TradingView-only
+                    'premarket_change': r['premarket_change'],
+                    'premarket_volume': r['premarket_volume'],
+                    'sector': sector,
+                    'exchange': exchange,
+                    'source': 'stream',
+                })
+            logger.info(f"Retrieved {len(all_records)} stream-ranked records")
+
+            # Cheap prefilter to bound the Alpaca batch: keep anything already
+            # tracked today, plus rows with enough headroom that the price gate
+            # might still admit them. (The stream carries no OTC symbols, and
+            # known-OTC symbols were dropped above via metadata.)
+            tracked = self._tracked_today()
+            prefilter_cap = ALPACA_MAX_PRICE * STICKY_PREFILTER_HEADROOM
+            filtered_records = []
+            for record in all_records:
+                price = record.get('close', 999)
+                if record.get('name') in tracked or price < prefilter_cap:
+                    filtered_records.append(record)
+                if len(filtered_records) >= limit:
+                    break
+
+            logger.info(f"After prefilter (price < ${prefilter_cap:.0f} or already tracked): {len(filtered_records)} records")
+            filtered_records = self._add_alpaca_screener_candidates(filtered_records)
+            filtered_records = self._add_news_candidates(filtered_records)
+            filtered_records = self._update_prices_with_alpaca(filtered_records)
+            filtered_records = self._finalize_alpaca_candidates(filtered_records)
+            filtered_records = self._add_relative_volume(filtered_records)
+            filtered_records = self._apply_price_gate(filtered_records)
+            return filtered_records
 
         except Exception as e:
             logger.error(f"Error getting volume screener data: {e}")
-            # Try even simpler query if the above fails
-            try:
-                logger.info("Trying simplified query without all columns...")
-                simple_query = (Query()
-                              .select('name', 'volume', 'close', 'change|5', 'premarket_change', 'sector', 'exchange', 'float_shares_outstanding')
-                              .order_by('volume', ascending=False)
-                              .limit(limit * 2))
-
-                data = simple_query.get_scanner_data(cookies=self.cookies)
-
-                if isinstance(data, tuple) and len(data) == 2:
-                    total_count, df_data = data
-                    if hasattr(df_data, 'to_dict'):
-                        all_records = df_data.to_dict('records')
-                        logger.info(f"Retrieved {len(all_records)} records with simplified query")
-
-                        # Manual filtering (same two-stage gate as the main query)
-                        tracked = self._tracked_today()
-                        prefilter_cap = ALPACA_MAX_PRICE * STICKY_PREFILTER_HEADROOM
-                        filtered_records = []
-                        for record in all_records:
-                            price = record.get('close', 999)
-                            exchange = (record.get('exchange') or '').upper()
-                            if exchange == 'OTC':
-                                continue
-
-                            if record.get('name') in tracked or price < prefilter_cap:
-                                filtered_records.append(record)
-
-                            if len(filtered_records) >= limit:
-                                break
-
-                        logger.info(f"Simplified query filtered results: {len(filtered_records)} records")
-                        filtered_records = self._add_alpaca_screener_candidates(filtered_records)
-                        filtered_records = self._add_news_candidates(filtered_records)
-                        filtered_records = self._update_prices_with_alpaca(filtered_records)
-                        filtered_records = self._finalize_alpaca_candidates(filtered_records)
-                        filtered_records = self._apply_price_gate(filtered_records)
-                        return filtered_records
-
-            except Exception as e2:
-                logger.error(f"Simplified query also failed: {e2}")
-                return None
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return None
 
     def analyze_volume_movement(self, current_data, previous_data):
         """Analyze which tickers are moving up in volume rankings"""
@@ -3941,7 +3980,8 @@ class VolumeMomentumTracker:
         except KeyboardInterrupt:
             logger.info("🛑 Volume momentum monitoring stopped")
         finally:
-            # Clean up PID file when exiting
+            # Clean up PID file and release the bar stream when exiting
+            self.stop_stream_screener()
             self._cleanup_pid_file()
 
     def reset_ticker_counters(self):
