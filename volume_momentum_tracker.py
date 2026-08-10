@@ -76,6 +76,12 @@ except ImportError:
     print("⚠️  alpaca-py not installed. Run: pip install alpaca-py")
 
 try:
+    from alpaca_news_feed import NewsAnnotator
+    NEWS_ANNOTATOR_AVAILABLE = True
+except ImportError:
+    NEWS_ANNOTATOR_AVAILABLE = False
+
+try:
     from paper_trading_system import PaperTradingSystem
     PAPER_TRADING_AVAILABLE = True
 except ImportError:
@@ -214,6 +220,11 @@ class VolumeMomentumTracker:
                     logger.warning("⚠️  Alpaca API keys not found in environment. Set APCA_API_KEY_ID and APCA_API_SECRET_KEY")
             except Exception as e:
                 logger.error(f"❌ Failed to initialize Alpaca client: {e}")
+
+        # Latest-news annotator (Alpaca News API): stamps scanned records with
+        # their most recent headline before the raw_data snapshot is written, so
+        # the market-hour dashboard can boost/highlight tickers on fresh news.
+        self.news_annotator = NewsAnnotator() if NEWS_ANNOTATOR_AVAILABLE else None
 
         if telegram_bot_token and telegram_chat_id:
             try:
@@ -3736,6 +3747,14 @@ class VolumeMomentumTracker:
             if not current_data:
                 logger.error("Failed to get current data")
                 return
+
+            # Stamp each record with its latest Alpaca news article; the fields
+            # land in the raw_data snapshot the dashboard reads.
+            if self.news_annotator and self.news_annotator.available:
+                try:
+                    self.news_annotator.annotate(current_data)
+                except Exception as e:
+                    logger.warning(f"⚠️  News annotation failed: {e}")
 
             # NEW: Check for paper trading exits before analyzing new movements
             self.check_paper_trading_exits(current_data)

@@ -30,6 +30,12 @@ try:
 except ImportError:
     STREAM_SCREENER_AVAILABLE = False
 
+try:
+    from alpaca_news_feed import NewsAnnotator
+    NEWS_ANNOTATOR_AVAILABLE = True
+except ImportError:
+    NEWS_ANNOTATOR_AVAILABLE = False
+
 # Alpaca imports for real-time price/volume data
 try:
     from alpaca.data.historical import StockHistoricalDataClient
@@ -79,6 +85,12 @@ CANDLE_SPIKE_MIN_BARS_IN_BUCKET = 3  # ignore just-started/mostly-empty buckets
 STREAM_MIN_CHANGE_PCT = 5.0
 STREAM_MIN_DOLLAR_VOL = 100_000.0
 
+# News-driven admission: a candidate-pool ticker whose latest Alpaca news
+# article is younger than this joins the watch list even before its
+# volume/change rank would surface it. Matches the dashboard's decaying
+# fresh-news boost window (NEWS_BOOST_MINUTES in index.html/index2.html).
+NEWS_ADMIT_MAX_AGE_MINUTES = 60
+
 class PremarketTop20Monitor:
     def __init__(self, telegram_bot_token=None, telegram_chat_id=None):
         """Initialize the monitor"""
@@ -126,6 +138,11 @@ class PremarketTop20Monitor:
         # scan has no time to accumulate a table, and Alpaca permits only one
         # market-data websocket per account).
         self.stream_screener = None
+
+        # Latest-news annotator (Alpaca News API): stamps candidates with their
+        # most recent headline so the dashboard can boost/highlight them, and
+        # lets fresh-news pool tickers into the watch list before volume does.
+        self.news_annotator = NewsAnnotator() if NEWS_ANNOTATOR_AVAILABLE else None
 
         # Initialize Alpaca client for real-time market data
         self.alpaca_client = None
@@ -760,6 +777,27 @@ class PremarketTop20Monitor:
                     record['candle_spike_ratio'] = spike['ratio']
                     record['candle_spike_range'] = spike['range']
                     record['candle_spike_baseline_avg'] = spike['baseline_avg']
+
+            # News overlay: promote pool tickers whose latest article just broke
+            # (their volume may not have picked up yet), then stamp every merged
+            # record with its latest headline for the dashboard's decaying boost.
+            if self.news_annotator and self.news_annotator.available:
+                try:
+                    self.news_annotator.refresh(list(record_lookup.keys()))
+                    added_from_news = 0
+                    for symbol, record in record_lookup.items():
+                        if symbol in seen_symbols:
+                            continue
+                        age = self.news_annotator.age_minutes(symbol)
+                        if age is not None and age <= NEWS_ADMIT_MAX_AGE_MINUTES:
+                            seen_symbols.add(symbol)
+                            merged.append(record)
+                            added_from_news += 1
+                    if added_from_news:
+                        logger.info(f"📰 Added {added_from_news} tickers with breaking news")
+                    self.news_annotator.annotate(merged)
+                except Exception as e:
+                    logger.warning(f"⚠️  News annotation failed: {e}")
 
             logger.info(f"✅ Total merged tickers: {len(merged)}")
 

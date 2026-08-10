@@ -312,6 +312,31 @@ canvas { width: 100% !important; }
   vertical-align: 1px;
 }
 
+.news-badge {
+  display: inline-block;
+  background: #0d2440;
+  color: #58a6ff;
+  border: 1px solid #1f6feb;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  margin-left: 6px;
+  vertical-align: 1px;
+  text-decoration: none;
+}
+
+.news-badge.fresh {
+  background: #1f6feb;
+  color: #fff;
+  animation: newsPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes newsPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(88,166,255,0.55); }
+  50% { box-shadow: 0 0 0 5px rgba(88,166,255,0); }
+}
+
 .stale-tag {
   display: block;
   color: #6e7681;
@@ -392,6 +417,7 @@ canvas { width: 100% !important; }
       <button class="mode-btn active" id="btnChange" onclick="setMode('change')">Change from Open</button>
       <button class="mode-btn" id="btnRank" onclick="setMode('rank')">Rank</button>
     </div>
+    <button class="mode-btn active" id="btnNews" onclick="toggleNews()" style="border:1px solid #1f6feb;border-radius:6px;background:#0d2440;color:#58a6ff;">📰 News</button>
     <label>Session</label>
     <select id="sessionSelect" onchange="onSessionChange()"></select>
     <label>Top</label>
@@ -450,6 +476,9 @@ let pollTimer = null;
 let rankCache = [];
 let rankSort = 'latestChange';
 let accelCache = {};
+let newsCache = {};
+let showNews = true;
+let newsShown = new Set();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -530,8 +559,11 @@ function applySession() {
   snapshots = sessions[sessionIdx] || [];
   rankCache = calcConsistency(snapshots);
   accelCache = calcAccel(snapshots);
+  newsCache = calcNewsMarks(snapshots);
+  newsShown = new Set();
   sortRankCache();
   resetHidden();
+  applyNewsVisibility();
   rebuild();
   renderSidebar();
 }
@@ -600,6 +632,79 @@ function calcAccel(snaps) {
   return accel;
 }
 
+// ── Fresh-news boost ────────────────────────────────────────────────────────
+// The backend (volume_momentum_tracker.py via alpaca_news_feed.py) stamps each
+// record with its latest Alpaca news article: news_headline / news_url /
+// news_source / news_at_et — the publish time as a naive ET string, the same
+// convention as snapshot timestamps, so subtracting the two Dates gives the
+// article's age directly. A ticker with breaking news is bumped to the top of
+// the priority order (and onto the chart) even before its volume picks up; the
+// bump decays linearly and is gone NEWS_BOOST_MINUTES after publication,
+// leaving the ticker wherever the normal sort puts it.
+const NEWS_BOOST_MINUTES = 60;
+
+function newsAgeMin(t) {
+  if (!t.newsAtEt || !snapshots.length) return null;
+  const age = (new Date(snapshots[snapshots.length - 1].timestamp) - new Date(t.newsAtEt)) / 60000;
+  return age < 0 ? 0 : age;
+}
+
+function newsDecay(t) {
+  const age = newsAgeMin(t);
+  return age === null ? 0 : Math.max(0, 1 - age / NEWS_BOOST_MINUTES);
+}
+
+// Chart marker at the first snapshot where each ticker's current article was
+// still fresh; a newer article moves the marker to its own first snapshot.
+function calcNewsMarks(snaps) {
+  const marks = {};
+  snaps.forEach((snap, si) => {
+    const snapTime = new Date(snap.timestamp);
+    snap.data.forEach(item => {
+      if (!item.news_headline || !item.news_at_et) return;
+      const age = (snapTime - new Date(item.news_at_et)) / 60000;
+      if (age < 0 || age > NEWS_BOOST_MINUTES) return;
+      const cur = marks[item.name];
+      if (!cur || cur.atEt !== item.news_at_et) {
+        marks[item.name] = {
+          si, atEt: item.news_at_et,
+          headline: item.news_headline,
+          source: item.news_source || '',
+          ageMin: age
+        };
+      }
+    });
+  });
+  return marks;
+}
+
+// A fresh article should put its ticker on the chart even if it sat hidden
+// below the top-N cutoff. Manual overrides win. `newsShown` remembers which
+// tickers we auto-unhid so the unhide happens once (the user can re-hide it)
+// and so the ticker is tucked back below topN once the boost expires.
+function applyNewsVisibility() {
+  const overrides = loadHiddenOverrides();
+  const topN = getTopN();
+  const target = soloedName ? preSoloHidden : hidden;
+  if (!target) return;
+  rankCache.forEach((t, i) => {
+    const fresh = newsDecay(t) > 0;
+    if (fresh && !newsShown.has(t.name)) {
+      newsShown.add(t.name);
+      if (overrides[t.name] !== true) target.delete(t.name);
+    } else if (!fresh && newsShown.has(t.name)) {
+      newsShown.delete(t.name);
+      if (typeof overrides[t.name] !== 'boolean' && i >= topN) target.add(t.name);
+    }
+  });
+}
+
+function toggleNews() {
+  showNews = !showNews;
+  document.getElementById('btnNews').classList.toggle('active', showNews);
+  rebuild();
+}
+
 // ── Consistency calc ──────────────────────────────────────────────────────────
 
 function calcConsistency(snaps) {
@@ -645,6 +750,16 @@ function calcConsistency(snaps) {
       map[n].latestClose = p;
       map[n].latestRank = i + 1;
       map[n].latestSnap = si;
+      if (item.news_headline) {
+        // Overwritten every snapshot the ticker appears in, so it ends up
+        // holding the last-seen (newest) article.
+        map[n].news = {
+          headline: item.news_headline,
+          url: item.news_url || '',
+          source: item.news_source || ''
+        };
+        map[n].newsAtEt = item.news_at_et || null;
+      }
     });
   });
 
@@ -672,6 +787,15 @@ function sortRankCache() {
       default:             return b.pct - a.pct || a.avgRank - b.avgRank;
     }
   });
+  // Decaying fresh-news bump on top of the chosen sort: a just-published
+  // article subtracts the whole list length from the ticker's position (i.e.
+  // straight to the top); the subtraction shrinks linearly to zero over
+  // NEWS_BOOST_MINUTES, sliding the ticker back to its base position.
+  const n = rankCache.length;
+  rankCache = rankCache
+    .map((t, i) => [i - n * newsDecay(t), t])
+    .sort((a, b) => a[0] - b[0])
+    .map(p => p[1]);
 }
 
 // ── Persisted manual hide/show overrides ────────────────────────────────────
@@ -803,7 +927,47 @@ function tickerDataset(t, color, snapTotals) {
 function buildDatasets() {
   const shown = rankCache.filter(t => !hidden.has(t.name));
   const snapTotals = snapVolTotals();
-  return shown.map((t, i) => tickerDataset(t, COLORS[i % COLORS.length], snapTotals));
+  const datasets = shown.map((t, i) => tickerDataset(t, COLORS[i % COLORS.length], snapTotals));
+
+  if (showNews) {
+    const shownNames = new Set(shown.map(t => t.name));
+    const pts = [];
+    for (const [name, mark] of Object.entries(newsCache)) {
+      if (!shownNames.has(name)) continue;
+      const snap = snapshots[mark.si];
+      if (!snap) continue;
+      const idx = snap.data.findIndex(d => d.name === name);
+      if (idx === -1) continue;
+      const entry = snap.data[idx];
+      let y;
+      if (mode === 'close') {
+        const base = firstCloseFor(name);
+        y = base ? (pmPrice(entry) - base) / base * 100 : null;
+      }
+      else if (mode === 'volume') y = pmVolume(entry);
+      else if (mode === 'change') y = pmChange(entry);
+      else y = idx + 1;
+      pts.push({ x: snap.timestamp, y, ticker: name, news: mark });
+    }
+    if (pts.length) {
+      datasets.push({
+        label: '📰 news',
+        newsMark: true,
+        type: 'scatter',
+        data: pts,
+        pointStyle: 'rectRot',
+        pointRadius: 10,
+        pointHoverRadius: 13,
+        borderColor: '#58a6ff',
+        backgroundColor: '#58a6ff',
+        borderWidth: 3,
+        showLine: false,
+        order: -1
+      });
+    }
+  }
+
+  return datasets;
 }
 
 function yAxisConfig() {
@@ -872,7 +1036,8 @@ function createChart() {
       interaction: { mode: 'nearest', intersect: true },
       onClick: (event, elements) => {
         if (!elements.length) return;
-        const ticker = chart.data.datasets[elements[0].datasetIndex].label;
+        const ds = chart.data.datasets[elements[0].datasetIndex];
+        const ticker = ds.newsMark ? ds.data[elements[0].index].ticker : ds.label;
         window.open(`https://www.tradingview.com/chart/?symbol=${encodeURIComponent(ticker)}`, '_blank');
       },
       plugins: {
@@ -911,11 +1076,24 @@ function createChart() {
             title: items => {
               if (!items.length) return '';
               const item = items[0];
-              const ticker = item.dataset.label;
+              const ticker = item.dataset.newsMark ? item.raw.ticker : item.dataset.label;
               const time = new Date(item.raw.x).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              if (item.dataset.newsMark) return `📰 ${ticker}  ·  NEWS  ·  ${time}`;
               return `${ticker}  ·  ${time}`;
             },
             label: item => {
+              if (item.dataset.newsMark) {
+                const m = item.raw.news;
+                const lines = [];
+                let line = '';
+                m.headline.split(' ').forEach(w => {
+                  if ((line + ' ' + w).trim().length > 52) { lines.push(' ' + line); line = w; }
+                  else line = line ? line + ' ' + w : w;
+                });
+                if (line) lines.push(' ' + line);
+                lines.push(` — ${m.source}, ${Math.round(m.ageMin)} min before this snapshot`);
+                return lines;
+              }
               const snap = snapshots[item.dataIndex];
               if (!snap) return [];
               const ticker = item.dataset.label;
@@ -927,7 +1105,7 @@ function createChart() {
               const pct = totalVol > 0 ? (vol / totalVol * 100).toFixed(2) : '—';
               const chg = numOr(pmChange(entry), null);
               const chgStr = chg === null ? '—' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-              return [
+              const lines = [
                 ` Close   : $${pmPrice(entry).toFixed(4)}`,
                 ` Volume  : ${fmtVol(vol)} (${vol.toLocaleString()})`,
                 ` Vol %   : ${pct}% of total`,
@@ -935,6 +1113,8 @@ function createChart() {
                 ` Rank    : #${rank}`,
                 ` Sector  : ${entry.sector || '—'}`,
               ];
+              if (entry.news_headline) lines.push(` News    : ${entry.news_headline.slice(0, 58)}`);
+              return lines;
             }
           }
         }
@@ -1010,11 +1190,21 @@ function rowInnerHTML(t, color, maxCount) {
   const barWidth = ((t.count / maxCount) * 100).toFixed(1);
   const accel = accelCache[t.name];
   const accelBadge = accel ? `<span class="accel-badge" title="Accelerating: latest move +${accel.lastDiff.toFixed(2)}pp vs +${accel.prevDiff.toFixed(2)}pp before">🚀 surge</span>` : '';
+  let newsBadge = '';
+  if (t.news) {
+    const age = newsAgeMin(t);
+    const ago = age === null ? '' : age < 90 ? ` ${Math.round(age)}m` : ` ${(age / 60).toFixed(1)}h`;
+    const tip = `${t.news.headline} (${t.news.source})`.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const cls = 'news-badge' + (newsDecay(t) > 0 ? ' fresh' : '');
+    newsBadge = t.news.url
+      ? `<a class="${cls}" href="${t.news.url}" target="_blank" rel="noopener" title="${tip}" onclick="event.stopPropagation()">📰${ago}</a>`
+      : `<span class="${cls}" title="${tip}">📰${ago}</span>`;
+  }
 
   return `
       <div class="dot" style="background:${color}"></div>
       <div class="ticker-info">
-        <div class="ticker-name">${t.name}${accelBadge}</div>
+        <div class="ticker-name">${t.name}${accelBadge}${newsBadge}</div>
         <div class="ticker-sector">${t.sector}</div>
         <div class="consistency-bar">
           <div class="consistency-fill" style="width:${barWidth}%;background:${color}"></div>
@@ -1136,8 +1326,10 @@ function startPolling() {
         snapshots = sessions[sessionIdx] || [];
         rankCache = calcConsistency(snapshots);
         accelCache = calcAccel(snapshots);
+        newsCache = calcNewsMarks(snapshots);
         sortRankCache();
         classifyNewTickers();
+        applyNewsVisibility();
         rebuild();
         renderSidebar();
       }
@@ -1202,7 +1394,7 @@ function applyHoverSolo() {
   if (hoverSoloName && !rankCache.some(r => r.name === hoverSoloName)) hoverSoloName = null;
   if (!chart || !hoverSoloName) return;
   chart.data.datasets = chart.data.datasets.filter(ds => !ds._hoverTemp);
-  const inChart = chart.data.datasets.some(ds => ds.label === hoverSoloName);
+  const inChart = chart.data.datasets.some(ds => !ds.newsMark && ds.label === hoverSoloName);
   if (!inChart) {
     // Muted ticker: build a temporary dataset so it can be previewed
     const t = rankCache.find(r => r.name === hoverSoloName);
@@ -1213,7 +1405,12 @@ function applyHoverSolo() {
     }
   }
   chart.data.datasets.forEach(ds => {
-    ds.hidden = ds.label !== hoverSoloName;
+    if (ds.newsMark) {
+      if (!ds._allData) ds._allData = ds.data;
+      ds.data = ds._allData.filter(p => p.ticker === hoverSoloName);
+    } else {
+      ds.hidden = ds.label !== hoverSoloName;
+    }
   });
   chart.update('none');
 }
@@ -1222,7 +1419,10 @@ function hoverSoloEnd() {
   hoverSoloName = null;
   if (!chart) return;
   chart.data.datasets = chart.data.datasets.filter(ds => !ds._hoverTemp);
-  chart.data.datasets.forEach(ds => { ds.hidden = false; });
+  chart.data.datasets.forEach(ds => {
+    if (ds._allData) { ds.data = ds._allData; delete ds._allData; }
+    ds.hidden = false;
+  });
   chart.update('none');
 }
 
@@ -1263,6 +1463,7 @@ function onSessionChange() {
 
 function onTopNChange() {
   resetHidden();
+  applyNewsVisibility();
   rebuild();
   renderSidebar();
 }
@@ -1271,6 +1472,7 @@ function onSortChange() {
   rankSort = document.getElementById('rankSort').value;
   sortRankCache();
   resetHidden();
+  applyNewsVisibility();
   rebuild();
   renderSidebar();
 }
