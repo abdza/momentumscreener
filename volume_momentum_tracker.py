@@ -131,6 +131,14 @@ ALPACA_MAX_PRICE = 20.0          # match the manual price < $20 filter
 # Alpaca's previous close / open — the price the ticker *started* the day at.
 STICKY_PREFILTER_HEADROOM = 4.0  # keep TV rows up to 4x the cap for re-gating
 
+# News-driven admission: a ticker with a company-specific article published
+# within the last hour joins the candidate merge even though its volume hasn't
+# ranked it yet. It still passes through the same Alpaca overlay and $20 price
+# gate as every other candidate. Matches the dashboard's decaying boost window
+# (NEWS_BOOST_MINUTES in index2.html).
+NEWS_ADMIT_MAX_AGE_MINUTES = 60
+NEWS_ADMIT_MAX_PER_SCAN = 15     # cap the flood on a busy news morning
+
 def get_float_shares_value(data, key='float_shares_outstanding'):
     """
     Helper function to properly extract float shares value, handling NaN and None cases
@@ -3004,21 +3012,62 @@ class VolumeMomentumTracker:
             logger.info(f"⚡ Added Alpaca screener candidates: {gainer_count} gainers, {active_count} most-active")
         return records
 
+    def _add_news_candidates(self, records):
+        """
+        Append tickers whose news just broke (market-wide Alpaca News query,
+        company-specific articles under NEWS_ADMIT_MAX_AGE_MINUTES old) so a
+        news mover is tracked before its volume would rank it. Like the Alpaca
+        screener candidates, they enter as name-only records: the price overlay
+        fills in live data, _finalize_alpaca_candidates() backfills the
+        TradingView-shaped fields, and _apply_price_gate() enforces the $20
+        admission rule — a news ticker with no Alpaca prints simply drops out.
+        """
+        if records is None or not (self.news_annotator and self.news_annotator.available):
+            return records
+
+        try:
+            breaking = self.news_annotator.breaking_symbols(NEWS_ADMIT_MAX_AGE_MINUTES)
+        except Exception as e:
+            logger.warning(f"⚠️  Breaking-news lookup failed: {e}")
+            return records
+
+        seen = {record.get('name') for record in records}
+        added = []
+        # Newest articles first, so the per-scan cap keeps the freshest stories
+        for symbol, art in sorted(breaking.items(),
+                                  key=lambda kv: kv[1]['created_at'], reverse=True):
+            if symbol in seen or not self._is_common_stock_symbol(symbol):
+                continue
+            if len(added) >= NEWS_ADMIT_MAX_PER_SCAN:
+                break
+            seen.add(symbol)
+            records.append({
+                'name': symbol,
+                'sector': '',
+                'exchange': '',
+                'source': 'news',
+            })
+            added.append(symbol)
+
+        if added:
+            logger.info(f"📰 Added {len(added)} breaking-news candidates: {', '.join(added)}")
+        return records
+
     def _finalize_alpaca_candidates(self, records):
         """
-        Backfill TradingView-shaped fields on Alpaca-screener candidates from
-        the Alpaca price overlay so the chart (which needs numeric close/
-        volume/change_from_open) and downstream consumers can render them.
-        Drops candidates with no Alpaca data. The $20 check is left to
-        _apply_price_gate() so a candidate already admitted today survives even
-        after it runs past the cap.
+        Backfill TradingView-shaped fields on Alpaca-screener and breaking-news
+        candidates from the Alpaca price overlay so the chart (which needs
+        numeric close/volume/change_from_open) and downstream consumers can
+        render them. Drops candidates with no Alpaca data. The $20 check is
+        left to _apply_price_gate() so a candidate already admitted today
+        survives even after it runs past the cap.
         """
         if records is None:
             return records
 
         finalized = []
         for record in records:
-            if record.get('source') == 'alpaca_screener':
+            if record.get('source') in ('alpaca_screener', 'news'):
                 price = record.get('alpaca_price')
                 if not price or not record.get('alpaca_volume'):
                     continue
@@ -3084,6 +3133,7 @@ class VolumeMomentumTracker:
 
                     logger.info(f"After prefilter (price < ${prefilter_cap:.0f} or already tracked, no OTC): {len(filtered_records)} records")
                     filtered_records = self._add_alpaca_screener_candidates(filtered_records)
+                    filtered_records = self._add_news_candidates(filtered_records)
                     filtered_records = self._update_prices_with_alpaca(filtered_records)
                     filtered_records = self._finalize_alpaca_candidates(filtered_records)
                     filtered_records = self._apply_price_gate(filtered_records)
@@ -3131,6 +3181,7 @@ class VolumeMomentumTracker:
 
                         logger.info(f"Simplified query filtered results: {len(filtered_records)} records")
                         filtered_records = self._add_alpaca_screener_candidates(filtered_records)
+                        filtered_records = self._add_news_candidates(filtered_records)
                         filtered_records = self._update_prices_with_alpaca(filtered_records)
                         filtered_records = self._finalize_alpaca_candidates(filtered_records)
                         filtered_records = self._apply_price_gate(filtered_records)

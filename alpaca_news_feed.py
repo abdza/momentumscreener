@@ -55,6 +55,11 @@ NEWS_SYMBOL_BATCH = 50          # symbols per News API request
 NEWS_ARTICLES_PER_BATCH = 50    # newest-first article cap per request
 NEWS_SWEEP_OVERLAP_SECONDS = 300  # re-read a little history so no article slips
 
+# Market-wide breaking-news queries (no symbol filter). Articles tagging many
+# symbols are market roundups ("10 stocks to watch"), not company news - only
+# articles about a handful of symbols count as a story on those tickers.
+NEWS_BREAKING_MAX_SYMBOLS_PER_ARTICLE = 3
+
 
 class NewsAnnotator:
     """Caches each symbol's latest Alpaca news article and stamps it onto records."""
@@ -64,6 +69,8 @@ class NewsAnnotator:
         self._latest = {}       # symbol -> {'headline','source','url','created_at'}
         self._covered = set()   # symbols already backfilled this session
         self._last_sweep = None  # tz-aware UTC datetime of last incremental sweep
+        self._breaking = {}     # symbol -> article dict, from market-wide queries
+        self._breaking_fetched_at = None
 
         api_key = api_key or os.environ.get('APCA_API_KEY_ID')
         api_secret = api_secret or os.environ.get('APCA_API_SECRET_KEY')
@@ -139,6 +146,58 @@ class NewsAnnotator:
         if not art:
             return None
         return max(0.0, (datetime.now(pytz.UTC) - art['created_at']).total_seconds() / 60)
+
+    def breaking_symbols(self, max_age_minutes=60,
+                         max_symbols_per_article=NEWS_BREAKING_MAX_SYMBOLS_PER_ARTICLE):
+        """Symbols with a company-specific article published in the last
+        `max_age_minutes`, from a market-wide (no symbol filter) news query.
+        Returns {symbol: article dict}. Used to *admit* tickers into a watch
+        list before their volume would surface them; refreshed at most every
+        NEWS_REFRESH_SECONDS, so calling every scan cycle is cheap.
+        """
+        if not self.client:
+            return {}
+        now = datetime.now(pytz.UTC)
+        due = (self._breaking_fetched_at is None
+               or (now - self._breaking_fetched_at).total_seconds() >= NEWS_REFRESH_SECONDS)
+        if due:
+            try:
+                news_set = self.client.get_news(NewsRequest(
+                    start=now - timedelta(minutes=max_age_minutes),
+                    sort='desc',
+                    limit=NEWS_ARTICLES_PER_BATCH,
+                    include_content=False,
+                ))
+                breaking = {}
+                for art in news_set.data.get('news', []):
+                    syms = [s for s in art.symbols if s.isalpha()]
+                    if not syms or len(syms) > max_symbols_per_article:
+                        continue
+                    created = art.created_at
+                    if created.tzinfo is None:
+                        created = pytz.UTC.localize(created)
+                    entry = {
+                        'headline': art.headline,
+                        'source': art.source,
+                        'url': art.url,
+                        'created_at': created,
+                    }
+                    for sym in syms:
+                        cur = breaking.get(sym)
+                        if cur is None or created > cur['created_at']:
+                            breaking[sym] = entry
+                        # Feed the latest-article cache too, so annotate() can
+                        # stamp an admitted ticker without a second fetch.
+                        latest = self._latest.get(sym)
+                        if latest is None or created > latest['created_at']:
+                            self._latest[sym] = entry
+                self._breaking = breaking
+                self._breaking_fetched_at = now
+            except Exception as e:
+                logger.warning(f"⚠️  Breaking-news fetch failed: {e}")
+
+        cutoff = now - timedelta(minutes=max_age_minutes)
+        return {s: a for s, a in self._breaking.items() if a['created_at'] >= cutoff}
 
     # ----------------------------------------------------------------- private
 
