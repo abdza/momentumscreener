@@ -632,6 +632,34 @@ function newsDecay(t) {
   return age === null ? 0 : Math.max(0, 1 - age / NEWS_BOOST_MINUTES);
 }
 
+// Is the feed actually live right now? Not the same question as "is the loaded
+// date today in ET": a browser east of ET sits in the next local day for most
+// of the ET evening, and a page left open after the close keeps today's date
+// with a last snapshot hours behind the wall clock. Both cases must count as a
+// replay, or a stale anchor turns a day-old article into "8m ago".
+const NEWS_LIVE_ANCHOR_MINUTES = 15;
+
+function feedIsLive() {
+  if (!snapshots.length) return false;
+  const last = new Date(snapshots[snapshots.length - 1].timestamp);
+  return (etNow() - last) / 60000 <= NEWS_LIVE_ANCHOR_MINUTES;
+}
+
+// Badge label: a true wall-clock "minutes ago" while the feed is live, the
+// article's ET publish time once it isn't. The relative age against the
+// session's own last scan stays in the chart-marker tooltip, where it is
+// spelled out as "N min before this snapshot".
+function newsAgeLabel(t) {
+  if (!t.newsAtEt) return '';
+  if (!feedIsLive()) return ' ' + fmtNewsClock(t.newsAtEt);
+  const age = Math.max(0, (etNow() - new Date(t.newsAtEt)) / 60000);
+  return age < 90 ? ` ${Math.round(age)}m` : ` ${(age / 60).toFixed(1)}h`;
+}
+
+function fmtNewsClock(atEt) {
+  return new Date(atEt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 // Chart marker at the first snapshot where each ticker's current article was
 // still fresh; a newer article moves the marker to its own first snapshot.
 function calcNewsMarks(snaps) {
@@ -691,6 +719,20 @@ const ET_DATE_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_Yo
 const ET_TIME_FMT = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit'
 });
+// Snapshot timestamps and news_at_et are naive ET wall clock, parsed here as
+// browser-local time; stamping "now" the same way keeps all three comparable
+// from any timezone. h23 so midnight is 00:00:00, not the en-GB 24:00:00.
+const ET_STAMP_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/New_York', hour12: false, hourCycle: 'h23',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit'
+});
+
+function etNow() {
+  const p = {};
+  for (const { type, value } of ET_STAMP_FMT.formatToParts(new Date())) p[type] = value;
+  return new Date(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`);
+}
 
 function todayStr() {
   return ET_DATE_FMT.format(new Date()).replace(/-/g, '');
@@ -1293,9 +1335,9 @@ function rowInnerHTML(t, color, maxCount) {
   const accelBadge = accel ? `<span class="accel-badge" title="Accelerating: latest move +${accel.lastDiff.toFixed(2)}pp vs +${accel.prevDiff.toFixed(2)}pp before">🚀 surge</span>` : '';
   let newsBadge = '';
   if (t.news) {
-    const age = newsAgeMin(t);
-    const ago = age === null ? '' : age < 90 ? ` ${Math.round(age)}m` : ` ${(age / 60).toFixed(1)}h`;
-    const tip = `${t.news.headline} (${t.news.source})`.replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const ago = newsAgeLabel(t);
+    const stamp = t.newsAtEt ? ` · ${fmtNewsClock(t.newsAtEt)} ET` : '';
+    const tip = `${t.news.headline} (${t.news.source})${stamp}`.replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const cls = 'news-badge' + (newsDecay(t) > 0 ? ' fresh' : '');
     newsBadge = t.news.url
       ? `<a class="${cls}" href="${t.news.url}" target="_blank" rel="noopener" title="${tip}" onclick="event.stopPropagation()">📰${ago}</a>`
