@@ -4,7 +4,8 @@ Latest-news annotation for screener candidates, backed by Alpaca's News API.
 
 Both trackers (premarket_top20_monitor.py and volume_momentum_tracker.py) call
 NewsAnnotator.annotate() on the records they are about to snapshot to disk. Each
-record whose symbol has a news article within the backfill window gains:
+record whose symbol has a company-specific article within the backfill window
+(see NEWS_MAX_SYMBOLS_PER_ARTICLE) gains:
 
     news_headline    headline of the symbol's most recent article
     news_source      e.g. "benzinga"
@@ -55,9 +56,16 @@ NEWS_SYMBOL_BATCH = 50          # symbols per News API request
 NEWS_ARTICLES_PER_BATCH = 50    # newest-first article cap per request
 NEWS_SWEEP_OVERLAP_SECONDS = 300  # re-read a little history so no article slips
 
-# Market-wide breaking-news queries (no symbol filter). Articles tagging many
-# symbols are market roundups ("10 stocks to watch"), not company news - only
-# articles about a handful of symbols count as a story on those tickers.
+# Articles tagging a long list of symbols are market roundups ("12 Industrials
+# Stocks Moving In Monday's Pre-Market Session", "Why <X> Shares Are Trading
+# Higher" with 20 tickers attached), not news about any one company, and must
+# not earn a ticker the freshness boost. A story about a single company does
+# routinely pick up a few extra tags - sector ETFs that hold it, a peer named in
+# passing - so the cap allows a handful instead of demanding an exact match.
+NEWS_MAX_SYMBOLS_PER_ARTICLE = 6
+# Admitting a ticker into a watch list on news alone is a stronger claim than
+# labelling one that is already there, so the market-wide breaking-news query
+# (no symbol filter) holds to a tighter line.
 NEWS_BREAKING_MAX_SYMBOLS_PER_ARTICLE = 3
 
 
@@ -217,6 +225,8 @@ class NewsAnnotator:
                 continue
             batch_set = set(batch)
             for art in news_set.data.get('news', []):
+                if len([s for s in art.symbols if s.isalpha()]) > NEWS_MAX_SYMBOLS_PER_ARTICLE:
+                    continue  # market roundup, not a story on any one ticker
                 created = art.created_at
                 if created.tzinfo is None:
                     created = pytz.UTC.localize(created)
