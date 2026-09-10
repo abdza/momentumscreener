@@ -752,6 +752,10 @@ function getTopN() {
   return Math.max(1, Math.min(20, parseInt(document.getElementById('topN').value) || 10));
 }
 
+function numOr(v, fallback) {
+  return typeof v === 'number' && isFinite(v) ? v : fallback;
+}
+
 // TradingView's premarket_change is ~15min delayed for this account (see
 // premarket_top20_monitor.py); alpaca_premarket_change is computed live from
 // Alpaca quotes each scan (current alpaca_price vs. alpaca_previous_close,
@@ -1238,10 +1242,10 @@ function createChart() {
               const rank = snap.data.indexOf(entry) + 1;
               const totalVol = snap.data.reduce((s, d) => s + d.premarket_volume, 0);
               const pct = totalVol > 0 ? (entry.premarket_volume / totalVol * 100).toFixed(2) : '—';
-              const chg = pmChange(entry);
-              const chgStr = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-              const price = pmPrice(entry);
-              const prevClose = pmPrevClose(entry);
+              const chg = numOr(pmChange(entry), null);
+              const chgStr = chg === null ? '—' : (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+              const price = numOr(pmPrice(entry), null);
+              const prevClose = numOr(pmPrevClose(entry), null);
               const lines = [];
               if (price !== null) lines.push(` Price      : $${price.toFixed(4)}`);
               if (prevClose !== null) lines.push(` Prev Close : $${prevClose.toFixed(4)}`);
@@ -1315,11 +1319,17 @@ function syncZoomBtn() {
 const rowEls = new Map();   // ticker name → its <div class="ticker-row">
 
 function rowInnerHTML(t, color, maxCount) {
-  const chg = t.latestChange;
-  const chgClass = chg > 0 ? 'green' : chg < 0 ? 'red' : 'gray';
-  const chgStr = chg !== 0
-    ? (chg > 0 ? '+' : '') + chg.toFixed(2) + '%'
-    : '0.00%';
+  // A ticker can reach the dashboard with no usable change reading at all —
+  // Alpaca has a live price but no previous close (fresh listings), so both
+  // premarket_change and alpaca_premarket_change come through null. Render that
+  // as '—' rather than assuming a number: the old `chg !== 0` guard let null
+  // straight through to .toFixed() and threw, which killed renderSidebar() and
+  // with it the rest of init(), including startPolling().
+  const chg = numOr(t.latestChange, null);
+  const chgClass = chg === null ? 'gray' : chg > 0 ? 'green' : chg < 0 ? 'red' : 'gray';
+  const chgStr = chg === null
+    ? '—'
+    : (chg > 0 ? '+' : '') + chg.toFixed(2) + '%';
   const barWidth = ((t.count / maxCount) * 100).toFixed(1);
   const sig = signalCache[t.name];
   const sigTime = sig && snapshots[sig.si]
@@ -1449,7 +1459,25 @@ function startPolling() {
   stopPolling();
   pollTimer = setInterval(async () => {
     const today = todayStr();
-    if (currentDate !== today) return;
+
+    // The viewed date can lag the live one two ways: the page was opened before
+    // the day's first snapshot existed (so init fell back to the previous
+    // session), or it stayed open across the ET midnight rollover. Both used to
+    // return early here forever, freezing the chart. Adopt the new session as
+    // soon as it has data instead. A user-picked past date never reaches this
+    // path — onDateChange stops the timer for those.
+    let rolledOver = false;
+    if (currentDate !== today) {
+      const probe = await apiFetch(`/pretop20/api/latest?date=${today}`);
+      if (!probe.count) { updateStatus(); return; }
+      currentDate = today;
+      lastCount = 0;
+      newsShown = new Set();
+      rolledOver = true;
+      const sel = document.getElementById('dateSelect');
+      if (sel) { sel.max = fmtDate(today); sel.value = fmtDate(today); }
+    }
+
     const res = await apiFetch(`/pretop20/api/latest?date=${today}`);
     if (res.count > lastCount) {
       lastCount = res.count;
@@ -1461,10 +1489,16 @@ function startPolling() {
       accelCache = calcAccel(snapshots);
       newsCache = calcNewsMarks(snapshots);
       sortRankCache();
-      classifyNewTickers();
+      // A rollover is a fresh session, not a continuation: drop the previous
+      // day's visibility picks instead of carrying them onto new tickers.
+      if (rolledOver) { rowEls.clear(); resetHidden(); } else { classifyNewTickers(); }
       applyNewsVisibility();
-      rebuild();
-      renderSidebar();
+      try {
+        rebuild();
+        renderSidebar();
+      } catch (e) {
+        console.error('poll render failed', e);
+      }
     }
     updateStatus();
   }, 30000);
@@ -1660,14 +1694,27 @@ async function init() {
   sortRankCache();
   resetHidden();
   applyNewsVisibility();
-  rebuild();
-  renderSidebar();
+
+  // Drawing is best-effort: a single malformed record used to throw out of
+  // renderSidebar() and abort the rest of init(), so polling never started and
+  // the page sat frozen on its first load for the whole session. Painting is
+  // not worth the live feed — log and keep going.
+  try {
+    rebuild();
+    renderSidebar();
+  } catch (e) {
+    console.error('initial render failed', e);
+  }
   updateStatus();
 
   // No periodic location.reload() here: the 30s poll already folds new
   // snapshots into the live chart, and reloading threw away the user's
   // selection/zoom mid-session for no gain.
-  if (currentDate === today) startPolling();
+  //
+  // Polling starts unconditionally: it re-checks the date every tick, so
+  // opening the page before the day's first snapshot exists (which lands
+  // currentDate on the previous session) no longer wedges it there forever.
+  startPolling();
 }
 
 init();

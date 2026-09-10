@@ -129,7 +129,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def _pretop20_latest(self, date):
         files = sorted(glob.glob(os.path.join(PRETOP20_DIR, f'screener_{date}_*.json')))
-        return {'latest': os.path.basename(files[-1]) if files else None, 'count': len(files)}
+        # 'count' must match what _pretop20_data actually serves — the
+        # deduplicated snapshot count, not the raw file count. The dashboard
+        # seeds its lastCount from the data endpoint and polls against this one,
+        # so returning len(files) made a run of duplicate snapshots look like
+        # new data and triggered a pointless full refetch.
+        return {
+            'latest': os.path.basename(files[-1]) if files else None,
+            'count': len(self._pretop20_data(date)),
+        }
 
     # ── markethour data helpers ───────────────────────────────────────────────
 

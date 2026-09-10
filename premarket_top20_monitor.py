@@ -733,6 +733,23 @@ class PremarketTop20Monitor:
                     record['premarket_volume'] = record['alpaca_premarket_volume']
                 if record.get('close') is None and record.get('alpaca_previous_close') is not None:
                     record['close'] = record['alpaca_previous_close']
+                # Last resort: derive the change ourselves from whatever close
+                # survived above. Alpaca sometimes returns a live price with no
+                # previous close at all (fresh listings), which left both change
+                # fields null — the dashboard then had no number to render and
+                # threw on it. Deriving here keeps the promise this block's
+                # comment makes; a record that still has nothing is logged so a
+                # persistent gap is visible rather than silent.
+                if record.get('premarket_change') is None:
+                    prev = record.get('close')
+                    price = record.get('alpaca_price')
+                    if isinstance(prev, (int, float)) and prev > 0 and isinstance(price, (int, float)):
+                        record['premarket_change'] = (price - prev) / prev * 100
+                    else:
+                        logger.debug(
+                            f"⚠️  {record.get('name')}: no premarket change available "
+                            f"(close={prev!r}, alpaca_price={price!r})"
+                        )
                 filled.append(record)
             merged = filled
 
