@@ -60,6 +60,7 @@ import pandas as pd
 from collections import defaultdict
 
 from symbol_meta import lookup as symbol_meta_lookup
+import float_shares
 
 # Alpaca imports for real-time price/volume data
 try:
@@ -3161,6 +3162,19 @@ class VolumeMomentumTracker:
                 r['relative_volume_10d_calc'] = vol / avg
         return records
 
+    def _add_float_shares(self, records):
+        """Fill float_shares_outstanding from float_shares.json.
+
+        TradingView used to carry this field and Alpaca has no fundamentals
+        endpoint, so it comes from the yfinance-backed cache instead. The
+        lookup is cache-only: a symbol the cache hasn't got yet is queued for
+        a background refresh and stays None for this scan, so the network
+        never holds up a snapshot.
+        """
+        if records is None:
+            return records
+        return float_shares.annotate(records)
+
     def get_volume_screener_data(self, limit=200):
         """Ranked candidate records from the Alpaca bar stream (previously the
         TradingView scanner). Stream rows carry live volume/price/change;
@@ -3192,7 +3206,7 @@ class VolumeMomentumTracker:
                     'change_from_open': None,   # Alpaca overlay fills this live
                     'change|5': r['change_5min'],
                     'close': r['price'],
-                    'float_shares_outstanding': None,  # was TradingView-only
+                    'float_shares_outstanding': None,  # stamped by _add_float_shares
                     'premarket_change': r['premarket_change'],
                     'premarket_volume': r['premarket_volume'],
                     'sector': sector,
@@ -3221,6 +3235,7 @@ class VolumeMomentumTracker:
             filtered_records = self._update_prices_with_alpaca(filtered_records)
             filtered_records = self._finalize_alpaca_candidates(filtered_records)
             filtered_records = self._add_relative_volume(filtered_records)
+            filtered_records = self._add_float_shares(filtered_records)
             filtered_records = self._apply_price_gate(filtered_records)
             return filtered_records
 

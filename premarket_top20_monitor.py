@@ -22,6 +22,7 @@ import pytz
 from telegram import Bot
 
 from symbol_meta import lookup as symbol_meta_lookup
+import float_shares
 
 try:
     from alpaca_stream_screener import StreamScreener
@@ -752,6 +753,12 @@ class PremarketTop20Monitor:
                         )
                 filled.append(record)
             merged = filled
+
+            # Float never came from this feed at all - TradingView carried it
+            # for the market-hours tracker and nothing carried it here. It
+            # comes from float_shares.json now, cache-only so the network
+            # can't hold up a premarket snapshot.
+            merged = float_shares.annotate(merged)
 
             # Log the screener data to file
             if merged:
