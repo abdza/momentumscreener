@@ -128,6 +128,42 @@ class VolumeMomentumTracker:
 }
 ```
 
+### Bid/Ask Capture (`quotes.py`)
+
+All three gatherers stamp every candidate record with the NBBO quote sampled in
+the same batch as the trade price, so a snapshot says both what the stock printed
+at and what it would have cost to cross the book there:
+
+| Collector | Session | Output |
+|---|---|---|
+| `premarket_top20_monitor.py` | premarket, 1/min | `pretop20/screener_*.json` |
+| `volume_momentum_tracker.py` | regular session | `momentum_data/raw_data_*.json` |
+| `orb_screener.py` | opening range | `orb_data/screener_*.json` |
+
+Fields added per record (all optional - absent when the venue had no quote):
+
+```json
+{
+  "bid": float, "ask": float,
+  "bid_size": int, "ask_size": int,
+  "mid": float,          // (bid + ask) / 2
+  "spread": float,       // ask - bid, dollars
+  "spread_pct": float,   // spread as % of mid
+  "quote_at": "ISO-8601, ET"
+}
+```
+
+`mid`/`spread`/`spread_pct` are **null on a one-sided or crossed book** (either
+side at zero, or bid >= ask) rather than zero, so they never silently average into
+a cost model. `spread_pct` is also withheld above `MAX_PLAUSIBLE_SPREAD_PCT` (50%),
+which is a placeholder quote rather than a market. `bid`/`ask` are kept raw either
+way.
+
+Why it matters: every backtest run off these snapshots before Sep 2026 was gross
+of spread, and the measured premarket edge (~+1% per trade) is the same order of
+magnitude as the spread on the sub-$20 names the strategies actually trade. Any
+new backtest should charge `spread_pct` (or half of it against the mid) per side.
+
 ## Analysis & Performance Tracking
 
 ### Weekly Analysis Script

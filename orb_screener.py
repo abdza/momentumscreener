@@ -18,11 +18,23 @@ import sys
 import logging
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 try:
     import rookiepy
 except ImportError:
     rookiepy = None
+
+# Alpaca is used only to stamp each candidate with its bid/ask - the screening
+# itself stays on TradingView. Absent keys or package just means no quote fields.
+try:
+    from alpaca.data.historical import StockHistoricalDataClient
+    from alpaca.data.enums import DataFeed
+    ALPACA_AVAILABLE = True
+except ImportError:
+    ALPACA_AVAILABLE = False
+
+import quotes as quote_capture
 
 from telegram import Bot
 from tradingview_screener import Query, Column
@@ -37,6 +49,8 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+ET_TZ = ZoneInfo("America/New_York")
 
 # Log directory for screener data and notifications
 LOG_DIR = Path("orb_data")
@@ -54,6 +68,19 @@ class ORBScreener:
         self.telegram_bot_token = telegram_bot_token
         self.telegram_chat_id = telegram_chat_id
         self.telegram_bot = None
+
+        self.alpaca_client = None
+        if ALPACA_AVAILABLE:
+            api_key = os.environ.get('APCA_API_KEY_ID')
+            api_secret = os.environ.get('APCA_API_SECRET_KEY')
+            if api_key and api_secret:
+                try:
+                    self.alpaca_client = StockHistoricalDataClient(api_key, api_secret)
+                    logger.info("✅ Alpaca quote client initialized")
+                except Exception as e:
+                    logger.warning(f"⚠️  Alpaca quote client unavailable: {e}")
+            else:
+                logger.warning("⚠️  No Alpaca keys - ORB snapshots will have no bid/ask")
 
         if telegram_bot_token and telegram_chat_id:
             self.telegram_bot = Bot(token=telegram_bot_token)
@@ -136,6 +163,7 @@ class ORBScreener:
             logger.info(f"✅ Found {len(records)} ORB candidates")
 
             if records:
+                self._annotate_with_quotes(records)
                 self._log_screener_data(records)
 
             return records
@@ -145,6 +173,24 @@ class ORBScreener:
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             return []
+
+    def _annotate_with_quotes(self, records):
+        """
+        Stamp each candidate with its NBBO bid/ask so the snapshot records what
+        crossing the book would have cost at scan time. An ORB entry is a market
+        order into the first minutes of the session, where the spread is the whole
+        difference between a backtested edge and a real one.
+        """
+        if not self.alpaca_client:
+            return
+
+        # Alpaca rejects the whole batch on TV-style class symbols (e.g. DCOM/P)
+        symbols = [r['name'] for r in records if r.get('name') and r['name'].isalpha()]
+        latest = quote_capture.fetch_latest_quotes(
+            self.alpaca_client, symbols, feed=DataFeed.SIP, et_tz=ET_TZ)
+
+        quoted = sum(quote_capture.apply_quote(r, latest.get(r.get('name'))) for r in records)
+        logger.info(f"✅ Stamped {quoted}/{len(records)} ORB candidates with bid/ask")
 
     def _log_screener_data(self, screener_data):
         """Log the screener data downloaded from TradingView"""

@@ -61,6 +61,7 @@ from collections import defaultdict
 
 from symbol_meta import lookup as symbol_meta_lookup
 import float_shares
+import quotes as quote_capture
 
 # Alpaca imports for real-time price/volume data
 try:
@@ -2748,6 +2749,9 @@ class VolumeMomentumTracker:
         TradingView's screener snapshot can lag; Alpaca gives us a live quote per symbol.
         Adds 'alpaca_price', 'alpaca_volume', 'alpaca_previous_close', and
         'change_from_prev_close' fields without removing the original TradingView fields.
+        The same batch also pulls the NBBO quote, adding 'bid'/'ask'/'spread_pct' and
+        friends, so the snapshot records what it would actually have cost to cross the
+        book at that price.
         Uses a short-lived cache to avoid re-fetching the same symbol within a scan cycle.
 
         Args:
@@ -2786,6 +2790,10 @@ class VolumeMomentumTracker:
             if symbols_to_fetch:
                 request_params = StockLatestTradeRequest(symbol_or_symbols=symbols_to_fetch, feed=DataFeed.SIP)
                 latest_trades = self.alpaca_client.get_stock_latest_trade(request_params)
+
+                # Best bid/ask at the same instant as that trade price
+                latest_quotes = quote_capture.fetch_latest_quotes(
+                    self.alpaca_client, symbols_to_fetch, feed=DataFeed.SIP, et_tz=ET_TZ)
 
                 end_time = datetime.now()
                 start_time = end_time - timedelta(days=5)  # Ensure at least 2 trading days
@@ -2829,10 +2837,13 @@ class VolumeMomentumTracker:
                             )
 
                 for symbol in symbols_to_fetch:
-                    cache_entry = {'timestamp': current_time, 'price': None, 'volume': None, 'previous_close': None, 'open': None}
+                    cache_entry = {'timestamp': current_time, 'price': None, 'volume': None,
+                                   'previous_close': None, 'open': None, 'quote': None}
 
                     if symbol in latest_trades:
                         cache_entry['price'] = float(latest_trades[symbol].price)
+
+                    cache_entry['quote'] = latest_quotes.get(symbol)
 
                     if bars_data and hasattr(bars_data, 'data') and symbol in bars_data.data:
                         symbol_bars = bars_data.data[symbol]
@@ -2861,6 +2872,7 @@ class VolumeMomentumTracker:
                     self.alpaca_price_cache[symbol] = cache_entry
 
             updated_count = 0
+            quoted_count = 0
             for record in records:
                 symbol = record['name']
 
@@ -2885,7 +2897,11 @@ class VolumeMomentumTracker:
                             change_from_prev = ((cache_entry['price'] - cache_entry['previous_close']) / cache_entry['previous_close']) * 100
                             record['change_from_prev_close'] = change_from_prev
 
-            logger.info(f"✅ Updated {updated_count}/{len(records)} symbols with Alpaca prices")
+                    if quote_capture.apply_quote(record, cache_entry.get('quote')):
+                        quoted_count += 1
+
+            logger.info(f"✅ Updated {updated_count}/{len(records)} symbols with Alpaca prices, "
+                        f"{quoted_count} with bid/ask")
             return records
 
         except Exception as e:

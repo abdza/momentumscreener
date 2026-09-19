@@ -23,6 +23,7 @@ from telegram import Bot
 
 from symbol_meta import lookup as symbol_meta_lookup
 import float_shares
+import quotes as quote_capture
 
 try:
     from alpaca_stream_screener import StreamScreener
@@ -334,8 +335,11 @@ class PremarketTop20Monitor:
         records. The stream's table updates at minute-bar close; the latest-trade
         endpoint gives an intraminute quote, plus today's actual premarket minute-bar
         volume. Adds 'alpaca_price', 'alpaca_previous_close', 'alpaca_premarket_change',
-        and 'alpaca_premarket_volume' without removing the original fields. Uses a
-        short-lived cache to avoid re-fetching the same symbol within a scan cycle.
+        and 'alpaca_premarket_volume' without removing the original fields. The same
+        batch also pulls the NBBO quote, adding 'bid'/'ask'/'spread_pct' and friends,
+        so the snapshot records what it would actually have cost to cross the book at
+        that price. Uses a short-lived cache to avoid re-fetching the same symbol
+        within a scan cycle.
 
         Args:
             records: List of candidate record dicts
@@ -375,6 +379,10 @@ class PremarketTop20Monitor:
                 trade_request = StockLatestTradeRequest(symbol_or_symbols=symbols_to_fetch, feed=DataFeed.SIP)
                 latest_trades = self.alpaca_client.get_stock_latest_trade(trade_request)
 
+                # Best bid/ask at the same instant as that trade price
+                latest_quotes = quote_capture.fetch_latest_quotes(
+                    self.alpaca_client, symbols_to_fetch, feed=DataFeed.SIP, et_tz=ET_TZ)
+
                 # Daily bars to get previous close
                 end_time = datetime.now()
                 start_time = end_time - timedelta(days=5)  # Ensure at least 2 trading days
@@ -402,10 +410,13 @@ class PremarketTop20Monitor:
                 et_today = datetime.now(ET_TZ).date()
 
                 for symbol in symbols_to_fetch:
-                    cache_entry = {'timestamp': current_time, 'price': None, 'previous_close': None, 'premarket_volume': None}
+                    cache_entry = {'timestamp': current_time, 'price': None, 'previous_close': None,
+                                   'premarket_volume': None, 'quote': None}
 
                     if symbol in latest_trades:
                         cache_entry['price'] = float(latest_trades[symbol].price)
+
+                    cache_entry['quote'] = latest_quotes.get(symbol)
 
                     if daily_bars_data and hasattr(daily_bars_data, 'data') and symbol in daily_bars_data.data:
                         symbol_daily_bars = daily_bars_data.data[symbol]
@@ -438,6 +449,7 @@ class PremarketTop20Monitor:
                     self.alpaca_price_cache[symbol] = cache_entry
 
             updated_count = 0
+            quoted_count = 0
             for record in records:
                 symbol = record.get('name')
                 if symbol not in self.alpaca_price_cache:
@@ -457,7 +469,11 @@ class PremarketTop20Monitor:
                 if cache_entry['premarket_volume'] is not None:
                     record['alpaca_premarket_volume'] = cache_entry['premarket_volume']
 
-            logger.info(f"✅ Updated {updated_count}/{len(records)} symbols with Alpaca prices")
+                if quote_capture.apply_quote(record, cache_entry.get('quote')):
+                    quoted_count += 1
+
+            logger.info(f"✅ Updated {updated_count}/{len(records)} symbols with Alpaca prices, "
+                        f"{quoted_count} with bid/ask")
             return records
 
         except Exception as e:
