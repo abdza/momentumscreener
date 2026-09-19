@@ -915,10 +915,6 @@ function classifyNewTickers() {
 
 // ── Chart ─────────────────────────────────────────────────────────────────────
 
-function snapVolTotals() {
-  return snapshots.map(snap => snap.data.reduce((s, d) => s + pmVolume(d), 0));
-}
-
 // First known close for a ticker, for close-mode normalization
 function firstCloseFor(name) {
   for (const snap of snapshots) {
@@ -931,7 +927,7 @@ function firstCloseFor(name) {
   return null;
 }
 
-function tickerDataset(t, color, snapTotals) {
+function tickerDataset(t, color) {
   const base = mode === 'close' ? firstCloseFor(t.name) : null;
   const data = snapshots.map(snap => {
     const idx = snap.data.findIndex(d => d.name === t.name);
@@ -944,21 +940,15 @@ function tickerDataset(t, color, snapTotals) {
     else y = idx + 1; // rank
     return { x: snap.timestamp, y };
   });
-  const pointRadii = snapshots.map((snap, si) => {
-    const idx = snap.data.findIndex(d => d.name === t.name);
-    if (idx === -1) return 2;
-    const total = snapTotals[si];
-    if (!total) return 2;
-    const volPct = pmVolume(snap.data[idx]) / total * 100;
-    return Math.max(2, Math.min(9, 2 + Math.sqrt(volPct) * 1.8));
-  });
   return {
     label: t.name,
     data,
     borderColor: color,
     backgroundColor: color + '18',
     borderWidth: 1.8,
-    pointRadius: pointRadii,
+    // Every point the same size: sizing dots by share of volume made the heavy
+    // tickers swell into their neighbours' lines and hid what was underneath.
+    pointRadius: 2.5,
     pointHoverRadius: 7,
     tension: 0.25,
     spanGaps: false,
@@ -968,8 +958,7 @@ function tickerDataset(t, color, snapTotals) {
 
 function buildDatasets() {
   const shown = rankCache.filter(t => !hidden.has(t.name));
-  const snapTotals = snapVolTotals();
-  const datasets = shown.map((t, i) => tickerDataset(t, COLORS[i % COLORS.length], snapTotals));
+  const datasets = shown.map((t, i) => tickerDataset(t, COLORS[i % COLORS.length]));
 
   if (showNews) {
     const shownNames = new Set(shown.map(t => t.name));
@@ -1441,7 +1430,7 @@ function applyHoverSolo() {
     // Muted ticker: build a temporary dataset so it can be previewed
     const t = rankCache.find(r => r.name === hoverSoloName);
     if (t) {
-      const ds = tickerDataset(t, '#58a6ff', snapVolTotals());
+      const ds = tickerDataset(t, '#58a6ff');
       ds._hoverTemp = true;
       chart.data.datasets.push(ds);
     }

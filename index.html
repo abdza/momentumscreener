@@ -953,21 +953,15 @@ function tickerDataset(t, color, snapTotals) {
     else y = idx + 1; // rank
     return { x: snap.timestamp, y };
   });
-  const pointRadii = snapshots.map((snap, si) => {
-    const idx = snap.data.findIndex(d => d.name === t.name);
-    if (idx === -1) return 2;
-    const total = snapTotals[si];
-    if (!total) return 2;
-    const volPct = snap.data[idx].premarket_volume / total * 100;
-    return Math.max(2, volPct * 0.5);
-  });
   return {
     label: t.name,
     data,
     borderColor: color,
     backgroundColor: color + '18',
     borderWidth: 1.8,
-    pointRadius: pointRadii,
+    // Every point the same size: sizing dots by share of volume made the heavy
+    // tickers swell into their neighbours' lines and hid what was underneath.
+    pointRadius: 2.5,
     pointHoverRadius: 7,
     tension: 0.25,
     spanGaps: false,
