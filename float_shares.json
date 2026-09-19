@@ -113,6 +113,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"ABI": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-15"
+},
 "ABLV": {
 "float": 14036616,
 "shares": 24518489,
@@ -148,6 +154,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-25"
+},
+"ABT": {
+"float": 1719931781,
+"shares": 1730383296,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "ABTC": {
 "float": 23343815,
@@ -226,6 +238,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-29"
+},
+"ACGL": {
+"float": 326902135,
+"shares": 341229126,
+"src": "yfinance",
+"ts": "2026-09-19"
 },
 "ACHR": {
 "float": 652964782,
@@ -309,7 +327,7 @@
 "float": 50625609,
 "shares": null,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "ADCT": {
 "float": 88561803,
@@ -399,7 +417,7 @@
 "float": 196957,
 "shares": 974809,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "AEHR": {
 "float": 31272247,
@@ -416,6 +434,12 @@
 "AEMD": {
 "float": 706407,
 "shares": 711136,
+"src": "yfinance",
+"ts": "2026-09-19"
+},
+"AENT": {
+"float": 3391342,
+"shares": 50957370,
 "src": "yfinance",
 "ts": "2026-09-11"
 },
@@ -533,6 +557,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"AGG": {
+"float": 572600000,
+"shares": 572600000,
+"src": "yfinance_shares",
+"ts": "2026-09-16"
+},
 "AGM/PG": {
 "float": 9118013,
 "shares": null,
@@ -540,10 +570,10 @@
 "ts": "2026-07-17"
 },
 "AGMH": {
-"float": 1832168,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-27"
+"float": 3454390,
+"shares": 3596375,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "AGNC": {
 "float": 1177929930,
@@ -933,7 +963,7 @@
 "float": 20719994,
 "shares": 87028604,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "AMC": {
 "float": 835344050,
@@ -1047,7 +1077,7 @@
 "float": 20505351,
 "shares": 7348249,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "AMZN": {
 "float": 9810583646,
@@ -1066,6 +1096,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-15"
+},
+"ANGX": {
+"float": 104777765,
+"shares": 130096882,
+"src": "yfinance",
+"ts": "2026-09-12"
 },
 "ANNA": {
 "float": 3631664,
@@ -1163,6 +1199,12 @@
 "src": "snapshot",
 "ts": "2026-08-05"
 },
+"APLZ": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-15"
+},
 "APM": {
 "float": 5305281,
 "shares": null,
@@ -1204,6 +1246,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-09"
+},
+"APTV": {
+"float": 205044143,
+"shares": 207633331,
+"src": "yfinance",
+"ts": "2026-09-19"
 },
 "APUR": {
 "float": 10083791,
@@ -1252,6 +1300,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-12"
+},
+"AQN": {
+"float": 623782214,
+"shares": 769901895,
+"src": "yfinance",
+"ts": "2026-09-12"
 },
 "AQST": {
 "float": 114681248,
@@ -1473,7 +1527,7 @@
 "float": null,
 "shares": null,
 "src": "unavailable",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "ASTX": {
 "float": null,
@@ -1493,6 +1547,12 @@
 "src": "unavailable",
 "ts": "2026-09-11"
 },
+"AT": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-16"
+},
 "ATAI": {
 "float": 308411059,
 "shares": 370864669,
@@ -1500,10 +1560,16 @@
 "ts": "2026-09-11"
 },
 "ATCH": {
-"float": 136395804,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-23"
+"float": 148538231,
+"shares": 150337774,
+"src": "yfinance",
+"ts": "2026-09-17"
+},
+"ATEC": {
+"float": 122064230,
+"shares": 154451076,
+"src": "yfinance",
+"ts": "2026-09-15"
 },
 "ATER": {
 "float": 13768639,
@@ -1540,6 +1606,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-01"
+},
+"ATLQ": {
+"float": 18605000,
+"shares": 18605000,
+"src": "yfinance_shares",
+"ts": "2026-09-11"
 },
 "ATOS": {
 "float": 8459481,
@@ -1596,10 +1668,10 @@
 "ts": "2026-09-11"
 },
 "AURE": {
-"float": 10909218,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-08-04"
+"float": 10466284,
+"shares": 22348486,
+"src": "yfinance",
+"ts": "2026-09-12"
 },
 "AUST": {
 "float": 7772284,
@@ -1656,10 +1728,10 @@
 "ts": "2026-09-11"
 },
 "AVTR": {
-"float": 661836069,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-06-08"
+"float": 657806317,
+"shares": 676358840,
+"src": "yfinance",
+"ts": "2026-09-15"
 },
 "AVXL": {
 "float": 89808408,
@@ -2057,6 +2129,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"BENF": {
+"float": 2351588,
+"shares": 15425814,
+"src": "yfinance",
+"ts": "2026-09-16"
+},
 "BEP/PA": {
 "float": 225405142,
 "shares": null,
@@ -2068,6 +2146,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-08"
+},
+"BETA": {
+"float": 124351370,
+"shares": 225439576,
+"src": "yfinance",
+"ts": "2026-09-19"
 },
 "BETR": {
 "float": 7478998,
@@ -2092,6 +2176,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-29"
+},
+"BGFI": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-15"
 },
 "BGI": {
 "float": 2918351,
@@ -2315,6 +2405,12 @@
 "src": "snapshot",
 "ts": "2026-06-29"
 },
+"BKLN": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-15"
+},
 "BKYI": {
 "float": 960966,
 "shares": null,
@@ -2332,6 +2428,12 @@
 "shares": 301506494,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"BLDR": {
+"float": 104451413,
+"shares": 107596457,
+"src": "yfinance",
+"ts": "2026-09-19"
 },
 "BLIN": {
 "float": 9174239,
@@ -2419,9 +2521,9 @@
 },
 "BMGL": {
 "float": 501423,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-15"
+"shares": 1565480,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "BMHL": {
 "float": 3352499,
@@ -2442,10 +2544,10 @@
 "ts": "2026-07-01"
 },
 "BMM": {
-"float": 65528710,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-28"
+"float": 82801923,
+"shares": 104863001,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "BMNG": {
 "float": null,
@@ -2500,6 +2602,18 @@
 "shares": null,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"BNDX": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-16"
+},
+"BNGO": {
+"float": 10636515,
+"shares": 11777000,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "BNKK": {
 "float": 5163487,
@@ -2745,7 +2859,7 @@
 "float": 9168463,
 "shares": 16976004,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "BTCU": {
 "float": null,
@@ -2832,10 +2946,10 @@
 "ts": "2026-09-11"
 },
 "BURU": {
-"float": 177921632,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-01"
+"float": 336927073,
+"shares": 370493812,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "BUUU": {
 "float": 3134994,
@@ -2898,10 +3012,10 @@
 "ts": "2026-07-28"
 },
 "BYAH": {
-"float": 2036269,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-08"
+"float": 269336,
+"shares": 747902,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "BYFC": {
 "float": 4395473,
@@ -2962,6 +3076,12 @@
 "shares": 478565642,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"CAI": {
+"float": 134857249,
+"shares": 282680695,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "CAII": {
 "float": 14831665,
@@ -3246,10 +3366,10 @@
 "ts": "2026-07-10"
 },
 "CDT": {
-"float": 385437,
+"float": 403617,
 "shares": 13693866,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "CDTG": {
 "float": 2766994,
@@ -3549,7 +3669,7 @@
 "float": 261784931,
 "shares": 104058235,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "CLBR": {
 "float": 30050000,
@@ -3730,6 +3850,12 @@
 "shares": 1237725958,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"CNP": {
+"float": 656263261,
+"shares": 658720288,
+"src": "yfinance",
+"ts": "2026-09-15"
 },
 "CNTB": {
 "float": 21066166,
@@ -3936,10 +4062,16 @@
 "ts": "2026-09-11"
 },
 "CPOP": {
-"float": 3406288,
-"shares": 11381074,
+"float": 227086,
+"shares": 937978,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
+},
+"CPRI": {
+"float": 110615983,
+"shares": 114796106,
+"src": "yfinance",
+"ts": "2026-09-12"
 },
 "CRAC": {
 "float": 18056250,
@@ -3964,6 +4096,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-20"
+},
+"CRBP": {
+"float": 15159899,
+"shares": 19341293,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "CRCA": {
 "float": null,
@@ -4140,10 +4278,10 @@
 "ts": "2026-09-11"
 },
 "CRWV": {
-"float": 327678926,
+"float": 327899541,
 "shares": 458871690,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "CSAI": {
 "float": 832773,
@@ -4209,7 +4347,7 @@
 "float": 2955200,
 "shares": 2955935,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "CTOR": {
 "float": 26085317,
@@ -4252,6 +4390,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-16"
+},
+"CUE": {
+"float": 6846492,
+"shares": 7264414,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "CULP": {
 "float": 9680952,
@@ -4337,6 +4481,12 @@
 "src": "unavailable",
 "ts": "2026-09-11"
 },
+"CX": {
+"float": 1411948665,
+"shares": 1442952453,
+"src": "yfinance",
+"ts": "2026-09-15"
+},
 "CXAI": {
 "float": 2220769,
 "shares": 2337406,
@@ -4401,7 +4551,7 @@
 "float": 692763,
 "shares": 1210383,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "DAKT": {
 "float": 45977054,
@@ -4413,7 +4563,7 @@
 "float": null,
 "shares": null,
 "src": "unavailable",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "DARE": {
 "float": 12946692,
@@ -4482,10 +4632,10 @@
 "ts": "2026-09-11"
 },
 "DCX": {
-"float": 2095734,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-30"
+"float": 2061598,
+"shares": 351577182,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "DDC": {
 "float": 33001820,
@@ -4656,10 +4806,10 @@
 "ts": "2026-09-11"
 },
 "DLXY": {
-"float": 4999998,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-06-25"
+"float": 4706021,
+"shares": 7174000,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "DMAA": {
 "float": 18555354,
@@ -4740,10 +4890,10 @@
 "ts": "2026-09-11"
 },
 "DRCT": {
-"float": 733355,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-20"
+"float": 750292,
+"shares": 760567,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "DRDB": {
 "float": 23000000,
@@ -4756,6 +4906,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-08-05"
+},
+"DRK": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-17"
 },
 "DRMA": {
 "float": 2897833,
@@ -4836,10 +4992,10 @@
 "ts": "2026-06-02"
 },
 "DTSS": {
-"float": 8207874,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-22"
+"float": 6961683,
+"shares": 6447153,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "DTST": {
 "float": 2007416,
@@ -4860,10 +5016,10 @@
 "ts": "2026-09-11"
 },
 "DV": {
-"float": 133281182,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-06-29"
+"float": 135069487,
+"shares": 154987592,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "DVLT": {
 "float": 679521320,
@@ -4949,6 +5105,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"ECO": {
+"float": 20806897,
+"shares": 39044655,
+"src": "yfinance",
+"ts": "2026-09-17"
+},
 "ECX": {
 "float": 138682833,
 "shares": null,
@@ -4978,6 +5140,12 @@
 "shares": 1646623,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"EFA": {
+"float": 938400000,
+"shares": 938400000,
+"src": "yfinance_shares",
+"ts": "2026-09-16"
 },
 "EFSCP": {
 "float": 35605827,
@@ -5051,6 +5219,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"ELAN": {
+"float": 495400026,
+"shares": 499449583,
+"src": "yfinance",
+"ts": "2026-09-16"
+},
 "ELE": {
 "float": 14596366,
 "shares": null,
@@ -5064,10 +5238,10 @@
 "ts": "2026-06-26"
 },
 "ELMT": {
-"float": 2864305,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-06-02"
+"float": 10123214,
+"shares": 30459498,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "ELOG": {
 "float": 4124461,
@@ -5122,6 +5296,12 @@
 "shares": 621800646,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"EMB": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-16"
 },
 "EMBC": {
 "float": 54671940,
@@ -5208,10 +5388,10 @@
 "ts": "2026-06-29"
 },
 "EPOW": {
-"float": 24064807,
-"shares": 32161978,
+"float": 4880007,
+"shares": 2064142,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "EPRX": {
 "float": 52937588,
@@ -5220,10 +5400,10 @@
 "ts": "2026-07-23"
 },
 "EPSM": {
-"float": 2661180,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-10"
+"float": 2072651,
+"shares": 2649034,
+"src": "yfinance",
+"ts": "2026-09-11"
 },
 "EQ": {
 "float": 36965010,
@@ -5349,7 +5529,7 @@
 "float": 36899956,
 "shares": 44550005,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "ETSS": {
 "float": 15000000,
@@ -5549,6 +5729,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"FBDT": {
+"float": 26298479,
+"shares": 55776201,
+"src": "yfinance",
+"ts": "2026-09-17"
+},
 "FBGL": {
 "float": 6584355,
 "shares": 13500000,
@@ -5642,6 +5828,12 @@
 "FEED": {
 "float": 923718,
 "shares": 923717,
+"src": "yfinance",
+"ts": "2026-09-11"
+},
+"FEIM": {
+"float": 7698364,
+"shares": 11177530,
 "src": "yfinance",
 "ts": "2026-09-11"
 },
@@ -5801,6 +5993,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"FLIA": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-15"
+},
 "FLJH": {
 "float": null,
 "shares": null,
@@ -5820,10 +6018,10 @@
 "ts": "2026-06-15"
 },
 "FLO": {
-"float": 195549168,
-"shares": 211993230,
+"float": 195996189,
+"shares": 212057418,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "FLUX": {
 "float": 15586177,
@@ -5933,6 +6131,18 @@
 "src": "snapshot",
 "ts": "2026-06-30"
 },
+"FPS": {
+"float": 140207220,
+"shares": 259971169,
+"src": "yfinance",
+"ts": "2026-09-15"
+},
+"FPSX": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-17"
+},
 "FRGT": {
 "float": 498548,
 "shares": 572125,
@@ -6009,7 +6219,7 @@
 "float": 7882804,
 "shares": 8077492,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "FTHA": {
 "float": 6311670,
@@ -6186,10 +6396,10 @@
 "ts": "2026-09-11"
 },
 "GAUZ": {
-"float": 13151684,
-"shares": 22987632,
+"float": 657584,
+"shares": 1149382,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "GBAB": {
 "float": 26680732,
@@ -6393,7 +6603,7 @@
 "float": 1592810,
 "shares": 3038140,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "GITS": {
 "float": 2404427,
@@ -6456,10 +6666,10 @@
 "ts": "2026-09-11"
 },
 "GLOO": {
-"float": 14814291,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-14"
+"float": 31062889,
+"shares": 40215326,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "GLXG": {
 "float": 2014446,
@@ -6473,10 +6683,22 @@
 "src": "unavailable",
 "ts": "2026-09-11"
 },
+"GM": {
+"float": 874819186,
+"shares": 904451541,
+"src": "yfinance",
+"ts": "2026-09-16"
+},
 "GME": {
 "float": 408910656,
 "shares": 448691257,
 "src": "yfinance",
+"ts": "2026-09-11"
+},
+"GMEU": {
+"float": null,
+"shares": null,
+"src": "unavailable",
 "ts": "2026-09-11"
 },
 "GMEX": {
@@ -6508,6 +6730,12 @@
 "shares": 819709,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"GNRC": {
+"float": 57944247,
+"shares": 59006361,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "GNS": {
 "float": 143951151,
@@ -6570,10 +6798,10 @@
 "ts": "2026-07-21"
 },
 "GOSS": {
-"float": 306453122,
-"shares": 488846722,
+"float": 3830664,
+"shares": 6116391,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "GOTU": {
 "float": 108353139,
@@ -6833,6 +7061,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"GTM": {
+"float": 243239910,
+"shares": 291110046,
+"src": "yfinance",
+"ts": "2026-09-19"
+},
 "GTN.A": {
 "float": 3718075,
 "shares": null,
@@ -6870,10 +7104,10 @@
 "ts": "2026-07-29"
 },
 "GVH": {
-"float": 2350172,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-21"
+"float": 2296389,
+"shares": 2415472,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "GWAV": {
 "float": 804759,
@@ -6924,10 +7158,10 @@
 "ts": "2026-07-14"
 },
 "HAIN": {
-"float": 87632267,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-06-29"
+"float": 65894970,
+"shares": 90253483,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "HAO": {
 "float": 19864,
@@ -7110,10 +7344,10 @@
 "ts": "2026-09-11"
 },
 "HLP": {
-"float": 50301196,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-06"
+"float": 37050988,
+"shares": 74738750,
+"src": "yfinance",
+"ts": "2026-09-15"
 },
 "HLX": {
 "float": 147382447,
@@ -7296,10 +7530,10 @@
 "ts": "2026-09-11"
 },
 "HUBC": {
-"float": 3187369,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-08-04"
+"float": 1787426,
+"shares": 1787426,
+"src": "yfinance_shares",
+"ts": "2026-09-14"
 },
 "HUBCZ": {
 "float": null,
@@ -7356,10 +7590,10 @@
 "ts": "2026-07-29"
 },
 "HWH": {
-"float": 1509455,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-06-11"
+"float": 375426,
+"shares": 7726400,
+"src": "yfinance",
+"ts": "2026-09-19"
 },
 "HXHX": {
 "float": 2470050,
@@ -7373,11 +7607,23 @@
 "src": "snapshot",
 "ts": "2026-08-04"
 },
+"HYG": {
+"float": 195600000,
+"shares": 195600000,
+"src": "yfinance_shares",
+"ts": "2026-09-16"
+},
 "HYLN": {
 "float": 125496693,
 "shares": 178597218,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"HYMB": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-12"
 },
 "HYNX": {
 "float": null,
@@ -7499,6 +7745,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"IDEV": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-11"
+},
 "IEAG": {
 "float": 34545003,
 "shares": null,
@@ -7510,6 +7762,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-21"
+},
+"IEMG": {
+"float": 1150800000,
+"shares": 1150800000,
+"src": "yfinance_shares",
+"ts": "2026-09-16"
 },
 "IFBD": {
 "float": 8186773,
@@ -7534,6 +7792,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-22"
+},
+"IGSB": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-12"
 },
 "IH": {
 "float": 14067282,
@@ -7596,10 +7860,10 @@
 "ts": "2026-09-11"
 },
 "IMCC": {
-"float": 471434,
+"float": 480216,
 "shares": 603921,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "IMDX": {
 "float": 10400105,
@@ -7767,7 +8031,7 @@
 "float": 4619496960,
 "shares": 5286105262,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "INTJ": {
 "float": 782079,
@@ -7872,10 +8136,10 @@
 "ts": "2026-09-11"
 },
 "IPDN": {
-"float": 11498845,
-"shares": 14450323,
+"float": 383294,
+"shares": 481677,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "IPEX": {
 "float": 11417484,
@@ -7908,10 +8172,10 @@
 "ts": "2026-09-11"
 },
 "IPW": {
-"float": 1628864,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-24"
+"float": 65069,
+"shares": 956733,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "IPWR": {
 "float": 13094147,
@@ -8076,10 +8340,10 @@
 "ts": "2026-09-11"
 },
 "IZM": {
-"float": 7771391,
-"shares": 8188610,
+"float": 1554278,
+"shares": 327544,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "JABRU": {
 "float": 15454693,
@@ -8107,9 +8371,9 @@
 },
 "JAGX": {
 "float": 5141735,
-"shares": 5168300,
+"shares": 434131,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "JANX": {
 "float": 57261424,
@@ -8310,10 +8574,10 @@
 "ts": "2026-09-11"
 },
 "JZXN": {
-"float": 1391525,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-13"
+"float": 462184,
+"shares": 51512759,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "KALA": {
 "float": 19338819,
@@ -8369,6 +8633,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"KEY": {
+"float": 1062603929,
+"shares": 1067128554,
+"src": "yfinance",
+"ts": "2026-09-15"
+},
 "KFFB": {
 "float": 3057787,
 "shares": null,
@@ -8390,6 +8660,12 @@
 "KIDZ": {
 "float": 859379,
 "shares": 859805,
+"src": "yfinance",
+"ts": "2026-09-11"
+},
+"KIM": {
+"float": 654113549,
+"shares": 670789373,
 "src": "yfinance",
 "ts": "2026-09-11"
 },
@@ -8519,6 +8795,12 @@
 "src": "snapshot",
 "ts": "2026-08-03"
 },
+"KR": {
+"float": 793591118,
+"shares": 612647282,
+"src": "yfinance",
+"ts": "2026-09-11"
+},
 "KRAQ": {
 "float": 34500000,
 "shares": null,
@@ -8530,6 +8812,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-16"
+},
+"KRE": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-19"
 },
 "KREF/PA": {
 "float": 56148067,
@@ -8629,9 +8917,9 @@
 },
 "KXIN": {
 "float": 1418651,
-"shares": 1509096,
+"shares": 42133884,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "KYNB": {
 "float": 3954582,
@@ -9024,10 +9312,10 @@
 "ts": "2026-06-05"
 },
 "LOBO": {
-"float": 9323619,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-07"
+"float": 9612525,
+"shares": 10111618,
+"src": "yfinance",
+"ts": "2026-09-19"
 },
 "LOCL": {
 "float": 299733,
@@ -9130,6 +9418,12 @@
 "shares": 62789407,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"LQD": {
+"float": 293500000,
+"shares": 293500000,
+"src": "yfinance_shares",
+"ts": "2026-09-14"
 },
 "LRHC": {
 "float": 1601846,
@@ -9366,10 +9660,10 @@
 "ts": "2026-07-08"
 },
 "MASK": {
-"float": 2336003,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-21"
+"float": 756661,
+"shares": 3595885,
+"src": "yfinance",
+"ts": "2026-09-11"
 },
 "MASS": {
 "float": 28056079,
@@ -9547,9 +9841,9 @@
 },
 "MEDS": {
 "float": 1484051,
-"shares": 3061919,
+"shares": 3197633,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "MEGI": {
 "float": 52003710,
@@ -9666,10 +9960,10 @@
 "ts": "2026-06-17"
 },
 "MGN": {
-"float": 796351,
-"shares": 20000,
+"float": 4288466,
+"shares": 26666,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "MGNX": {
 "float": 57010393,
@@ -9780,10 +10074,10 @@
 "ts": "2026-06-04"
 },
 "MLEC": {
-"float": 200069,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-22"
+"float": 726118,
+"shares": 726118,
+"src": "yfinance_shares",
+"ts": "2026-09-12"
 },
 "MLSS": {
 "float": 71285962,
@@ -9816,10 +10110,10 @@
 "ts": "2026-09-11"
 },
 "MNOV": {
-"float": 46700336,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-02"
+"float": 42255947,
+"shares": 49221246,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "MNTK": {
 "float": 65767300,
@@ -9900,10 +10194,10 @@
 "ts": "2026-09-11"
 },
 "MPU": {
-"float": 59425142,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-08-05"
+"float": 7850178,
+"shares": 3103274,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "MPV": {
 "float": 10765238,
@@ -10157,6 +10451,12 @@
 "src": "snapshot",
 "ts": "2026-07-22"
 },
+"MUB": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-11"
+},
 "MUD": {
 "float": null,
 "shares": null,
@@ -10210,6 +10510,12 @@
 "shares": 384534486,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"MWC": {
+"float": 21574595,
+"shares": 59419414,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "MWG": {
 "float": 2863542,
@@ -10324,6 +10630,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-30"
+},
+"NAMI": {
+"float": 747383,
+"shares": 3162856,
+"src": "yfinance",
+"ts": "2026-09-15"
 },
 "NAMM": {
 "float": 4491332,
@@ -10443,7 +10755,7 @@
 "float": 4387760,
 "shares": 7847899,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "NCRA": {
 "float": 1630509,
@@ -10452,10 +10764,10 @@
 "ts": "2026-09-11"
 },
 "NCT": {
-"float": 400076,
-"shares": 9437740,
+"float": 112123,
+"shares": 1017509,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "NCTY": {
 "float": 4654902,
@@ -10548,16 +10860,22 @@
 "ts": "2026-09-11"
 },
 "NFE": {
-"float": 153340106,
-"shares": 285634650,
+"float": 3343354,
+"shares": 5712693,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "NFJ": {
 "float": 94801125,
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-20"
+},
+"NFLX": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-18"
 },
 "NG": {
 "float": 330475945,
@@ -10709,6 +11027,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"NNVC": {
+"float": 21076385,
+"shares": 25527353,
+"src": "yfinance",
+"ts": "2026-09-18"
+},
 "NODK": {
 "float": 7567918,
 "shares": null,
@@ -10788,10 +11112,10 @@
 "ts": "2026-06-09"
 },
 "NRSN": {
-"float": 23870668,
-"shares": 37766098,
+"float": 1193534,
+"shares": 1896902,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "NRT": {
 "float": 8897336,
@@ -10828,6 +11152,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-14"
+},
+"NTAL": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-12"
 },
 "NTCL": {
 "float": 755115,
@@ -10956,10 +11286,10 @@
 "ts": "2026-09-11"
 },
 "NVDA": {
-"float": 23129734000,
+"float": 23130698000,
 "shares": 24147000000,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "NVDL": {
 "float": null,
@@ -11082,10 +11412,10 @@
 "ts": "2026-08-05"
 },
 "NXXT": {
-"float": 78034700,
-"shares": 168133448,
+"float": 7803470,
+"shares": 16813345,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "NYC": {
 "float": 725195,
@@ -11213,6 +11543,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"OIG": {
+"float": 99030000,
+"shares": 99030000,
+"src": "yfinance_shares",
+"ts": "2026-09-18"
+},
 "OIM": {
 "float": 28549986,
 "shares": null,
@@ -11235,7 +11571,7 @@
 "float": null,
 "shares": null,
 "src": "unavailable",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "OKTA": {
 "float": 166703992,
@@ -11430,10 +11766,10 @@
 "ts": "2026-09-11"
 },
 "OPTT": {
-"float": 263949277,
-"shares": 270138823,
+"float": 8886667,
+"shares": 9004628,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "OPTU": {
 "float": 260526935,
@@ -11584,6 +11920,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-15"
+},
+"PAAI": {
+"float": 13144349,
+"shares": 47610653,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "PACB": {
 "float": 304011132,
@@ -11801,11 +12143,17 @@
 "src": "yfinance_shares",
 "ts": "2026-09-11"
 },
+"PDM": {
+"float": 123513606,
+"shares": 125132825,
+"src": "yfinance",
+"ts": "2026-09-15"
+},
 "PDSB": {
 "float": 54559741,
-"shares": 55971338,
+"shares": 72474208,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "PDYN": {
 "float": 34514755,
@@ -11920,6 +12268,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-15"
+},
+"PGX": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-16"
 },
 "PHAT": {
 "float": 50300610,
@@ -12084,10 +12438,10 @@
 "ts": "2026-09-11"
 },
 "PMAX": {
-"float": 892198,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-20"
+"float": 1017107,
+"shares": 1037171,
+"src": "yfinance",
+"ts": "2026-09-11"
 },
 "PMEC": {
 "float": 5529117,
@@ -12513,7 +12867,7 @@
 "float": null,
 "shares": null,
 "src": "unavailable",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "QCML": {
 "float": null,
@@ -12652,6 +13006,12 @@
 "shares": 198946412,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"QSR": {
+"float": 317593044,
+"shares": 348758065,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "QTEX": {
 "float": 30915127,
@@ -12815,6 +13175,12 @@
 "src": "snapshot",
 "ts": "2026-07-16"
 },
+"RBRK": {
+"float": 163832693,
+"shares": 160956763,
+"src": "yfinance",
+"ts": "2026-09-17"
+},
 "RC/PC": {
 "float": 147015996,
 "shares": null,
@@ -12891,6 +13257,12 @@
 "float": null,
 "shares": null,
 "src": "unavailable",
+"ts": "2026-09-11"
+},
+"RDDT": {
+"float": 140697644,
+"shares": 146103200,
+"src": "yfinance",
 "ts": "2026-09-11"
 },
 "RDGT": {
@@ -13011,7 +13383,7 @@
 "float": 3269702,
 "shares": 8219891,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "RFAI": {
 "float": 4831290,
@@ -13089,7 +13461,7 @@
 "float": null,
 "shares": null,
 "src": "unavailable",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "RIBB": {
 "float": 1997457,
@@ -13180,6 +13552,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-30"
+},
+"RLMD": {
+"float": 7718550,
+"shares": 106669846,
+"src": "yfinance",
+"ts": "2026-09-12"
 },
 "RLX": {
 "float": 334456006,
@@ -13294,6 +13672,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-30"
+},
+"RPD": {
+"float": 59297735,
+"shares": 67400640,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "RPGL": {
 "float": 21511,
@@ -13416,10 +13800,10 @@
 "ts": "2026-09-11"
 },
 "RYDE": {
-"float": 110294813,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-08-03"
+"float": 65806432,
+"shares": 150049131,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "RYET": {
 "float": 15961434,
@@ -13462,6 +13846,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-15"
+},
+"SABR": {
+"float": 269972955,
+"shares": 403583214,
+"src": "yfinance",
+"ts": "2026-09-12"
 },
 "SABS": {
 "float": 57077545,
@@ -13613,6 +14003,12 @@
 "src": "snapshot",
 "ts": "2026-07-20"
 },
+"SCHH": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-16"
+},
 "SCII": {
 "float": 17250004,
 "shares": null,
@@ -13691,6 +14087,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"SDGR": {
+"float": 57334026,
+"shares": 65641435,
+"src": "yfinance",
+"ts": "2026-09-17"
+},
 "SDHI": {
 "float": 27600006,
 "shares": null,
@@ -13704,10 +14106,10 @@
 "ts": "2026-09-11"
 },
 "SDST": {
-"float": 11250890,
+"float": 11300204,
 "shares": 14523933,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "SEAT": {
 "float": 3798737,
@@ -13847,11 +14249,17 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
-"SHFS": {
-"float": 3861611,
+"SH": {
+"float": null,
 "shares": null,
-"src": "snapshot",
-"ts": "2026-07-10"
+"src": "unavailable",
+"ts": "2026-09-15"
+},
+"SHFS": {
+"float": 11117049,
+"shares": 12332955,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "SHMD": {
 "float": 13553725,
@@ -13990,6 +14398,12 @@
 "shares": null,
 "src": "unavailable",
 "ts": "2026-09-11"
+},
+"SKIL": {
+"float": 4577523,
+"shares": 9100444,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "SKIN": {
 "float": 79336195,
@@ -14139,7 +14553,7 @@
 "float": 5555085,
 "shares": 5560256,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "SMCI": {
 "float": 557428559,
@@ -14397,7 +14811,7 @@
 "float": null,
 "shares": null,
 "src": "unavailable",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "SNYR": {
 "float": 8170053,
@@ -14523,7 +14937,7 @@
 "float": null,
 "shares": null,
 "src": "unavailable",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "SPAI": {
 "float": 12492819,
@@ -14627,6 +15041,12 @@
 "src": "snapshot",
 "ts": "2026-06-26"
 },
+"SPTL": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-18"
+},
 "SPTX": {
 "float": 17522154,
 "shares": null,
@@ -14651,6 +15071,12 @@
 "src": "snapshot",
 "ts": "2026-07-20"
 },
+"SPY": {
+"float": 917782016,
+"shares": 917782016,
+"src": "yfinance_shares",
+"ts": "2026-09-11"
+},
 "SQFT": {
 "float": 977972,
 "shares": 1434432,
@@ -14664,10 +15090,10 @@
 "ts": "2026-09-11"
 },
 "SRFM": {
-"float": 93447566,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-01"
+"float": 100525242,
+"shares": 123644243,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "SRI": {
 "float": 27394892,
@@ -14724,10 +15150,10 @@
 "ts": "2026-06-30"
 },
 "SSM": {
-"float": 910160,
+"float": 626671,
 "shares": 1424834,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "SSPC": {
 "float": null,
@@ -14976,16 +15402,22 @@
 "ts": "2026-09-11"
 },
 "SVRN": {
-"float": 1154187,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-08"
+"float": 605376,
+"shares": 1875816,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "SWAG": {
 "float": 8219891,
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-27"
+},
+"SWKS": {
+"float": 149749008,
+"shares": 150472782,
+"src": "yfinance",
+"ts": "2026-09-11"
 },
 "SWVL": {
 "float": 4747512,
@@ -15090,10 +15522,10 @@
 "ts": "2026-09-11"
 },
 "TCRT": {
-"float": 2046978,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-06-30"
+"float": 1980457,
+"shares": 2540480,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "TCRX": {
 "float": 57818416,
@@ -15160,6 +15592,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-20"
+},
+"TEM": {
+"float": 115898657,
+"shares": 175390967,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "TEMC": {
 "float": null,
@@ -15359,6 +15797,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"TMF": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-15"
+},
 "TMS": {
 "float": 37443113,
 "shares": 73660516,
@@ -15375,13 +15819,13 @@
 "float": 237283,
 "shares": 6084581,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "TNON": {
-"float": 620847,
+"float": 620827,
 "shares": 667047,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "TNXP": {
 "float": 14117351,
@@ -15414,10 +15858,10 @@
 "ts": "2026-07-16"
 },
 "TOPP": {
-"float": 8149740,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-27"
+"float": 16300024,
+"shares": 24700000,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "TOPS": {
 "float": 2924327,
@@ -15549,7 +15993,7 @@
 "float": 1881924,
 "shares": 1903708,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "TSDD": {
 "float": null,
@@ -15610,6 +16054,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-07-28"
+},
+"TURB": {
+"float": 4260328,
+"shares": 12017140,
+"src": "yfinance",
+"ts": "2026-09-17"
 },
 "TUYA": {
 "float": 468368396,
@@ -15935,6 +16385,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"UVIX": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-18"
+},
 "UVXY": {
 "float": null,
 "shares": null,
@@ -15958,6 +16414,12 @@
 "shares": null,
 "src": "unavailable",
 "ts": "2026-09-11"
+},
+"UYLD": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-15"
 },
 "UYSC": {
 "float": 5420670,
@@ -16025,6 +16487,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"VCIT": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-16"
+},
 "VCRE": {
 "float": 182050195,
 "shares": null,
@@ -16053,7 +16521,7 @@
 "float": 1521105,
 "shares": 3110708,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "VEEE": {
 "float": 523412,
@@ -16151,6 +16619,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"VICR": {
+"float": 25694360,
+"shares": 34389014,
+"src": "yfinance",
+"ts": "2026-09-18"
+},
 "VIOT": {
 "float": 31641213,
 "shares": 31723708,
@@ -16223,6 +16697,12 @@
 "src": "snapshot",
 "ts": "2026-07-08"
 },
+"VMRK": {
+"float": 773779120,
+"shares": 773779120,
+"src": "yfinance_shares",
+"ts": "2026-09-12"
+},
 "VNCE": {
 "float": 4106252,
 "shares": 12847294,
@@ -16290,10 +16770,10 @@
 "ts": "2026-09-11"
 },
 "VRA": {
-"float": 18619664,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-06-12"
+"float": 18671419,
+"shares": 28438252,
+"src": "yfinance",
+"ts": "2026-09-15"
 },
 "VRAX": {
 "float": 529040,
@@ -16312,6 +16792,12 @@
 "shares": null,
 "src": "snapshot",
 "ts": "2026-06-29"
+},
+"VRIG": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-12"
 },
 "VRM": {
 "float": 5086006,
@@ -16350,10 +16836,10 @@
 "ts": "2026-07-31"
 },
 "VSME": {
-"float": 2572249,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-07-23"
+"float": 2712257,
+"shares": 2750784,
+"src": "yfinance",
+"ts": "2026-09-14"
 },
 "VSTD": {
 "float": 11949591,
@@ -16378,6 +16864,12 @@
 "shares": 3609471,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"VTEB": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-19"
 },
 "VTGN": {
 "float": 37965591,
@@ -16428,10 +16920,10 @@
 "ts": "2026-06-17"
 },
 "WAFU": {
-"float": 3006533,
-"shares": null,
-"src": "snapshot",
-"ts": "2026-08-05"
+"float": 1274519,
+"shares": 2922559,
+"src": "yfinance",
+"ts": "2026-09-16"
 },
 "WAI": {
 "float": 1718366,
@@ -16632,10 +17124,10 @@
 "ts": "2026-06-02"
 },
 "WLTH": {
-"float": 88469635,
-"shares": 149361216,
+"float": 93103023,
+"shares": 156176440,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "WMT": {
 "float": 4350231739,
@@ -16852,6 +17344,12 @@
 "shares": 6560274,
 "src": "yfinance",
 "ts": "2026-09-11"
+},
+"XENE": {
+"float": 90948660,
+"shares": 96840432,
+"src": "yfinance",
+"ts": "2026-09-18"
 },
 "XERS": {
 "float": 176006554,
@@ -17111,6 +17609,12 @@
 "src": "yfinance",
 "ts": "2026-09-11"
 },
+"YFOR": {
+"float": 2141626,
+"shares": 7837380,
+"src": "yfinance",
+"ts": "2026-09-16"
+},
 "YHC": {
 "float": 18111858,
 "shares": null,
@@ -17339,6 +17843,18 @@
 "src": "snapshot",
 "ts": "2026-06-16"
 },
+"ZS": {
+"float": 106468196,
+"shares": 163054698,
+"src": "yfinance",
+"ts": "2026-09-15"
+},
+"ZSL": {
+"float": null,
+"shares": null,
+"src": "unavailable",
+"ts": "2026-09-11"
+},
 "ZSQR": {
 "float": 48971479,
 "shares": null,
@@ -17361,7 +17877,7 @@
 "float": 4083260,
 "shares": 5441159,
 "src": "yfinance",
-"ts": "2026-09-11"
+"ts": "2026-09-19"
 },
 "ZTR": {
 "float": 55539345,
