@@ -438,7 +438,7 @@ canvas { width: 100% !important; }
     <button class="mode-btn active" id="btnCandleSpikes" onclick="toggleCandleSpikes()" style="border:1px solid #9e3300;border-radius:6px;background:#3d1400;color:#ff7b3d;">🕯️ Spikes</button>
     <button class="mode-btn active" id="btnNews" onclick="toggleNews()" style="border:1px solid #1f6feb;border-radius:6px;background:#0d2440;color:#58a6ff;">📰 News</button>
     <label>Top</label>
-    <input type="number" id="topN" value="10" min="1" max="100" onchange="onTopNChange()">
+    <input type="number" id="topN" value="50" min="1" max="100" onchange="onTopNChange()">
     <label>tickers</label>
     <input type="date" id="dateSelect" onchange="onDateChange()">
     <button class="zoom-btn" id="btnResetZoom" onclick="resetChartZoom()" title="Back to the full session" hidden>⤡ Reset zoom</button>
@@ -749,7 +749,7 @@ function fmtVol(v) {
 }
 
 function getTopN() {
-  return Math.max(1, Math.min(20, parseInt(document.getElementById('topN').value) || 10));
+  return Math.max(1, Math.min(100, parseInt(document.getElementById('topN').value) || 50));
 }
 
 function numOr(v, fallback) {

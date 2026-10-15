@@ -421,7 +421,7 @@ canvas { width: 100% !important; }
     <label>Session</label>
     <select id="sessionSelect" onchange="onSessionChange()"></select>
     <label>Top</label>
-    <input type="number" id="topN" value="10" min="1" max="20" onchange="onTopNChange()">
+    <input type="number" id="topN" value="50" min="1" max="100" onchange="onTopNChange()">
     <label>tickers</label>
     <input type="date" id="dateSelect" onchange="onDateChange()">
     <button class="zoom-btn" id="btnResetZoom" onclick="resetChartZoom()" title="Back to the full session" hidden>⤡ Reset zoom</button>
@@ -518,7 +518,7 @@ function fmtVol(v) {
 }
 
 function getTopN() {
-  return Math.max(1, Math.min(20, parseInt(document.getElementById('topN').value) || 10));
+  return Math.max(1, Math.min(100, parseInt(document.getElementById('topN').value) || 50));
 }
 
 // ── Session detection ─────────────────────────────────────────────────────────
